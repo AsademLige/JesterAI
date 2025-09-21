@@ -1,4 +1,4 @@
-from src.config_reader import Prefs
+from src.data.config import Prefs
 
 prefs = Prefs()
 
