@@ -23,9 +23,9 @@ class DataBase():
     async def get_all_users(self) ->  List[UserModel]: 
         return await UserModel.query.gino.all()
     
-    async def add_user(self, tg_id: int, tg_name: str):
+    async def add_user(self, tg_id: int, tg_name: str, length: int, custom_title: str,):
         try:
-            user = UserModel(tg_id = tg_id, tg_name = tg_name)
+            user = UserModel(tg_id = tg_id, tg_name = tg_name, length = length, custom_title = custom_title)
             await user.create()
             return True
         except Exception as error: 

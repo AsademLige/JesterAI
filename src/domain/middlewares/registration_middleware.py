@@ -15,6 +15,6 @@ class RegistrationMiddleware(BaseMiddleware):
             if (await UserController.is_registered(event.from_user)):
                 return await handler(event, data)
             else:
-                await event.answer(await UserController.register_user(event.from_user))
+                await event.answer(await UserController.register_user(event.from_user, event.chat))
         else:
             return await handler(event, data)

@@ -6,5 +6,7 @@ class UserModel(TimedBaseModel):
     __tablename__ = "users"
     id = sa.Column(sa.Integer, primary_key=True)
     tg_id = sa.Column(sa.BigInteger)
+    length = sa.Column(sa.BigInteger)
     tg_name = sa.Column(sa.Text)
+    custom_title = sa.Column(sa.Text)
     role_id = sa.Column(sa.Integer, sa.ForeignKey('roles.id'))
