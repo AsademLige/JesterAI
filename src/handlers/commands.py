@@ -16,11 +16,11 @@ class Commands():
     ###Создать новый стикер-пак
     create_sticker_set = "create_sticker_set"
 
-    ###Добавить стикер в пак
-    add_to_sticker_set = "add_to_sticker_set"
+    ###Создать новый стикер-пак
+    create_sticker_set = "create_sticker_set"
 
-    ###Удалить стикер-пак
-    delete_project = "delete_sticker_set"
+    ###Изменить стикер в пак
+    edit_sticker_set = "edit_sticker_set"
 
     async def setup_bot_commands():
         bot_commands = [

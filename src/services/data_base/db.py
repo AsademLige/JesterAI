@@ -1,3 +1,4 @@
+from src.models.sticker_set_model import StickerSetModel
 from src.models.user_model import UserModel
 from src.models.role_model import RoleModel
 from sqlalchemy import select
@@ -6,8 +7,9 @@ from typing import List
 class DataBase():
     def __init__(self):
         pass
-
-    ### Методы получения данных о пользователях     
+    ###--------------------------------------
+    ### Методы работы с данными пользователей 
+    ###--------------------------------------
     async def get_user(self, tg_id: int) -> UserModel :
         try:
             return await UserModel.query.where(UserModel.tg_id == tg_id).gino.first()
@@ -66,3 +68,13 @@ class DataBase():
             return await UserModel.query.where(UserModel.role_id == 1).gino.all()
         except:
             return []
+        
+    ###-----------------------------------------
+    ### Методы работы с данными наборов стикеров 
+    ###-----------------------------------------
+
+    async def get_all_sticker_sets(self) ->  List[StickerSetModel]: 
+        return await StickerSetModel.query.gino.all()
+    
+    async def delete_sticker_set_by_name(self, short_name:str):
+        return await StickerSetModel.delete.where(StickerSetModel.short_name == short_name).gino.status()
