@@ -1,3 +1,4 @@
+from src.models.custom_sticker_model import CustomStickerModel
 from src.models.sticker_set_model import StickerSetModel
 from src.models.user_model import UserModel
 from src.models.role_model import RoleModel
@@ -72,6 +73,26 @@ class DataBase():
     ###-----------------------------------------
     ### Методы работы с данными наборов стикеров 
     ###-----------------------------------------
+
+    async def add_sticker_set(self, short_name:str, title:str):
+        try:
+            sticker_set = StickerSetModel(short_name = short_name, title = title)
+            await sticker_set.create()
+            return True
+        except Exception as error: 
+            print(f"sticker set create error: {error}")
+            return False
+        
+    async def add_custom_sticker(self, media_path: str, sticker_id:str, sticker_set_name:str):
+        try:
+            custom_sticker = CustomStickerModel(media_path = media_path, 
+                                                sticker_id = sticker_id, 
+                                                sticker_set_name = sticker_set_name)
+            await custom_sticker.create()
+            return True
+        except Exception as error: 
+            print(f"custom sticker create error: {error}")
+            return False
 
     async def get_all_sticker_sets(self) ->  List[StickerSetModel]: 
         return await StickerSetModel.query.gino.all()

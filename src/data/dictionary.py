@@ -7,14 +7,20 @@ class Dictionary():
 Дай-ка я на тебя взгляну...\nИзмерим твой чучундрик... Ого! Вот это питон! {length}см
 {f'А погоняло твое... Ага! {custom_title}' if type(custom_title) is str else ''}'''
     
-    def sticker_set_create_success(bot_name:str) -> str:
-        return f"Набор стикеров создан!: https://t.me/addstickers/{bot_name}"
+    def sticker_set_create_success(sticker_set_name:str) -> str:
+        return f"Набор стикеров создан!: https://t.me/addstickers/{sticker_set_name}"
     
     help:str = "Что умеет бот"
+
+    edit_sticker_set:str = "Изменить набор стикеров"
+
+    create_sticker_set:str = "Создать набор стикеров"
 
     error:str = "Что-то мне сегодня плохо, приходи попозже..."
 
     exit:str = "❌ Выход"
+
+    skip:str = "⏩ Пропустить"
 
     ###------------------------------------------------------------
     ###Создание набора стикеров
@@ -22,7 +28,7 @@ class Dictionary():
 
     error_sticker_set_create:str = "Ошибка создания набора стикеров"
 
-    use_this:str = "Использовать это"
+    use_this:str = "Использовать видео стикера"
 
     send_sticker_placeholder:str = "Отправь видео, которым будет заменяться стикер"
 

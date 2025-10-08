@@ -44,7 +44,9 @@ async def edit_sticker_set_handler(callback: CallbackQuery, callback_data: Stick
        last_bot_message:Message = await callback.message.edit_text(Dictionary.sticker_edit_variants, 
                                                        reply_markup = kb.edit_sticker_set_command_button(callback_data.short_name))
     elif (callback_data.action == "delete"):
+        #TODO: Удалять и все связанные с ним стикеры и медиа файлы
         if (await db.delete_sticker_set_by_name(callback_data.short_name)):
+            await bot.delete_sticker_set(callback_data.short_name)
             await callback.message.edit_text(Dictionary.delete_sticker_set_success)
         else:
             await callback.message.edit_text(Dictionary.error)

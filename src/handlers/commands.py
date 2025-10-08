@@ -24,6 +24,8 @@ class Commands():
 
     async def setup_bot_commands():
         bot_commands = [
-        BotCommand(command="help", description=Dictionary.help),
+            BotCommand(command="help", description=Dictionary.help),
+            BotCommand(command="create_sticker_set", description=Dictionary.create_sticker_set),
+            BotCommand(command="edit_sticker_set", description=Dictionary.edit_sticker_set),
         ]
         await bot.set_my_commands(bot_commands)
