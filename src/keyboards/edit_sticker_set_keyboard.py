@@ -26,12 +26,41 @@ class EditStickerSetKeyboard():
         
         return builder.as_markup()
     
+    def exit(self) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(text=Dictionary.exit,
+            callback_data=StickerSetCF(action="exit"))
+        builder.adjust(1)
+        return builder.as_markup()
+    
+    def back(self, short_name:str) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(text=Dictionary.back,
+            callback_data=StickerSetCF(action="choice", short_name=short_name))
+        builder.adjust(1)
+        return builder.as_markup()
+    
+    def confirm_delete(self, short_name:str) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(text=Dictionary.delete_sticker_set,
+            callback_data=StickerSetCF(action="confirm_delete_set"))
+        builder.button(text=Dictionary.back,
+            callback_data=StickerSetCF(action="choice", short_name=short_name))
+        builder.adjust(2)
+        return builder.as_markup()
+    
     def edit_sticker_set_command_button(self, short_name:str) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
+        
+        builder.button(text=Dictionary.add_sticker_to_set,
+            callback_data=StickerSetCF(action="add_sticker", short_name=short_name))
+        
+        builder.button(text=Dictionary.delete_sticker_from_set,
+            callback_data=StickerSetCF(action="delete_sticker", short_name=short_name))
+        
+        builder.button(text=Dictionary.delete_sticker_set,
+            callback_data=StickerSetCF(action="delete_set", short_name=short_name))
 
-        builder.button(text=Dictionary.delete,
-            callback_data=StickerSetCF(action="delete", short_name=short_name))
-            
         builder.button(text=Dictionary.exit,
             callback_data=StickerSetCF(action="exit"))
         

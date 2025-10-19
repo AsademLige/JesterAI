@@ -21,11 +21,24 @@ class CreateStickerSetKeyboard():
     #     )
 
     @property
+    def clip_text_choice(self) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        
+        builder.add(InlineKeyboardButton(
+                text=Dictionary.skip,
+                callback_data="skip")
+            )
+            
+        builder.adjust(1)
+        
+        return builder.as_markup()
+    
+    @property
     def media_choice(self) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         
         builder.add(InlineKeyboardButton(
-                text="Использовать это",
+                text=Dictionary.use_this,
                 callback_data="use_this")
             )
             

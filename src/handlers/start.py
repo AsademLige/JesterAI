@@ -17,13 +17,16 @@ rt = Router()
 ### Запустить бота
 @rt.message(Command(cn.start))
 async def start_handler(message: Message):
-    await message.answer("Я тебе не какая-то бездушная машина, конкретнее вопрос задавай!")
+    await message.answer("Я тебе не какая-то бездушная машина, конкретный вопрос задавай, а не командами своими тычь!")
 
 ### Что умеет бот
 @rt.message(Command(cn.help))
 async def help_handler(message: Message):
-    await show_help(message)
+    if (await db.is_admin(message.from_user.id)):
+        await message.answer("Вот список доступных тебе команд: \n" \
+        "/create_sticker_set - Создать набор стикеров\n" \
+        "/edit_sticker_set - Изменить набор стикеров")
+    else:
+        await message.answer("Для тебя ничего не могу сделать")
 
-### Методы
-async def show_help(message: Message):
-    await message.answer("Я пока нихуя не умею")
+    
