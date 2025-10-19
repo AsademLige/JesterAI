@@ -8,7 +8,7 @@ class Dictionary():
 {f'А погоняло твое... Ага! {custom_title}' if type(custom_title) is str else ''}'''
     
     def sticker_set_create_success(sticker_set_name:str) -> str:
-        return f"Набор стикеров создан!: https://t.me/addstickers/{sticker_set_name}"
+        return f"🟢 Набор стикеров создан: https://t.me/addstickers/{sticker_set_name}"
     
     help:str = "Что умеет бот"
 
@@ -19,6 +19,8 @@ class Dictionary():
     error:str = "Что-то мне сегодня плохо, приходи попозже..."
 
     exit:str = "❌ Выход"
+
+    back:str = "↩ Назад"
 
     skip:str = "⏩ Пропустить"
 
@@ -36,12 +38,19 @@ class Dictionary():
     ###изменение набора стикеров
     ###------------------------------------------------------------
 
+    def sticker_add_to_set_success(sticker_set_name:str) -> str:
+        return f"🟢 Стикер добавлен: https://t.me/addstickers/{sticker_set_name}"
+    
     choice_sticker_set:str = "Выбери набор стикеров, который хочешь изменить"
 
     sticker_set_list_is_empty:str = "Нет наборов стикеров!"
 
     sticker_edit_variants:str = "Вот что мы можем с ним сделать:"
 
-    delete_sticker_set_success:str = "✅ Удалили удачно!"
+    delete_sticker_set_success:str = "🟢 Удалили удачно!"
 
-    delete:str = "🗑️ Удалить"
+    delete_sticker_set:str = "🚫 Удалить набор"
+
+    add_sticker_to_set:str = "📥 Добавить стикер"
+
+    delete_sticker_from_set:str = "🗑️ Удалить стикер"

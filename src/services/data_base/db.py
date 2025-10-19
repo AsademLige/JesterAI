@@ -2,8 +2,12 @@ from src.models.custom_sticker_model import CustomStickerModel
 from src.models.sticker_set_model import StickerSetModel
 from src.models.user_model import UserModel
 from src.models.role_model import RoleModel
+from src.data.config import Prefs
 from sqlalchemy import select
+from typing import Optional
 from typing import List
+
+prefs = Prefs()
 
 class DataBase():
     def __init__(self):
@@ -59,9 +63,11 @@ class DataBase():
     
     async def is_admin(self, tg_id: int) -> bool: 
         try:
+            super_users : List = prefs.super_users
             user = await self.get_user(tg_id)
-            return user.role_id == 1
-        except:
+            return user.role_id == 1 or f'{tg_id}' in super_users
+        except Exception as error:
+            print(f"check role error: {error}")
             return False
     
     async def get_admins_list(self) ->  List[UserModel]:
@@ -93,9 +99,39 @@ class DataBase():
         except Exception as error: 
             print(f"custom sticker create error: {error}")
             return False
+        
+    async def get_custom_sticker_by_id(self, sticker_id:str,) -> Optional[CustomStickerModel]:
+        try:
+            custom_sticker : CustomStickerModel = await CustomStickerModel.\
+            query.where(CustomStickerModel.sticker_id == sticker_id).gino.first()
+
+            return custom_sticker
+        except Exception as error:
+            print(f"custom sticker media get error: {error}")
+            return None
+        
+    async def delete_custom_sticker_by_id(self, sticker_id:str) -> bool:
+        try:
+            return await CustomStickerModel.delete.\
+                where(CustomStickerModel.sticker_id == sticker_id).gino.status()
+        except Exception as error:
+            print(f"custom sticker media delete error: {error}")
+            return False
+        
+    async def get_custom_stickers_by_set_name(self,
+                                              sticker_set_name:str) -> Optional[List[CustomStickerModel]]:
+        try:
+            custom_stickers : List[CustomStickerModel] = await CustomStickerModel.\
+            query.where(CustomStickerModel.sticker_set_name == sticker_set_name).gino.all()
+
+            return custom_stickers
+        except Exception as error:
+            print(f"custom stickers media get error: {error}")
+            return None
 
     async def get_all_sticker_sets(self) ->  List[StickerSetModel]: 
         return await StickerSetModel.query.gino.all()
     
     async def delete_sticker_set_by_name(self, short_name:str):
-        return await StickerSetModel.delete.where(StickerSetModel.short_name == short_name).gino.status()
+        return await StickerSetModel.delete.\
+            where(StickerSetModel.short_name == short_name).gino.status()
