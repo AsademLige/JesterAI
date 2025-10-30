@@ -1,6 +1,7 @@
 from src.domain.middlewares.registration_middleware import RegistrationMiddleware
 import src.handlers.create_sticker_set as create_sticker_set
 import src.handlers.edit_sticker_set as edit_sticker_set
+import src.handlers.interactive as interactive
 import src.handlers.send_media as send_media
 from aiogram.filters.command import Command
 from aiogram import Bot, Dispatcher, types
@@ -23,7 +24,8 @@ async def main():
     dp.include_routers(start.rt, 
                       create_sticker_set.rt,
                       edit_sticker_set.rt,
-                      send_media.rt)
+                      send_media.rt,
+                      interactive.rt)
     dp.message.outer_middleware(RegistrationMiddleware())
     await on_startup(dp)
     await Commands.setup_bot_commands()
