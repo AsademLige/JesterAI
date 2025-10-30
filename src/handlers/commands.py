@@ -4,6 +4,7 @@ from src.data.config import Prefs
 from aiogram import Bot
 
 prefs = Prefs()
+dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 
 class Commands():
@@ -22,7 +23,15 @@ class Commands():
     ###Изменить стикер в пак
     edit_sticker_set = "edit_sticker_set"
 
+    ###Информация о пользователе
+    me = "me"
+
+    ###Интерактивное действие с текущим размером пользователя
+    pencil = "pencil"
+
     async def setup_bot_commands():
         await bot.set_my_commands([
-            BotCommand(command="help", description=Dictionary.help)
+            BotCommand(command="help", description=dict.help),
+            BotCommand(command="me", description=dict.me),
+            BotCommand(command="pencil", description=dict.pencil)
         ])

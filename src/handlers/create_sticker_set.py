@@ -15,6 +15,7 @@ from aiogram import Router, F
 from aiogram import Bot
 
 prefs = Prefs()
+dict = Dictionary()
 kb = CreateStickerSetKeyboard()
 bot = Bot(token=prefs.bot_token)
 db = DataBase()
@@ -138,12 +139,12 @@ async def create_set(state_data: Dict[str, Any], sticker_media_id:int) -> str:
                                                           sticker_set.stickers[0].file_unique_id)
             if (sticker_path):
                 await db.add_custom_sticker(sticker_path, sticker_set.stickers[0].file_unique_id, sticker_set_name)
-            return Dictionary.sticker_set_create_success(sticker_set_name)
+            return dict.sticker_set_create_success(sticker_set_name)
         else:
-            return Dictionary.error_sticker_set_create
+            return dict.error_sticker_set_create
     except Exception as e:
         print(f"Ошибка создания стикера: {e}")
-        return Dictionary.error_sticker_set_create
+        return dict.error_sticker_set_create
 
 async def validate_name(message: Message, state: FSMContext) -> str:
     valid = True

@@ -7,6 +7,7 @@ from random import Random
 from aiogram import Bot
 
 db = DataBase()
+dict = Dictionary()
 prefs = Prefs()
 bot = Bot(token=prefs.bot_token)
 
@@ -25,6 +26,6 @@ class UserController():
             custom_title = member.custom_title
         
         if (await db.add_user(user.id, user.full_name, length, custom_title)):
-            return Dictionary.first_meet(user.full_name, length, custom_title)
+            return dict.first_meet(user.full_name, length, custom_title)
         else:
-            return Dictionary.error
+            return dict.error

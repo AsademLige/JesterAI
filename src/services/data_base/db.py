@@ -48,6 +48,21 @@ class DataBase():
             print(f"update role error: {error}")
             return False
         
+    async def update_user_member(self, tg_id: int, length: int) -> bool:
+        user = await self.get_user(tg_id)
+        return self.__update_user_member(user, length);    
+    
+    async def update_user_member(self, user: UserModel, length: int) -> bool:
+        return await self.__update_user_member(user, length);    
+        
+    async def __update_user_member(self, user: UserModel, length: int) -> bool:
+        try:
+            await user.update(length = length).apply()
+            return True
+        except Exception as error:
+            print(f"update member error: {error}")
+            return False
+        
     async def get_role_id_by_name(self, name: str) -> int:
         try:
             role = await RoleModel.query.where(RoleModel.name == name).gino.first()

@@ -1,7 +1,6 @@
 from src.domain.controllers.user_controller import UserController
 from aiogram.types import Message, CallbackQuery, TelegramObject
 from typing import Any, Callable, Dict, Awaitable
-from src.data.dictionary import Dictionary
 from aiogram import BaseMiddleware
 
 class RegistrationMiddleware(BaseMiddleware):

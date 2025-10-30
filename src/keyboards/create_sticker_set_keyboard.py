@@ -4,6 +4,7 @@ from src.data.dictionary import Dictionary
 from src.data.config import Prefs
 
 prefs = Prefs()
+dict = Dictionary()
 
 class CreateStickerSetKeyboard():
     def __init__(self):
@@ -25,7 +26,7 @@ class CreateStickerSetKeyboard():
         builder = InlineKeyboardBuilder()
         
         builder.add(InlineKeyboardButton(
-                text=Dictionary.skip,
+                text=dict.skip,
                 callback_data="skip")
             )
             
@@ -38,7 +39,7 @@ class CreateStickerSetKeyboard():
         builder = InlineKeyboardBuilder()
         
         builder.add(InlineKeyboardButton(
-                text=Dictionary.use_this,
+                text=dict.use_this,
                 callback_data="use_this")
             )
             

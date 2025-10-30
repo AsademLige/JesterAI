@@ -23,10 +23,10 @@ async def start_handler(message: Message):
 @rt.message(Command(cn.help))
 async def help_handler(message: Message):
     if (await db.is_admin(message.from_user.id)):
-        await message.answer("Вот список доступных тебе команд: \n" \
+        await message.answer("Вот список доступных тебе специальных команд: \n" \
         "/create_sticker_set - Создать набор стикеров\n" \
         "/edit_sticker_set - Изменить набор стикеров")
     else:
-        await message.answer("Для тебя ничего не могу сделать")
+        await message.answer("Для тебя специальных команд нет")
 
     
