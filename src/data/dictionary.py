@@ -1,0 +1,191 @@
+from src.domain.utils.text_processing import TextProcessing as tp
+from aiogram.utils.markdown import hbold, hcode, hblockquote
+from src.models.user_model import UserModel
+from typing import Optional, List, Dict
+import random
+
+class Dictionary():
+    def __init__(self):
+        pass
+
+    ###------------------------------------------------------------
+    ###Описание команд бота
+    ###------------------------------------------------------------
+
+    help:str = "Что умеет бот"
+
+    me:str = "Информация обо мне"
+
+    pencil:str = "Недоволен своим размером? ЖМИ СЮДА"
+
+    edit_sticker_set:str = "Изменить набор стикеров"
+
+    create_sticker_set:str = "Создать набор стикеров"
+
+    ###------------------------------------------------------------
+    ###Общее
+    ###------------------------------------------------------------
+
+    error:str = "Что-то мне сегодня плохо, приходи попозже..."
+
+    exit:str = "❌ Выход"
+
+    back:str = "↩ Назад"
+
+    skip:str = "⏩ Пропустить"
+
+    ###------------------------------------------------------------
+    ###Взаимодействие с пользователем
+    ###------------------------------------------------------------
+    
+    __first_meet : str = 'А тебя я не знаю... Ты, значится, {{full_name}}! '\
+    'А я Шут. Ромашковый.🤡 Я работаю на мобильных разработчиков в их мобильном подвале. '\
+    'Дай-ка я на тебя взгляну...\nИзмерим твой {{pencil}}...'\
+    '\nОго! Вот это питон! {{length}}\n'\
+    '{{custom_title}}'
+    
+    __user_information : str = f'{hblockquote("🔍 {{tg_name}} {{custom_title}} Имеет {{pencil_accu}} длинной {{length}}!")}\n'\
+    '💰 Монет на руках: {{money}}\n'\
+    '🎖 Достижений пока нет'
+
+    ###------------------------------------------------------------
+    ###Создание набора стикеров
+    ###------------------------------------------------------------
+
+    error_sticker_set_create:str = "Ошибка создания набора стикеров"
+
+    use_this:str = "Использовать видео стикера"
+
+    send_sticker_placeholder:str = "Отправь видео, которым будет заменяться стикер"
+
+    __sticker_set_create_success: str = "🟢 Набор стикеров создан: https://t.me/addstickers/{{sticker_set_name}}"
+
+    ###------------------------------------------------------------
+    ###изменение набора стикеров
+    ###------------------------------------------------------------
+
+    __sticker_add_to_set_success: str = "🟢 Стикер добавлен: https://t.me/addstickers/{{sticker_set_name}}"
+    
+    choice_sticker_set:str = "Выбери набор стикеров, который хочешь изменить"
+
+    sticker_set_list_is_empty:str = "Нет наборов стикеров!"
+
+    sticker_edit_variants:str = "Вот что мы можем с ним сделать:"
+
+    delete_sticker_set_success:str = "🟢 Удалили удачно!"
+
+    delete_sticker_set:str = "🚫 Удалить набор"
+
+    add_sticker_to_set:str = "📥 Добавить стикер"
+
+    delete_sticker_from_set:str = "🗑️ Удалить стикер"
+
+    ###------------------------------------------------------------
+    ###интерактивные действия изменения размера
+    ###------------------------------------------------------------
+    positive_length_change:List = [
+    'Шут капает на член пользователя {{tg_name}} капельку странной жижи. '\
+    'Тот в восторге! {{pencil}} увеличен на {{length}}',
+
+    'Шут раздает получку, {{tg_name}} получает неожиданную прибавку на {{length}}, наливай!',
+
+    'Шуту лень что-то придумывать, {{tg_name}} получает прибавку {{length}}',
+
+    '{{tg_name}} сунул {{pencil}} в трубу пылесоса... {{length}}',
+    ]
+
+    negative_length_change:List = [
+    'Шут пританцовывает вокруг бедолаги с острым ножичком в руках!'\
+    '{{tg_name}} нервничает. Ой... {{pencil}} уменьшен на {{length}}',
+
+    'Джонклер достал острые ножницы! {{tg_name}} в ужасе! Но ничего не произошло...'\
+    'От страха {{pencil}} уменьшился на {{length}}',   
+
+    'Шут заявляет: <blockquote>Краткость сестра таланта!</blockquote>'\
+    'С этими словами он уменьшает {{pencil_accu}} на {{length}} '\
+    'совершенно нечестным способом! {{tg_name}} в слезах!',
+
+    'Шут негодует: <blockquote>"Работал бы лучше, чем тут ерундой заниматься!\n'\
+    'Выписываю тебе штраф в размере... {{length}}, давай оттяпывай</blockquote>',
+
+    'Шут раздает получку, {{tg_name}} депремирован на {{length}}!',
+
+    'Увеличение члена в домашних условиях! Нужно всего лишь каждый день... '\
+    '{{tg_name}} пользовался советом три дня, но {{pencil}} сморщился на {{length}}',
+    ]
+
+    ### 0 - Именительный падеж
+    ### 1 - Родительный
+    ### 2 - Дательный
+    ### 3 - Винительный
+    ### 4 - Творительный
+    ### 5 - Предложный 
+    member_names:List[List] = [
+        ["член", "члена", "члену","член","членом",""],
+        ["питон", "питона", "питону","питон","питоном",""],
+        ["пипиролька", "пипирольки", "пипирольке","пиперольку","пипиролькой",""],
+        ["чучундрик", "чучундрика", "чучундрику","чучундрик","чучундриком",""]
+    ]
+
+    __member_change_not_reset:str = "С тебя уже хватит, приходи позже...\n"\
+    "<blockquote>⏰ Осталось потерпеть часов: {{hours}}</blockquote>"
+    
+    ###------------------------------------------------------------
+    ###Методы
+    ###------------------------------------------------------------
+
+    def first_meet(self, full_name:str, length:int,  custom_title: Optional[str]) -> str:  
+        return tp.text_replacement(self.__first_meet, {
+            "full_name" : full_name,
+            "length" : self.length_wrapper(length, False), 
+            "custom_title": f'А погоняло твое... Ага! {custom_title}' if type(custom_title) is str else '',
+            **self.random_member(),
+        }) 
+
+    def user_information(self,user:UserModel) -> str:
+        return tp.text_replacement(self.__user_information,
+                                   {"tg_name": user.tg_name, 
+                                    **self.random_member(),
+                                    "money": user.money,
+                                    "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
+                                    "length":self.length_wrapper(user.length, False)})
+    
+    def sticker_set_create_success(self, sticker_set_name:str) -> str:
+        return tp.text_replacement(self.__sticker_set_create_success, {
+            sticker_set_name:sticker_set_name
+        })
+    
+    def sticker_add_to_set_success(self, sticker_set_name:str) -> str:
+        return tp.text_replacement(self.__sticker_add_to_set_success, {
+            sticker_set_name:sticker_set_name
+        })
+
+    def length_change(self, tg_name:str, length_change:int) -> str:
+        params: Dict = {**self.random_member(), 
+                        "length":self.length_wrapper(length_change), 
+                        "tg_name": hbold(tg_name)}
+        
+        if (length_change > 0):
+            return tp.text_replacement(f"⚠️ {self.positive_length_change[random.randint(0, len(self.positive_length_change) - 1)]}",
+                                       params)
+        else:
+            return tp.text_replacement(
+                f"⚠️ {self.negative_length_change[random.randint(0, len(self.negative_length_change) - 1)]}",
+                                       params)
+    
+    def random_member(self) -> Dict[str, str]:
+        index:int = random.randint(0, len(self.member_names) - 1)
+        return {
+            "pencil":self.member_names[index][0],
+            "pencil_gen":self.member_names[index][1],
+            "pencil_dat":self.member_names[index][2],
+            "pencil_accu":self.member_names[index][3],
+            "pencil_inst":self.member_names[index][4],
+            "pencil_prep":self.member_names[index][5]
+        }
+    
+    def member_change_not_reset(self, hours_left:int) -> str:
+        return tp.text_replacement(self.__member_change_not_reset, {"hours" : hours_left})
+    
+    def length_wrapper(self, length:int, plus_visible:bool = True) -> str:
+        return hcode(f'{"+" if (length > 0 and plus_visible) else ""}{length}см')

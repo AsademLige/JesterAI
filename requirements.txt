@@ -1,0 +1,8 @@
+# pip install -r requirements.txt
+
+aiogram<4.0
+pydantic-settings
+APScheduler
+gino
+pillow
+moviepy
