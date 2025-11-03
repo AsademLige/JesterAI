@@ -1,6 +1,7 @@
 from src.domain.middlewares.registration_middleware import RegistrationMiddleware
 import src.handlers.create_sticker_set as create_sticker_set
 import src.handlers.edit_sticker_set as edit_sticker_set
+from src.services.scheduler.scheduler import Scheduler
 import src.handlers.interactive as interactive
 import src.handlers.send_media as send_media
 from aiogram.filters.command import Command
@@ -19,6 +20,7 @@ prefs = Prefs()
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=prefs.bot_token)
 dp = Dispatcher()
+scheduler = Scheduler()
 
 async def main():
     dp.include_routers(start.rt, 
@@ -28,6 +30,7 @@ async def main():
                       interactive.rt)
     dp.message.outer_middleware(RegistrationMiddleware())
     await on_startup(dp)
+    await scheduler.init()
     await Commands.setup_bot_commands()
     await dp.start_polling(bot)
 

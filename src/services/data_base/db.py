@@ -6,6 +6,7 @@ from src.data.config import Prefs
 from sqlalchemy import select
 from typing import Optional
 from typing import List
+import datetime
 
 prefs = Prefs()
 
@@ -57,7 +58,7 @@ class DataBase():
         
     async def __update_user_member(self, user: UserModel, length: int) -> bool:
         try:
-            await user.update(length = length).apply()
+            await user.update(length = length, last_length_check = datetime.datetime.now()).apply()
             return True
         except Exception as error:
             print(f"update member error: {error}")

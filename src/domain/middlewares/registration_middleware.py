@@ -1,6 +1,7 @@
 from src.domain.controllers.user_controller import UserController
 from aiogram.types import Message, CallbackQuery, TelegramObject
 from typing import Any, Callable, Dict, Awaitable
+from aiogram.enums import ParseMode
 from aiogram import BaseMiddleware
 
 class RegistrationMiddleware(BaseMiddleware):
@@ -14,6 +15,7 @@ class RegistrationMiddleware(BaseMiddleware):
             if (await UserController.is_registered(event.from_user)):
                 return await handler(event, data)
             else:
-                await event.answer(await UserController.register_user(event.from_user, event.chat))
+                await event.answer(await UserController.register_user(event.from_user, event.chat), 
+                                   parse_mode=ParseMode.HTML)
         else:
             return await handler(event, data)

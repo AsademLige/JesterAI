@@ -1,4 +1,5 @@
 from aiogram.types import User, Chat, ChatMemberAdministrator, ChatMemberOwner
+from src.domain.utils.text_processing import TextProcessing as tp
 from src.services.data_base.db import DataBase
 from src.data.dictionary import Dictionary
 from src.data.config import Prefs

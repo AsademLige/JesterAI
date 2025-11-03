@@ -29,6 +29,8 @@ class Commands():
     ###Интерактивное действие с текущим размером пользователя
     pencil = "pencil"
 
+    
+
     async def setup_bot_commands():
         await bot.set_my_commands([
             BotCommand(command="help", description=dict.help),
