@@ -24,6 +24,7 @@ rt = Router()
 ### Выбор названия набора стикеров
 @rt.message(StateFilter(None), Command(cn.create_sticker_set))
 async def create_sticker_set_short_name_handler(message: Message, state: FSMContext):
+    # await bot.delete_sticker_set("zip_zap_media_by_ChamomileJesterBot")
     if (not await db.is_admin(message.from_user.id)):
         await message.answer("Не по масти тебе такие команды мне давать... ")    
         return
@@ -152,10 +153,3 @@ async def validate_name(message: Message, state: FSMContext) -> str:
         if (c in ['/', '\\', '*', '(', ')', '.', '@', '`', ]): valid = False
 
     return valid
-
-async def pack_exists(get_sticker_set, pack_id: str) -> bool:
-    try:
-        await get_sticker_set(pack_id)
-    except TelegramBadRequest:
-        return False
-    return True

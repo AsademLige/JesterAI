@@ -14,8 +14,13 @@ bot = Bot(token=prefs.bot_token)
 
 class UserController():
     @staticmethod
-    async def is_registered(user: User) -> str:
-        return not await db.is_user_unknown(user.id)
+    async def is_admin(user: User) -> bool:
+        return await db.is_admin(user.id)
+    
+    @staticmethod
+    async def is_registered_in_chat(user: User, chat_id: int) -> bool:
+        print(f"cdlog {await db.get_user_by_chat_id(user.id, chat_id)}")
+        return await db.get_user_by_chat_id(user.id, chat_id) is not None
 
     @staticmethod
     async def register_user(user: User, chat: Chat) -> str:
@@ -25,8 +30,8 @@ class UserController():
 
         if (type(member) is ChatMemberAdministrator or type(member) is ChatMemberOwner):
             custom_title = member.custom_title
-        
-        if (await db.add_user(user.id, user.full_name, length, custom_title)):
-            return dict.first_meet(user.full_name, length, custom_title)
+
+        if (await db.add_user(user.id, user.full_name, length, custom_title, chat.id)):
+            return dict.first_meet(user.full_name, user.id, length, custom_title)
         else:
             return dict.error
