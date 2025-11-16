@@ -5,6 +5,7 @@ from src.models.role_model import RoleModel
 from src.data.config import Prefs
 from sqlalchemy import select
 from typing import Optional
+from sqlalchemy import and_
 from typing import List
 import datetime
 
@@ -16,29 +17,50 @@ class DataBase():
     ###--------------------------------------
     ### Методы работы с данными пользователей 
     ###--------------------------------------
-    async def get_user(self, tg_id: int) -> UserModel :
+    async def get_user(self, tg_id: int) -> Optional[UserModel]:
         try:
             return await UserModel.query.where(UserModel.tg_id == tg_id).gino.first()
         except:
             return None
         
-    async def get_user_by_id(self, id: int) -> UserModel :
+    async def get_user_by_id(self, id: int) -> Optional[UserModel]:
         try:
             return await UserModel.query.where(UserModel.id == id).gino.first()
+        except:
+            return None
+        
+    async def get_user_by_chat_id(self, tg_id: int, chat_id: int) -> Optional[UserModel]:
+        try:
+            return await UserModel.query.where(and_(UserModel.chat_id == chat_id,
+                                                    UserModel.tg_id == tg_id)).gino.first()
         except:
             return None
         
     async def get_all_users(self) ->  List[UserModel]: 
         return await UserModel.query.gino.all()
     
-    async def add_user(self, tg_id: int, tg_name: str, length: int, custom_title: str,):
+    async def add_user(self, tg_id: int, tg_name: str, length: int, custom_title: str, chat_id:int):
         try:
-            user = UserModel(tg_id = tg_id, tg_name = tg_name, length = length, custom_title = custom_title)
+            user = UserModel(tg_id = tg_id, 
+                             tg_name = tg_name, 
+                             length = length, 
+                             role_id = await self.get_role_id_by_name("member"),
+                             custom_title = custom_title, 
+                             chat_id = chat_id)
             await user.create()
             return True
         except Exception as error: 
             print(f"user create error: {error}")
             return False
+        
+    async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:
+        users:List[UserModel] = await UserModel.query.where(UserModel.chat_id == chat_id).\
+                                        order_by(UserModel.length).gino.all()
+        for i in range(len(users)):
+            if (users[i].tg_id == tg_id):
+                return i
+            
+        return -1
         
     async def update_user_role(self, tg_id: int, role_id: int) -> bool:
         try:
@@ -54,7 +76,15 @@ class DataBase():
         return self.__update_user_member(user, length);    
     
     async def update_user_member(self, user: UserModel, length: int) -> bool:
-        return await self.__update_user_member(user, length);    
+        return await self.__update_user_member(user, length)  
+    
+    async def update_user_money(self, user: UserModel, money: int) -> bool:
+        try:
+            await user.update(money = user.money + money).apply()
+            return True
+        except Exception as error:
+            print(f"update member error: {error}")
+            return False
         
     async def __update_user_member(self, user: UserModel, length: int) -> bool:
         try:
@@ -70,12 +100,6 @@ class DataBase():
             return role.id
         except:
             return None
-    
-    async def is_user_unknown(self, tg_id: int) -> bool: 
-        try:
-            return await self.get_user(tg_id) == None
-        except:
-            return False
     
     async def is_admin(self, tg_id: int) -> bool: 
         try:

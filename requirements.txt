@@ -1,8 +1,11 @@
 # pip install -r requirements.txt
+# source jester/bin/activate
 
 aiogram<4.0
 pydantic-settings
-APScheduler
+APScheduler<3.11
+psycopg2-binary
 gino
+pytz
 pillow
 moviepy
