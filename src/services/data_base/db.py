@@ -58,7 +58,7 @@ class DataBase():
                                         order_by(UserModel.length).gino.all()
         for i in range(len(users)):
             if (users[i].tg_id == tg_id):
-                return i + 1
+                return i
             
         return -1
         
@@ -76,7 +76,15 @@ class DataBase():
         return self.__update_user_member(user, length);    
     
     async def update_user_member(self, user: UserModel, length: int) -> bool:
-        return await self.__update_user_member(user, length);    
+        return await self.__update_user_member(user, length)  
+    
+    async def update_user_money(self, user: UserModel, money: int) -> bool:
+        try:
+            await user.update(money = user.money + money).apply()
+            return True
+        except Exception as error:
+            print(f"update member error: {error}")
+            return False
         
     async def __update_user_member(self, user: UserModel, length: int) -> bool:
         try:

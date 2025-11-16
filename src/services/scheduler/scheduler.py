@@ -1,13 +1,14 @@
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from src.services.scheduler.scheduler_jobs import SchedulerJobs
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from src.services.data_base.db_config import POSTGRES_URI
 from typing import Optional
-import gino
+import pytz
 
 class Scheduler():
     _instance = None
-
-    scheduler:Optional[BackgroundScheduler] = None
+    scheduler:Optional[AsyncIOScheduler] = None
+    jobs:SchedulerJobs = SchedulerJobs()
 
     def __new__(cls):
         if cls._instance is None:
@@ -20,8 +21,21 @@ class Scheduler():
 
     async def init(self):
         jobstores = {
-            'default': SQLAlchemyJobStore(engine=await gino.create_engine(POSTGRES_URI))
+            'default': SQLAlchemyJobStore(url=POSTGRES_URI)
         }
         
-        self.scheduler = BackgroundScheduler(jobstores=jobstores)
+        self.scheduler = AsyncIOScheduler(jobstores=jobstores, timezone=pytz.timezone('Europe/Moscow'))
+
+        self.scheduler.add_job(self.jobs.weekly_top, 'cron', id='weekly_top', 
+                               replace_existing=True, day_of_week='fri', hour=11, minute=30,
+                               misfire_grace_time=15,)
+        self.scheduler.add_job(self.jobs.day_draw, 'cron', id='day_draw', 
+                               replace_existing=True, misfire_grace_time=15,
+                                hour=10, minute=30)
         
+        self.scheduler.start()
+
+        print(f"Scheduler init, active jobs: {len(self.scheduler.get_jobs())}")
+        
+        for job in self.scheduler.get_jobs():
+            print(f"job: {job}")

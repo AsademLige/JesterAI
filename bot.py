@@ -8,6 +8,7 @@ from aiogram.filters.command import Command
 from aiogram import Bot, Dispatcher, types
 from src.models.db_model import on_startup
 from src.handlers.commands import Commands
+import src.handlers.system as system
 from src.data.config import Prefs
 import src.handlers.start as start
 import asyncio
@@ -27,7 +28,8 @@ async def main():
                       create_sticker_set.rt,
                       edit_sticker_set.rt,
                       send_media.rt,
-                      interactive.rt)
+                      interactive.rt,
+                      system.rt)
     dp.message.outer_middleware(RegistrationMiddleware())
     await on_startup(dp)
     await scheduler.init()
