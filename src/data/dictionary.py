@@ -1,5 +1,5 @@
+from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from src.domain.utils.text_processing import TextProcessing as tp
-from aiogram.utils.markdown import hbold, hcode, hblockquote
 from src.models.user_model import UserModel
 from typing import Optional, List, Dict
 import random
@@ -34,6 +34,8 @@ class Dictionary():
 
     skip:str = "⏩ Пропустить"
 
+    trigger:str = "🚀 Запустить"
+
     ###------------------------------------------------------------
     ###Взаимодействие с пользователем
     ###------------------------------------------------------------
@@ -48,7 +50,7 @@ class Dictionary():
     '{{medal}} Место в топе: {{place_in_top}}\n'\
     '💰 Монет на руках: {{money}}'
 
-    private_messages_restriction: str = "Сюда тебе вход запрещен 🤡"
+    private_messages_restriction: str = "🚧 Здесь тебе(🤡) делать нечего 🚧"
 
     __user_link_m2 : str = '[{{full_name}}](tg://user?id={{tg_id}})'
 
@@ -87,9 +89,27 @@ class Dictionary():
     delete_sticker_from_set:str = "🗑️ Удалить стикер"
 
     ###------------------------------------------------------------
+    ###Описания розыгрышей
+    ###------------------------------------------------------------
+
+    __draw_list:List[str] = [
+        '🎁 Запускаем розыгрыш мази для увеличения {{pencil_gen}}! '\
+        'И сегодняшним победителем становится... 🎉{{user_link}}🎊, поздравляем победителя!\n'\
+        'Его выигрыш составил: {{length}}'
+    ]
+
+    ###------------------------------------------------------------
+    ###Описания подведения итогов
+    ###------------------------------------------------------------
+
+    __weekly_winners:List[str] = [
+        "<blockquote>🏆 Начинаем подведение итогов в номинации «Самый длинный {{pencil}} недели»!</blockquote>\n{{winners}}"
+    ]
+
+    ###------------------------------------------------------------
     ###интерактивные действия изменения размера
     ###------------------------------------------------------------
-    positive_length_change:List = [
+    __positive_length_change:List[str] = [
     'Шут капает на член пользователя {{tg_name}} капельку странной жижи. '\
     'Тот в восторге! {{pencil}} увеличен на {{length}}',
 
@@ -114,7 +134,7 @@ class Dictionary():
     'Не в ширь, а ввысь!!! {{tg_name}} увеличивает свой дубильный шест на {{length}}',
     ]
 
-    negative_length_change:List = [
+    __negative_length_change:List[str] = [
     'Шут пританцовывает вокруг бедолаги с острым ножичком в руках! '\
     '{{tg_name}} нервничает. Ой... {{pencil}} уменьшен на {{length}}',
 
@@ -150,7 +170,7 @@ class Dictionary():
     ### 3 - Винительный
     ### 4 - Творительный
     ### 5 - Предложный 
-    member_names:List[List] = [
+    member_names:List[List[str]] = [
         ["член", "члена", "члену","член","членом",""],
         ["Нефритовый стержень", "Нефритового стержня", "Нефритовому стержню","Нефритовый стержень","Нефритовым стержнем",""],
         ["питон", "питона", "питону","питон","питоном",""],
@@ -182,14 +202,36 @@ class Dictionary():
 
     def user_information(self, user:UserModel, place_in_top:int) -> str:
         return tp.text_replacement(self.__user_information,
-                                   {"tg_name": user.tg_name, 
-                                    **self.random_member(),
+                                   {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
                                     "money": user.money,
                                     "medal": self.get_medal_emoji(place_in_top),
                                     "place_in_top": place_in_top,
                                     "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
                                     "length":self.length_wrapper(user.length, False)})
+    
+    def draw(self, user:UserModel, length_change:int) -> str:
+        return tp.text_replacement(self.__draw_list[random.randint(0, len(self.__draw_list) - 1)], {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            **self.random_member(), 
+            "length":self.length_wrapper(length_change), 
+        })
+    
+    def weekly_winners(self, users:List[UserModel], rewards:List[int]) -> str:
+        return tp.text_replacement(self.__weekly_winners[random.randint(0, len(self.__weekly_winners) - 1)],{
+            "winners" : self.__generate_weekly_winners(users, rewards),
+            **self.random_member(),
+        })
+    
+    def __generate_weekly_winners(self, users:List[UserModel], rewards:List[int]) -> str:
+        winners:str = ""
+        for index, user in enumerate(users):
+            winners += f"{self.get_medal_emoji(index+1, True)}"\
+            f" {self.length_wrapper(user.length, False)} - "\
+            f" {self.get_user_link(user.tg_name, user.tg_id)}"\
+            f"{f' [{user.custom_title}] ' if type(user.custom_title) is str else ''}"\
+            f" { f'{self.money_wrapper(rewards[index])}' if (len(rewards) > index) else ''}\n"
+        return winners
     
     def sticker_set_create_success(self, sticker_set_name:str) -> str:
         return tp.text_replacement(self.__sticker_set_create_success, {
@@ -207,11 +249,11 @@ class Dictionary():
                         "tg_name": hbold(tg_name)}
         
         if (length_change > 0):
-            return tp.text_replacement(f"⚠️ {self.positive_length_change[random.randint(0, len(self.positive_length_change) - 1)]}",
+            return tp.text_replacement(f"⚠️ {self.__positive_length_change[random.randint(0, len(self.__positive_length_change) - 1)]}",
                                        params)
         else:
             return tp.text_replacement(
-                f"⚠️ {self.negative_length_change[random.randint(0, len(self.negative_length_change) - 1)]}",
+                f"⚠️ {self.__negative_length_change[random.randint(0, len(self.__negative_length_change) - 1)]}",
                                        params)
     
     def random_member(self) -> Dict[str, str]:
@@ -231,7 +273,10 @@ class Dictionary():
     def length_wrapper(self, length:int, plus_visible:bool = True) -> str:
         return hcode(f'{"+" if (length > 0 and plus_visible) else ""}{length}см')
     
-    def get_medal_emoji(self, place_in_top:int):
+    def money_wrapper(self, money:int, plus_visible:bool = True) -> str:
+        return hbold(f'{"+" if (money > 0 and plus_visible) else ""}{money}💰')
+    
+    def get_medal_emoji(self, place_in_top:int, only_tops:bool = False):
         if (place_in_top == 1):
             return "🥇"
         elif (place_in_top == 2):
@@ -239,4 +284,4 @@ class Dictionary():
         elif (place_in_top == 3):
             return "🥉"
         else:
-            return "🏅"
+            return "" if only_tops else "🏅"

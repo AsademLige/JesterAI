@@ -19,7 +19,6 @@ class UserController():
     
     @staticmethod
     async def is_registered_in_chat(user: User, chat_id: int) -> bool:
-        print(f"cdlog {await db.get_user_by_chat_id(user.id, chat_id)}")
         return await db.get_user_by_chat_id(user.id, chat_id) is not None
 
     @staticmethod

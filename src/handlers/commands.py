@@ -29,7 +29,8 @@ class Commands():
     ###Интерактивное действие с текущим размером пользователя
     pencil = "pencil"
 
-    
+    ###Список активных запланированных на выполнение команд
+    jobs = "jobs"
 
     async def setup_bot_commands():
         await bot.set_my_commands([
