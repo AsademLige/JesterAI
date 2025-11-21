@@ -172,6 +172,16 @@ class DataBase():
     async def get_all_sticker_sets(self) ->  List[StickerSetModel]: 
         return await StickerSetModel.query.gino.all()
     
+    async def get_sticker_set_by_id(self, set_id:str,) -> Optional[StickerSetModel]:
+        try:
+            custom_sticker : StickerSetModel = await StickerSetModel.\
+            query.where(StickerSetModel.id == set_id).gino.first()
+
+            return custom_sticker
+        except Exception as error:
+            print(f"sticker set get error: {error}")
+            return None
+    
     async def delete_sticker_set_by_name(self, short_name:str):
         return await StickerSetModel.delete.\
             where(StickerSetModel.short_name == short_name).gino.status()

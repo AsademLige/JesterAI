@@ -48,20 +48,20 @@ async def edit_sticker_set_handler(callback: CallbackQuery, callback_data: Stick
     state_data = await state.get_data()
     if (callback_data.action == "choice"):
         await callback.message.edit_text(dict.sticker_edit_variants, 
-                                                       reply_markup = edit_kb.edit_sticker_set_command_button(callback_data.short_name))
-        await state.update_data(set_name = callback_data.short_name)
+                                                       reply_markup = edit_kb.edit_sticker_set_command_button(callback_data.id))
+        await state.update_data(set_id = callback_data.id)
     elif (callback_data.action == "delete_set"):
         await callback.message.edit_text("⚠️ Ты уверен, что хочешь УДАЛИТЬ набор?", 
-                                         reply_markup=edit_kb.confirm_delete(state_data["set_name"]))
+                                         reply_markup=edit_kb.confirm_delete(state_data["set_id"]))
     elif (callback_data.action == "confirm_delete_set"):
-        await callback.message.edit_text(await delete_sticker_set(state_data["set_name"]))
+        await callback.message.edit_text(await delete_sticker_set(state_data["set_id"]))
         await state.clear()
     elif (callback_data.action == "add_sticker"):
         await callback.message.edit_text("Отправь эмодзи, который будет ассоциирован с стикером:")
         await state.set_state(EditStickerSet.add_sticker_set_sticker)
     elif (callback_data.action == "delete_sticker"):
         await callback.message.edit_text("Отправь стикер, который хочешь удалить:", 
-                                         reply_markup=edit_kb.back(state_data["set_name"]))
+                                         reply_markup=edit_kb.back(state_data["set_id"]))
         await state.set_state(EditStickerSet.delete_sticker_from_set)
     elif (callback_data.action == "exit"):
         await callback.message.delete()
@@ -170,13 +170,15 @@ async def create_sticker(state_data: Dict[str, Any]) -> str:
     raw_sticker = InputSticker(sticker=FSInputFile(path=video_paths[0]), 
                                format="video", emoji_list=[state_data["sticker_emoji"]])
     
-    if (await bot.add_sticker_to_set(state_data["user_id"], state_data["set_name"], raw_sticker)):
-        sticker_set: StickerSet = await bot.get_sticker_set(state_data["set_name"])
+    db_set:StickerSetModel = await db.get_sticker_set_by_id(state_data["set_id"])
+    
+    if (await bot.add_sticker_to_set(state_data["user_id"], db_set.short_name, raw_sticker)):
+        sticker_set: StickerSet = await bot.get_sticker_set(db_set.short_name)
         sticker_path = media.save_file(open(video_paths[1], "rb").read(), 
                                                           sticker_set.stickers[-1].file_unique_id)
         if (sticker_path):
-            await db.add_custom_sticker(sticker_path, sticker_set.stickers[-1].file_unique_id, state_data["set_name"])
-        return dict.sticker_add_to_set_success(state_data["set_name"])
+            await db.add_custom_sticker(sticker_path, sticker_set.stickers[-1].file_unique_id, db_set.short_name)
+        return dict.sticker_add_to_set_success(db_set.short_name)
     else:
         return "🔴 Ошибка при добавлении стикера"
 

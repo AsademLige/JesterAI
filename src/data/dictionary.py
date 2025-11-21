@@ -240,7 +240,7 @@ class Dictionary():
     
     def sticker_add_to_set_success(self, sticker_set_name:str) -> str:
         return tp.text_replacement(self.__sticker_add_to_set_success, {
-            sticker_set_name:sticker_set_name
+            "sticker_set_name":sticker_set_name
         })
 
     def length_change(self, tg_name:str, length_change:int) -> str:
