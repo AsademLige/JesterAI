@@ -1,25 +1,24 @@
 from moviepy import VideoFileClip, TextClip, CompositeVideoClip
 from src.models.custom_sticker_model import CustomStickerModel
-from moviepy.video.fx.Resize import Resize
+from aiogram.types import InputFile, BufferedInputFile
 from src.domain.utils.consts import Consts
 from typing import BinaryIO, Optional
 from src.data.config import Prefs
 import moviepy.video.fx as vfx
 from typing import List
+from aiogram import Bot
 import tempfile
 import os
 
-from aiogram import Bot
-from aiogram.types import FSInputFile, InputFile, BufferedInputFile
 
 prefs = Prefs()
 
 bot = Bot(token=prefs.bot_token)
 
-def process_media(videoIO: BinaryIO, clip_text: Optional[str]) -> Optional[List[str]]:
+def process_media(videoIO: BinaryIO, clip_text: Optional[str], extension:str) -> Optional[List[str]]:
     try:
         temp_input = None
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as temp_file:
             temp_file.write(videoIO.read())
             temp_input = temp_file.name
 
@@ -32,15 +31,15 @@ def process_media(videoIO: BinaryIO, clip_text: Optional[str]) -> Optional[List[
             temp_media = temp_file.name
 
         if temp_input:
-            clip = VideoFileClip(temp_input)
-            clip = clip.with_effects([vfx.Resize(width=512)])
+            sticker_clip = VideoFileClip(temp_input)
+            sticker_clip = sticker_clip.with_effects([vfx.Resize(width=512)])
 
-            print(f"input file meta: w:{clip.w}, h:{clip.h}, cx:{clip.w / 2}, cy:{clip.h / 2}")
+            print(f"input file meta: w:{sticker_clip.w}, h:{sticker_clip.h}, cx:{sticker_clip.w / 2}, cy:{sticker_clip.h / 2}")
             
-            crop = vfx.Crop(x_center=clip.w / 2, y_center=clip.h / 2, width=512, height=512)
-            clip = crop.apply(clip)
-        
-            clip_an = clip.without_audio()
+            crop = vfx.Crop(x_center=sticker_clip.w / 2, y_center=sticker_clip.h / 2, width=512, height=512)
+
+            sticker_clip = crop.apply(sticker_clip)
+            clip_an = sticker_clip.without_audio()
             crop_an = clip_an.subclipped(0, 3)
 
             txt_clip = TextClip(
@@ -56,10 +55,10 @@ def process_media(videoIO: BinaryIO, clip_text: Optional[str]) -> Optional[List[
             print(f"output file meta: w:{crop_an.w}, h:{crop_an.h}")
 
             final_sticker = CompositeVideoClip([crop_an, txt_clip])
-            final_media = CompositeVideoClip([clip, txt_clip])
+            final_media = CompositeVideoClip([sticker_clip])
 
             final_sticker.write_videofile(temp_sticker, codec="libvpx-vp9", fps=24, bitrate="192K")
-            final_media.write_videofile(temp_media, codec="libvpx-vp9", fps=24, bitrate="192K")
+            final_media.write_videofile(temp_media, codec="libvpx-vp9", fps=24, bitrate="400K")
             
             return [temp_sticker, temp_media]
     except Exception as e:
@@ -69,9 +68,10 @@ def process_media(videoIO: BinaryIO, clip_text: Optional[str]) -> Optional[List[
 async def make_sticker_webm_video(bot: Bot, id: str, clip_text: Optional[str]) -> Optional[InputFile]:
     file_info = await bot.get_file(id)
     assert file_info.file_path
+    filename, extension = os.path.splitext(file_info.file_path)
     raw_file = await bot.download_file(file_info.file_path)
     assert raw_file
-    return process_media(raw_file, clip_text)
+    return process_media(raw_file, clip_text, extension)
 
 def get_media_by_custom_sticker(custom_sticker: CustomStickerModel) -> Optional[InputFile]:
     try:
