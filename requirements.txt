@@ -3,7 +3,7 @@
 
 aiogram<4.0
 pydantic-settings
-APScheduler<3.11
+APScheduler<3.10
 psycopg2-binary
 gino
 pytz

@@ -150,12 +150,13 @@ async def create_sticker_set_complete_callback_handler(callback: CallbackQuery, 
 ###-----------------------------------
 ###Методы
 ###-----------------------------------
-async def delete_sticker_set(set_name:str) -> str: 
-    custom_stickers: List[CustomStickerModel] = await db.get_custom_stickers_by_set_name(set_name)
-    if (await db.delete_sticker_set_by_name(set_name)):
+async def delete_sticker_set(set_id:int) -> str:
+    db_set:StickerSetModel = await db.get_sticker_set_by_id(set_id)
+    custom_stickers: List[CustomStickerModel] = await db.get_custom_stickers_by_set_name(db_set.short_name)
+    if (await db.delete_sticker_set_by_name(db_set.short_name)):
         for custom_sticker in custom_stickers:
             media.delete_file(custom_sticker.media_path)
-        await bot.delete_sticker_set(set_name)
+        await bot.delete_sticker_set(db_set.short_name)
         return dict.delete_sticker_set_success
     else:
         return dict.error
