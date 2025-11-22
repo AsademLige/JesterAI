@@ -3,7 +3,6 @@ from src.models.sticker_set_model import StickerSetModel
 from src.models.user_model import UserModel
 from src.models.role_model import RoleModel
 from src.data.config import Prefs
-from sqlalchemy import select
 from typing import Optional
 from sqlalchemy import and_
 from typing import List
@@ -55,10 +54,10 @@ class DataBase():
         
     async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:
         users:List[UserModel] = await UserModel.query.where(UserModel.chat_id == chat_id).\
-                                        order_by(UserModel.length).gino.all()
+                                        order_by(UserModel.length.desc()).gino.all()
         for i in range(len(users)):
             if (users[i].tg_id == tg_id):
-                return i
+                return i + 1
             
         return -1
         
