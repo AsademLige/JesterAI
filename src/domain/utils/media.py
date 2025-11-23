@@ -82,8 +82,8 @@ def get_media_by_custom_sticker(custom_sticker: CustomStickerModel) -> Optional[
 
 def save_file(source:bytes, file_name: str) -> Optional[str]:
     try:
-        os.chdir(Consts.PROJECTS_DIR)
-        full_path = os.path.join(Consts.PROJECTS_DIR, f"{file_name}")
+        os.chdir(Consts.MEDIA_DIR)
+        full_path = os.path.join(Consts.MEDIA_DIR, f"{file_name}")
         with open(full_path, 'wb') as output_file_handler:
             output_file_handler.write(source)
         return full_path

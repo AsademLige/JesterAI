@@ -2,6 +2,7 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from src.services.scheduler.scheduler_jobs import SchedulerJobs
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from src.services.data_base.db_config import POSTGRES_URI
+from src.domain.utils.app_herald import AppHerald
 from typing import Optional
 import pytz
 
@@ -9,6 +10,7 @@ class Scheduler():
     _instance = None
     scheduler:Optional[AsyncIOScheduler] = None
     jobs:SchedulerJobs = SchedulerJobs()
+    logger:AppHerald = AppHerald()
 
     def __new__(cls):
         if cls._instance is None:
@@ -20,6 +22,8 @@ class Scheduler():
             self.initialized = True
 
     async def init(self):
+        self.logger.logs_init("apscheduler")
+
         jobstores = {
             'default': SQLAlchemyJobStore(url=POSTGRES_URI)
         }
@@ -31,7 +35,7 @@ class Scheduler():
                                misfire_grace_time=15,)
         self.scheduler.add_job(self.jobs.day_draw, 'cron', id='day_draw', 
                                replace_existing=True, misfire_grace_time=15,
-                                hour=10, minute=30)
+                               hour=10, minute=30)
         
         self.scheduler.start()
 
