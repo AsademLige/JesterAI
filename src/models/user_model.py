@@ -11,5 +11,6 @@ class UserModel(TimedBaseModel):
     custom_title = sa.Column(sa.Text)
     chat_id = sa.Column(sa.BigInteger)
     money = sa.Column(sa.Integer)
+    last_daily_draw_winner = sa.Column(sa.Boolean)
     last_length_check = sa.Column(sa.Date)
     role_id = sa.Column(sa.Integer, sa.ForeignKey('roles.id'))
