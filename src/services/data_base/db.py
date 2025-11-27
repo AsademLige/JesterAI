@@ -2,11 +2,10 @@ from src.models.custom_sticker_model import CustomStickerModel
 from src.models.sticker_set_model import StickerSetModel
 from src.models.user_model import UserModel
 from src.models.role_model import RoleModel
+from typing import List, Dict, Any
 from src.data.config import Prefs
 from typing import Optional
 from sqlalchemy import and_
-from typing import List
-import datetime
 
 prefs = Prefs()
 
@@ -19,6 +18,13 @@ class DataBase():
     async def get_user(self, tg_id: int) -> Optional[UserModel]:
         try:
             return await UserModel.query.where(UserModel.tg_id == tg_id).gino.first()
+        except:
+            return None
+        
+    async def get_last_day_draw_winner_in_chat(self, chat_id: int) -> Optional[UserModel]:
+        try:
+            return await UserModel.query.where(and_(UserModel.chat_id == chat_id, 
+                                               UserModel.last_daily_draw_winner == True)).gino.first()
         except:
             return None
         
@@ -37,6 +43,9 @@ class DataBase():
         
     async def get_all_users(self) ->  List[UserModel]: 
         return await UserModel.query.gino.all()
+    
+    async def get_daily_draw_participants(self) ->  List[UserModel]: 
+        return await UserModel.query.where(UserModel.last_daily_draw_winner == False).gino.all()
     
     async def add_user(self, tg_id: int, tg_name: str, length: int, custom_title: str, chat_id:int):
         try:
@@ -60,37 +69,21 @@ class DataBase():
                 return i + 1
             
         return -1
-        
-    async def update_user_role(self, tg_id: int, role_id: int) -> bool:
+    
+    async def update_user_by_id(self, tg_id: int, args:Dict[str, Any] = {}) -> bool:
         try:
-            user = await self.get_user(tg_id)
-            await user.update(role_id = role_id).apply()
+            await UserModel.update.values(**args).where(UserModel.tg_id == tg_id).gino.status()
             return True
         except Exception as error:
-            print(f"update role error: {error}")
+            print(f"update user error: {error}")
             return False
         
-    async def update_user_member(self, tg_id: int, length: int) -> bool:
-        user = await self.get_user(tg_id)
-        return self.__update_user_member(user, length);    
-    
-    async def update_user_member(self, user: UserModel, length: int) -> bool:
-        return await self.__update_user_member(user, length)  
-    
-    async def update_user_money(self, user: UserModel, money: int) -> bool:
+    async def update_user(self, user: UserModel, args:Dict[str, Any] = {}) -> bool:
         try:
-            await user.update(money = user.money + money).apply()
+            await user.update(**args).apply()
             return True
         except Exception as error:
-            print(f"update member error: {error}")
-            return False
-        
-    async def __update_user_member(self, user: UserModel, length: int) -> bool:
-        try:
-            await user.update(length = length, last_length_check = datetime.datetime.now()).apply()
-            return True
-        except Exception as error:
-            print(f"update member error: {error}")
+            print(f"update user error: {error}")
             return False
         
     async def get_role_id_by_name(self, name: str) -> int:
