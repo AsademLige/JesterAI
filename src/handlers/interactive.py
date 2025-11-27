@@ -48,7 +48,10 @@ async def pencil_change(message: Message, state: FSMContext):
     action:int = random.randrange(0, sys.maxsize)
     length_change:int = (random.randrange(1, 4) * -1) if (action % 2 == 0) else random.randrange(1, 7)
 
-    if (await db.update_user_member(user, user.length + length_change)):
+    if (await db.update_user(user, {
+        "length": user.length + length_change,
+        "last_length_check" : datetime.now()
+    })):
         await message.answer(dict.length_change(user.tg_name, length_change),
                             parse_mode=ParseMode.HTML)
         
