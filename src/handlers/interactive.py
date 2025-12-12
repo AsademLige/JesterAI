@@ -1,9 +1,7 @@
 from src.domain.utils.text_processing import TextProcessing as tp
-from aiogram.types import Message, CallbackQuery
 from src.handlers.commands import Commands as cn
 from aiogram.filters import Command, StateFilter
 from src.services.data_base.db import DataBase
-from typing import List, Any, Dict, Optional
 from src.models.user_model import UserModel
 from aiogram.fsm.context import FSMContext
 from src.data.dictionary import Dictionary
@@ -11,6 +9,7 @@ from datetime import timedelta, datetime
 from aiogram.enums import ParseMode
 from aiogram.types import Message
 from src.data.config import Prefs
+from aiogram.types import Message
 import random
 import math
 import sys
@@ -54,6 +53,29 @@ async def pencil_change(message: Message, state: FSMContext):
     })):
         await message.answer(dict.length_change(user.tg_name, length_change),
                             parse_mode=ParseMode.HTML)
+        
+###Бесполезная трата денег
+@rt.message(StateFilter(None), Command(cn.trash_loto))
+async def trash_loto(message: Message, state: FSMContext):
+    user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
+    if (user.money < 5):
+        await message.answer(dict.not_enough_money,
+                            parse_mode=ParseMode.HTML)
+        return
+
+    action =  random.randrange(0, sys.maxsize) / sys.maxsize
+    
+    if (action < 0.33):
+        await message.answer(f"1 {action}",
+                            parse_mode=ParseMode.HTML)
+    elif (action < 0.66):
+        await message.answer(f"2 {action}",
+                            parse_mode=ParseMode.HTML)
+    else:
+        await message.answer(f"3 {action}",
+                            parse_mode=ParseMode.HTML)
+
+
         
 def get_last_member_check_delta(last_length_check: datetime) -> int:
     delta:timedelta = (datetime.now() - (last_length_check + timedelta(hours=member_change_reset_time)))
