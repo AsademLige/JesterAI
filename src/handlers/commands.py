@@ -38,10 +38,12 @@ class Commands():
     ###Список активных запланированных на выполнение команд
     jobs = "jobs"
 
+    @staticmethod
     async def setup_bot_commands():
         await bot.set_my_commands([
-            BotCommand(command="me", description=dict.me),
-            BotCommand(command="pencil", description=dict.pencil),
-            BotCommand(command="sticker_pack", description=dict.sticker_pack),
-            BotCommand(command="help", description=dict.help),
+            BotCommand(command=Commands.me, description=dict.me),
+            BotCommand(command=Commands.pencil, description=dict.pencil),
+            BotCommand(command=Commands.trash_loto, description=dict.trash_loto),
+            BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
+            BotCommand(command=Commands.help, description=dict.help),
         ])
