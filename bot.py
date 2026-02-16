@@ -5,14 +5,15 @@ from src.services.scheduler.scheduler import Scheduler
 import src.handlers.interactive as interactive
 import src.handlers.send_media as send_media
 from aiogram.filters.command import Command
+from src.data.dictionary import Dictionary
 from aiogram import Bot, Dispatcher, types
 from src.models.db_model import on_startup
 from src.handlers.commands import Commands
 import src.handlers.system as system
 from src.data.config import Prefs
 import src.handlers.start as start
-import asyncio
 import logging
+import asyncio
 
 ###python3.9 bot.py - start bot
 ###Ctrl+c - stop bot
@@ -21,6 +22,7 @@ prefs = Prefs()
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=prefs.bot_token)
 dp = Dispatcher()
+dict = Dictionary()
 scheduler = Scheduler()
 
 async def main():
@@ -32,6 +34,7 @@ async def main():
                       system.rt)
     dp.message.outer_middleware(RegistrationMiddleware())
     await on_startup(dp)
+    await dict.init()
     await scheduler.init()
     await Commands.setup_bot_commands()
     await dp.start_polling(bot)

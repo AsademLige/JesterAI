@@ -10,7 +10,6 @@ from aiogram import Bot
 import tempfile
 import os
 
-
 prefs = Prefs()
 
 bot = Bot(token=prefs.bot_token)
@@ -27,7 +26,7 @@ def process_media(videoIO: BinaryIO, clip_text: Optional[str], extension:str) ->
             temp_sticker = temp_file.name
 
         temp_media = None
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
             temp_media = temp_file.name
 
         if temp_input:
@@ -58,7 +57,7 @@ def process_media(videoIO: BinaryIO, clip_text: Optional[str], extension:str) ->
             final_media = CompositeVideoClip([sticker_clip])
 
             final_sticker.write_videofile(temp_sticker, codec="libvpx-vp9", fps=24, bitrate="192K")
-            final_media.write_videofile(temp_media, codec="libvpx-vp9", fps=24, bitrate="400K")
+            final_media.write_videofile(temp_media, codec="libx264", fps=24, bitrate="400K")
             
             return [temp_sticker, temp_media]
     except Exception as e:

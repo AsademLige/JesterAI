@@ -1,12 +1,25 @@
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from src.domain.utils.text_processing import TextProcessing as tp
+from src.services.data_base.db import DataBase
 from src.models.user_model import UserModel
 from typing import Optional, List, Dict
 import random
 
 class Dictionary():
+    _instance = None
+    db = DataBase()
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        pass
+        if not hasattr(self, 'initialized'):
+            self.initialized = True
+
+    async def init(self):
+        await self.load_strings()
 
     ###------------------------------------------------------------
     ###Описание команд бота
@@ -18,9 +31,13 @@ class Dictionary():
 
     pencil:str = "Недоволен своим размером? ЖМИ СЮДА"
 
+    sticker_pack:str = "Аудио стикеры!"
+
     edit_sticker_set:str = "Изменить набор стикеров"
 
     create_sticker_set:str = "Создать набор стикеров"
+
+    trash_loto:str = "Деньги карман жгут? Попытай удачу за 10💰"
 
     ###------------------------------------------------------------
     ###Общее
@@ -35,6 +52,13 @@ class Dictionary():
     skip:str = "⏩ Пропустить"
 
     trigger:str = "🚀 Запустить"
+
+    bot_description:str = "Команда /sticker_pack отправит ссылку на стикеры, которые МАГИЧЕСКИМ образом превращаются в видео!\n\n"\
+                        "У нас тут что-то вроде интерактивной игры, команда /me покажет небольшую сводку с твоими успехами\n\n"\
+                        "Меряйся хозяйством с другими участниками! Команда /pencil поможет тебе получить БОЛЬШОЕ признание <i>(но есть шанс, что уменьшит его)</i>"\
+                        "Бот все же заскамил тебя? Подожди 24 часа и пробуй еще раз!\n\n"\
+                        "Каждый день проводим розыгрыш среди участников чата, а каждую пятницу подведем итоги и наградим самых крутых участников!\n\n"\
+                        "<i>Все вопросы и предложения отправлять на почтовый ящик:</i> <code>2202202000651657</code>"
 
     ###------------------------------------------------------------
     ###Взаимодействие с пользователем
@@ -56,6 +80,8 @@ class Dictionary():
 
     __user_link_html : str = '<a href="tg://user?id={{tg_id}}">{{full_name}}</a>'
 
+    not_enough_money:str = 'У тебя карман дырявый, иди подкопи'
+
     ###------------------------------------------------------------
     ###Создание набора стикеров
     ###------------------------------------------------------------
@@ -74,6 +100,8 @@ class Dictionary():
 
     __sticker_add_to_set_success: str = "🟢 Стикер добавлен: https://t.me/addstickers/{{sticker_set_name}}"
     
+    __sticker_set_link: str = "https://t.me/addstickers/{{sticker_set_name}}"
+    
     choice_sticker_set:str = "Выбери набор стикеров, который хочешь изменить"
 
     sticker_set_list_is_empty:str = "Нет наборов стикеров!"
@@ -87,6 +115,24 @@ class Dictionary():
     add_sticker_to_set:str = "📥 Добавить стикер"
 
     delete_sticker_from_set:str = "🗑️ Удалить стикер"
+
+    ###------------------------------------------------------------
+    ###Описания треш лото
+    ###------------------------------------------------------------
+
+    __trash_loto_minor_length_award: str = "🍆 {{user_link}} выиграл мазь для увеличения {{pencil_gen}} на целых {{length}}!"
+
+    __trash_loto_minor_money_award: str = "🍀 Сегодня твой день, {{user_link}}! Выигрыш составил: {{money}}"
+
+    __trash_loto_major_length_award: str = "<blockquote>🍆 ВОТ ЭТО УДАЧА!</blockquote> {{user_link}}, весь персонал казино тянул за твой {{pencil_accu}}, и вытянул на целых {{length}}!"
+
+    __trash_loto_major_money_award: str = "<blockquote>🍀 ВОТ ЭТО УДАЧА!</blockquote> {{user_link}}, на твоей совести наша бабка-бухгалтер! Выигрыш составил: {{money}}"
+
+    __trash_loto_jackpot_money_award: str = "<blockquote>🍀 ДЖЕКПОТ!!!</blockquote>\n Однорукий бандит сегодня ты, {{user_link}}! Казино ОГРАБЛЕНО! Выигрыш составил: {{money}}"
+
+    __trash_loto_lose: str = "🎰 Жена плачет, дочь рыдает, {{user_link}} снова доливает! Минус бабки..."
+
+    trash_loto_error:str = "Ошибочка вышла... Зато деньги твои целы!"
 
     ###------------------------------------------------------------
     ###Описания розыгрышей
@@ -109,82 +155,10 @@ class Dictionary():
     ###------------------------------------------------------------
     ###интерактивные действия изменения размера
     ###------------------------------------------------------------
-    __positive_length_change:List[str] = [
-    'Шут капает на член пользователя {{tg_name}} капельку странной жижи. '\
-    'Тот в восторге! {{pencil}} увеличен на {{length}}',
-
-    'Шут раздает получку, {{tg_name}} получает неожиданную прибавку на {{length}}, наливай!',
-
-    'Шуту лень что-то придумывать, {{tg_name}} получает прибавку {{length}}',
-
-    '{{tg_name}} сунул {{pencil}} в трубу пылесоса... {{length}}',
     
-    'Волшебная палочка Шута срабатывает как надо! {{tg_name}} увеличивает {{pencil_accu}} на {{length}}',
+    __positive_length_change:List[str] = []
 
-    '🐁 {{tg_name}} крадет у шута {{length}}',
-
-    'Шут проводит конкурс на самый длинный {{pencil}}... {{tg_name}} получает поощрительный приз размером {{length}}',
-
-    'Рандом сегодня на стороне черта по имени {{tg_name}}! Он получает прибавку {{length}}',
-
-    'Вы помогли бабушке перейти дорогу. Ваш внутренний стержень выпрямился на {{length}}!',
-
-    'Пользователю {{tg_name}} впору теперь чесать свой {{pencil}} где-то в районе колена! Он увеличился на {{length}}',
-
-    'Не в ширь, а ввысь!!! {{tg_name}} увеличивает свой дубильный шест на {{length}}',
-
-    '🍀 {{tg_name}} в детстве съел три куста придорожного клевера, с тех пор удача не покидает его! Он получает {{length}}',
-
-    '🇨🇳 Славный Иван брать целебный чай, точно-точно получать {{length}} для нефритовый стержень! Гарантия!',
-
-    'Как договаривались, получай {{length}}, на карту переведешь 12 рублей, цифры те же'
-    ]
-
-    __negative_length_change:List[str] = [
-    'Шут пританцовывает вокруг бедолаги с острым ножичком в руках! '\
-    '{{tg_name}} нервничает. Ой... {{pencil}} уменьшен на {{length}}',
-
-    'Джонклер достал острые ножницы! {{tg_name}} в ужасе! Но ничего не произошло...'\
-    'От страха {{pencil}} уменьшился на {{length}}',   
-
-    'Шут заявляет: <blockquote>Краткость сестра таланта!</blockquote>'\
-    'С этими словами он уменьшает {{pencil_accu}} на {{length}} '\
-    'совершенно нечестным способом! {{tg_name}} в слезах!',
-
-    'Шут негодует: <blockquote>"Работал бы лучше, чем тут ерундой заниматься!\n'\
-    'Выписываю тебе штраф в размере... {{length}}, давай оттяпывай</blockquote>',
-
-    'Шут раздает получку, {{tg_name}} депремирован на {{length}}!',
-
-    'Увеличение члена в домашних условиях! Нужно всего лишь каждый день... '\
-    '{{tg_name}} пользовался советом три дня, но {{pencil}} сморщился на {{length}}',
-
-    'Волшебная палочка Шута дает осечку! {{tg_name}} уменьшает {{pencil_accu}} на {{length}}',
-
-    '{{tg_name}} смотрит на свои активы... {{pencil}} подвергается инфляции!\n'\
-    'Ценные активы уменьшаются на {{length}}',
-
-    'У Джонклера сегодня плохое настроение. Под руку попадается {{tg_name}}... {{length}}',
-
-    'Шут решил, что ты и так слишком выделяешься!\n'\
-    '<blockquote>Теперь твой {{pencil}} как WiFi в деревне: есть, но слабый! Получай {{length}}</blockquote>',
-
-    '📝 Штраф {{length}} за перенос в трусах крупногабаритного багажа без билета!',
-
-    '{{length}} в результате наложения на Вас порчи! <i>(Есть вероятность, что это сделал автор)</i>',
-
-    '<blockquote>🍆 Главное не длинна, а ширина!</blockquote> C этим умозаключением {{tg_name}} уменьшает {{pencil}} на {{length}}, '\
-    'но в ширину он растет вдвое больше! <i>(Жаль ширину мы не учитываем, хы)</i>',
-
-    'Как говаривал мой дед, а теперь и {{tg_name}}:'\
-    ' <blockquote>💬 Закупился на хаях - прокатился на хуях (уменьшенных на {{length}})</blockquote>',
-
-    '{{tg_name}} сегодня встал явно не с той ноги, гном-писькокрад украл <code>-94cm</code>!'\
-    ' <i>(Хаха, повелся! Это была шутка! Всего {{length}})</i>',
-
-    '{{tg_name}} читает... читает... {{length}}... заключает:'\
-    '<blockquote>Я этой Госпоже Удаче и ее казино лично на порог лично ссал и срал!</blockquote>',
-    ]
+    __negative_length_change:List[str] = []
 
     ### 0 - Именительный падеж
     ### 1 - Родительный
@@ -206,11 +180,61 @@ class Dictionary():
     ###------------------------------------------------------------
     ###Методы
     ###------------------------------------------------------------
+    
+    async def load_strings(self) -> bool:
+        try:
+            self.__negative_length_change.extend(await self.db.get_negative_length_change_assets())
+            self.__positive_length_change.extend(await self.db.get_positive_length_change_assets())
+            return True
+        except Exception as error:
+            print(f"load assets error: {error}")
+            return False
+    
+    def get_sticker_set_link(self, sticker_set_name:str) -> str:
+        return tp.text_replacement(self.__sticker_set_link, {"sticker_set_name" : sticker_set_name})
 
     def get_user_link(self, full_name: str, tg_id:int) -> str:
         return tp.text_replacement(self.__user_link_html, {
             "tg_id" : tg_id,
             "full_name" : full_name,
+        })
+    
+    def trash_loto_minor_length_award(self, full_name:str, tg_id:int, length:int) -> str:
+        return tp.text_replacement(self.__trash_loto_minor_length_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "length" : self.length_wrapper(length, False), 
+            **self.random_member(),
+        })
+    
+    def trash_loto_minor_money_award(self, full_name:str, tg_id:int, money:int) -> str:
+        return tp.text_replacement(self.__trash_loto_minor_money_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "money" : self.money_wrapper(money, False), 
+        })
+    
+    def trash_loto_major_length_award(self, full_name:str, tg_id:int, length:int) -> str:
+        return tp.text_replacement(self.__trash_loto_major_length_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "length" : self.length_wrapper(length, False), 
+            **self.random_member(),
+        })
+    
+    def trash_loto_major_money_award(self, full_name:str, tg_id:int, money:int) -> str:
+        return tp.text_replacement(self.__trash_loto_major_money_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "money" : self.money_wrapper(money, False), 
+        })
+    
+    def trash_loto_jackpot_money_award(self, full_name:str, tg_id:int, money:int) -> str:
+        return tp.text_replacement(self.__trash_loto_jackpot_money_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "money" : self.money_wrapper(money, False), 
+        })
+    
+    
+    def trash_loto_lose(self, full_name:str, tg_id:int) -> str:
+        return tp.text_replacement(self.__trash_loto_lose, {
+            "user_link" : self.get_user_link(full_name, tg_id),
         })
 
     

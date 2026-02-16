@@ -23,18 +23,27 @@ class Commands():
     ###Изменить стикер в пак
     edit_sticker_set = "edit_sticker_set"
 
+    ###Ссылка на актуальный набор стикеров бота
+    sticker_pack = "sticker_pack"
+
     ###Информация о пользователе
     me = "me"
 
     ###Интерактивное действие с текущим размером пользователя
     pencil = "pencil"
 
+    ###Гамба!
+    trash_loto = "trash_loto"
+
     ###Список активных запланированных на выполнение команд
     jobs = "jobs"
 
+    @staticmethod
     async def setup_bot_commands():
         await bot.set_my_commands([
-            BotCommand(command="help", description=dict.help),
-            BotCommand(command="me", description=dict.me),
-            BotCommand(command="pencil", description=dict.pencil)
+            BotCommand(command=Commands.me, description=dict.me),
+            BotCommand(command=Commands.pencil, description=dict.pencil),
+            BotCommand(command=Commands.trash_loto, description=dict.trash_loto),
+            BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
+            BotCommand(command=Commands.help, description=dict.help),
         ])
