@@ -10,7 +10,6 @@ from aiogram import Bot
 import tempfile
 import os
 
-
 prefs = Prefs()
 
 bot = Bot(token=prefs.bot_token)
