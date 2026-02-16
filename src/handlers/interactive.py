@@ -40,10 +40,10 @@ async def pencil_change(message: Message, state: FSMContext):
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     last_member_check_delta:int = get_last_member_check_delta(user.last_length_check)
 
-    # if (last_member_check_delta < 0):
-    #     await message.answer(dict.member_change_not_reset(last_member_check_delta * -1), 
-    #                          parse_mode=ParseMode.HTML)
-    #     return
+    if (last_member_check_delta < 0):
+        await message.answer(dict.member_change_not_reset(last_member_check_delta * -1), 
+                             parse_mode=ParseMode.HTML)
+        return
 
     action:int = random.randrange(0, sys.maxsize)
     length_change:int = (random.randrange(1, 4) * -1) if (action % 2 == 0) else random.randrange(1, 7)
