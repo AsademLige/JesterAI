@@ -1,3 +1,5 @@
+from src.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
+from src.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from src.models.custom_sticker_model import CustomStickerModel
 from src.models.sticker_set_model import StickerSetModel
 from src.models.user_model import UserModel
@@ -177,3 +179,15 @@ class DataBase():
     async def delete_sticker_set_by_name(self, short_name:str):
         return await StickerSetModel.delete.\
             where(StickerSetModel.short_name == short_name).gino.status()
+    
+    ###-----------------------------------------
+    ### Методы загрузки наборов данных 
+    ###-----------------------------------------
+
+    async def get_negative_length_change_assets(self) -> List[str]: 
+        models:List[StrAssetsNegativeLengthChange] = await StrAssetsNegativeLengthChange.query.gino.all()
+        return [model.data for model in models] 
+    
+    async def get_positive_length_change_assets(self) -> List[str]: 
+        models:List[StrAssetsPositiveLengthChange] = await StrAssetsPositiveLengthChange.query.gino.all()
+        return [model.data for model in models] 
