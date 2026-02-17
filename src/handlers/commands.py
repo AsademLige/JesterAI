@@ -31,6 +31,9 @@ class Commands():
 
     ###Интерактивное действие с текущим размером пользователя
     pencil = "pencil"
+    
+    ###Команда отображения таблицы лидеров
+    leaderboard = "leaderboard"
 
     ###Гамба!
     trash_loto = "trash_loto"
@@ -43,6 +46,7 @@ class Commands():
         await bot.set_my_commands([
             BotCommand(command=Commands.me, description=dict.me),
             BotCommand(command=Commands.pencil, description=dict.pencil),
+            BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
             BotCommand(command=Commands.trash_loto, description=dict.trash_loto),
             BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
             BotCommand(command=Commands.help, description=dict.help),

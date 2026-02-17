@@ -35,9 +35,9 @@ class SchedulerJobs():
             try:
                 await bot.get_chat(chat_id)
 
-                rewards: List[int] = [random.randrange(30, 40),
-                                random.randrange(15, 25),
-                                random.randrange(5, 10)]
+                rewards: List[int] = [random.randrange(50, 70),
+                                random.randrange(25, 40),
+                                random.randrange(10, 20)]
                 
                 sorted_users: List[UserModel] = sorted(indexed_users[chat_id], 
                                                     key=lambda u: u.length,
@@ -55,6 +55,34 @@ class SchedulerJobs():
                                     parse_mode=ParseMode.HTML)
             except Exception as e:
                 logger.send_log("apscheduler", logging.WARNING, f"weekly_top - {e}")
+
+    @staticmethod
+    async def day_salary():
+        """
+        Ежедневная получка для работяг
+        """
+        users: List[UserModel] = await db.get_all_users()
+        indexed_users: Dict[int, List[UserModel]] = {}
+
+        for user in users:
+            if (user.chat_id is not None):
+                if (user.chat_id not in indexed_users):
+                    indexed_users[user.chat_id] = []
+                indexed_users[user.chat_id].append(user)
+
+        for chat_id in indexed_users:
+            try:
+                # Исключение чата ромашки для теста
+                # if (chat_id == -1001603124529): continue
+
+                await db.update_users_money_by_chat(chat_id, 10)
+
+                await bot.send_message(chat_id, 
+                                    dict.day_salary(10), 
+                                    parse_mode=ParseMode.HTML)
+                
+            except Exception as e:
+                    logger.send_log("apscheduler", logging.WARNING, f"day_salary - {e}")
     
     @staticmethod
     async def day_draw():
@@ -76,20 +104,28 @@ class SchedulerJobs():
                 await bot.get_chat(chat_id)
                 if (not indexed_users[chat_id]): continue
 
-                draw_winner_index:int = 0 if (len(indexed_users[chat_id]) == 1) \
-                                        else random.randrange(0, len(indexed_users[chat_id]) - 1)
+                sorted_users: List[UserModel] = sorted(indexed_users[chat_id], 
+                                                    key=lambda u: u.length,
+                                                    reverse=True)
+                
+                draw_winner_index:int = 0
+                
+                if (len(sorted_users) <= 3):
+                    draw_winner_index = random.randrange(0, len(sorted_users) - 1)
+                else:
+                    draw_winner_index = random.randrange(2, len(sorted_users) - 1)
                 
                 last_winner:Optional[UserModel] = await db.get_last_day_draw_winner_in_chat(chat_id)
                 length_change:int = random.randrange(1, 7)
                 
-                await db.update_user(indexed_users[chat_id][draw_winner_index],
+                await db.update_user(sorted_users[draw_winner_index],
                                      {"last_daily_draw_winner" : True,
-                                      "length" : indexed_users[chat_id][draw_winner_index].length + length_change})
+                                      "length" : sorted_users[draw_winner_index].length + length_change})
                 
                 if (last_winner is not None):
                     await db.update_user(last_winner, {"last_daily_draw_winner":False})
                 
-                await bot.send_message(chat_id, dict.draw(indexed_users[chat_id][draw_winner_index], length_change), 
+                await bot.send_message(chat_id, dict.draw(sorted_users[draw_winner_index], length_change), 
                                     parse_mode=ParseMode.HTML)
             except Exception as e:
                 logger.send_log("apscheduler", logging.WARNING, f"day_draw - {e}")
