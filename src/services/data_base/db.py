@@ -46,6 +46,9 @@ class DataBase():
     async def get_all_users(self) ->  List[UserModel]: 
         return await UserModel.query.gino.all()
     
+    async def get_all_users_by_chat(self, chat_id: int) ->  List[UserModel]: 
+        return await UserModel.query.where(and_(UserModel.chat_id == chat_id)).gino.all()
+    
     async def get_daily_draw_participants(self) ->  List[UserModel]: 
         return await UserModel.query.where(UserModel.last_daily_draw_winner == False).gino.all()
     
@@ -83,6 +86,15 @@ class DataBase():
     async def update_user(self, user: UserModel, args:Dict[str, Any] = {}) -> bool:
         try:
             await user.update(**args).apply()
+            return True
+        except Exception as error:
+            print(f"update user error: {error}")
+            return False
+        
+    async def update_users_money_by_chat(self, chat_id: int, money:int) -> bool:
+        try:
+            await UserModel.update.where(UserModel.chat_id == chat_id).values(
+                balance=UserModel.money + money).gino.status()
             return True
         except Exception as error:
             print(f"update user error: {error}")
