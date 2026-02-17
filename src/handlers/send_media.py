@@ -39,16 +39,16 @@ async def get_media_by_sticker(message: Message):
         await message.answer("Я не могу удалять сообщения, дайте прав!")
         return
 
-    await message.delete()
-
-    loading_message = await bot.send_message(message.chat.id, "Ждем, пока телега распердится...")
-
     if (message.sticker is None):
         return
     custom_sticker : Optional[CustomStickerModel] = await db.\
         get_custom_sticker_by_id(message.sticker.file_unique_id)
     
     if (custom_sticker is None): return None
+    
+    await message.delete()
+
+    loading_message = await bot.send_message(message.chat.id, "Ждем, пока телега распердится...")
 
     media : Optional[InputFile] = get_media_by_custom_sticker(custom_sticker)
 
