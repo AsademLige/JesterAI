@@ -10,6 +10,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import Message
 from src.data.config import Prefs
 from aiogram.types import Message
+from typing import List
 import asyncio
 import random
 import math
@@ -54,12 +55,22 @@ async def pencil_change(message: Message, state: FSMContext):
     })):
         await message.answer(dict.length_change(user.tg_name, length_change),
                             parse_mode=ParseMode.HTML)
+
+###Команда отображения таблицы лидеров
+@rt.message(StateFilter(None), Command(cn.leaderboard))
+async def leaderboard(message: Message, state: FSMContext):
+    users: List[UserModel] = await db.get_all_users_by_chat(message.chat.id)
+    sorted_users: List[UserModel] = sorted(users, 
+                                            key=lambda u: u.length,
+                                            reverse=True)
+    await message.answer(dict.leaderboard(sorted_users),
+                        parse_mode=ParseMode.HTML)
         
 ###Бесполезная трата денег
 @rt.message(StateFilter(None), Command(cn.trash_loto))
 async def trash_loto(message: Message, state: FSMContext):
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
-    if (user.money < 5):
+    if (user.money < 10):
         await message.answer(dict.not_enough_money,
                             parse_mode=ParseMode.HTML)
         return

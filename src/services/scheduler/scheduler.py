@@ -36,6 +36,9 @@ class Scheduler():
         self.scheduler.add_job(self.jobs.day_draw, 'cron', id='day_draw', 
                                replace_existing=True, misfire_grace_time=15,
                                hour=10, minute=30)
+        self.scheduler.add_job(self.jobs.day_salary, 'cron', id='day_salary', 
+                               replace_existing=True, misfire_grace_time=15,
+                               hour=18, minute=00)
         
         self.scheduler.start()
 

@@ -31,6 +31,8 @@ class Dictionary():
 
     pencil:str = "Недоволен своим размером? ЖМИ СЮДА"
 
+    leaderboard_description:str = "ЧСВ жмет? Покажи им свое место! (и их заодно)"
+
     sticker_pack:str = "Аудио стикеры!"
 
     edit_sticker_set:str = "Изменить набор стикеров"
@@ -139,10 +141,13 @@ class Dictionary():
     ###------------------------------------------------------------
 
     __draw_list:List[str] = [
-        '🎁 Запускаем розыгрыш мази для увеличения {{pencil_gen}}! '\
+        '🎁 Запускаем розыгрыш мази для увеличения {{pencil_gen}} среди лоутабов! '\
         'И сегодняшним победителем становится... 🎉{{user_link}}🎊, поздравляем победителя!\n'\
         'Его выигрыш составил: {{length}}'
     ]
+
+    __day_salary:str = "<blockquote>💵 <b>ПОЛУЧКА</b>!</blockquote>\nРаботяги получают свои честно заработанные {{money}}! "\
+                        "\nНе забывайте проставить время в карточке!"
 
     ###------------------------------------------------------------
     ###Описания подведения итогов
@@ -151,6 +156,8 @@ class Dictionary():
     __weekly_winners:List[str] = [
         "<blockquote>🏆 Начинаем подведение итогов в номинации «Самый длинный {{pencil}} недели»!</blockquote>\n{{winners}}"
     ]
+
+    __leaderboard:str = "<blockquote>🍆 Длинный {{pencil}} - это про них!</blockquote>\n{{leaderboard}}"
 
     ###------------------------------------------------------------
     ###интерактивные действия изменения размера
@@ -256,6 +263,9 @@ class Dictionary():
                                     "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
                                     "length":self.length_wrapper(user.length, False)})
     
+    def day_salary(self, money:int) -> str:
+        return tp.text_replacement(self.__day_salary, {"money" : self.money_wrapper(money)})
+    
     def draw(self, user:UserModel, length_change:int) -> str:
         return tp.text_replacement(self.__draw_list[random.randint(0, len(self.__draw_list) - 1)], {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
@@ -265,11 +275,11 @@ class Dictionary():
     
     def weekly_winners(self, users:List[UserModel], rewards:List[int]) -> str:
         return tp.text_replacement(self.__weekly_winners[random.randint(0, len(self.__weekly_winners) - 1)],{
-            "winners" : self.__generate_weekly_winners(users, rewards),
+            "winners" : self.__generate_leaderboard(users, rewards),
             **self.random_member(),
         })
     
-    def __generate_weekly_winners(self, users:List[UserModel], rewards:List[int]) -> str:
+    def __generate_leaderboard(self, users:List[UserModel], rewards:List[int] = []) -> str:
         winners:str = ""
         for index, user in enumerate(users):
             winners += f"{self.get_medal_emoji(index+1, True)}"\
@@ -278,6 +288,12 @@ class Dictionary():
             f"{f' [{user.custom_title}] ' if type(user.custom_title) is str else ''}"\
             f" { f'{self.money_wrapper(rewards[index])}' if (len(rewards) > index) else ''}\n"
         return winners
+    
+    def leaderboard(self, users:List[UserModel]) -> str:
+        return tp.text_replacement(self.__leaderboard,{
+            "leaderboard" : self.__generate_leaderboard(users),
+            **self.random_member(),
+        })
     
     def sticker_set_create_success(self, sticker_set_name:str) -> str:
         return tp.text_replacement(self.__sticker_set_create_success, {
