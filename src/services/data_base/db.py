@@ -94,7 +94,7 @@ class DataBase():
     async def update_users_money_by_chat(self, chat_id: int, money:int) -> bool:
         try:
             await UserModel.update.where(UserModel.chat_id == chat_id).values(
-                balance=UserModel.money + money).gino.status()
+                money=UserModel.money + money).gino.status()
             return True
         except Exception as error:
             print(f"update user error: {error}")
