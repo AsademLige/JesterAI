@@ -108,13 +108,13 @@ async def trash_loto(message: Message, state: FSMContext):
     elif is_major_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
-            length = random.randrange(3, 5)
+            length = random.randrange(2, 4)
             if (await db.update_user(user, {"length": user.length + length, "money" : user.money - loto_cost})):
                 answer = await message.answer(dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
             else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
-            award =  random.randrange(15, 20)
+            award =  random.randrange(10, 15)
             if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
                 answer = await message.answer(dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
@@ -138,7 +138,7 @@ async def trash_loto(message: Message, state: FSMContext):
                                     parse_mode=ParseMode.HTML)
             else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
-            award =  random.randrange(10, 15)
+            award =  random.randrange(5, 10)
             if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
                 answer = await message.answer(dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
