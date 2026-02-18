@@ -1,6 +1,6 @@
+from src.domain.controllers.rights_controller import RightsController
 from src.models.custom_sticker_model import CustomStickerModel
 from src.domain.utils.media import get_media_by_custom_sticker
-from aiogram.enums.chat_member_status import ChatMemberStatus
 from src.models.sticker_set_model import StickerSetModel
 from src.handlers.commands import Commands as cn
 from aiogram.filters import Command, StateFilter
@@ -31,11 +31,11 @@ async def get_sticker_pack(message: Message, state: FSMContext):
 
 @rt.message(F.sticker)
 async def get_media_by_sticker(message: Message):
-    if (not await check_is_admin(message.chat.id)):
+    if (not await RightsController.check_is_admin(message.chat.id)):
         await message.answer("У меня прав меньше чем у посудомойки, дайте админку!")
         return
 
-    if (not await check_delete_messages_rights(message.chat.id)):
+    if (not await RightsController.check_delete_messages_rights(message.chat.id)):
         await message.answer("Я не могу удалять сообщения, дайте прав!")
         return
 
@@ -57,14 +57,4 @@ async def get_media_by_sticker(message: Message):
     await bot.send_video(message.chat.id, media)
 
     await loading_message.delete()
-
-async def check_is_admin(chat_id:int):
-    member = await bot.get_chat_member(chat_id, bot.id)
-    return member.status == ChatMemberStatus.ADMINISTRATOR
-
-async def check_delete_messages_rights(chat_id:int):
-    member = await bot.get_chat_member(chat_id, bot.id)
-    admin_member = member.model_dump()
-    return admin_member.get('can_delete_messages')
-        
         
