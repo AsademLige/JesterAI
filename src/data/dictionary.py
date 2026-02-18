@@ -328,6 +328,13 @@ class Dictionary():
             return tp.text_replacement(
                 f"⚠️ {self.__negative_length_change[random.randint(0, len(self.__negative_length_change) - 1)]}",
                                        params)
+        
+    def media_caption(self, user:UserModel) -> str:
+        return tp.text_replacement("Отправил: {{user_link}} {{custom_title}} - {{length}}", {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
+            "length":self.length_wrapper(user.length, False)
+        })
     
     def random_member(self) -> Dict[str, str]:
         index:int = random.randint(0, len(self.member_names) - 1)

@@ -8,6 +8,7 @@ from src.services.data_base.db import DataBase
 from aiogram.types import Message, InputFile
 from src.data.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
+from aiogram.enums import ParseMode
 from typing import Optional, List
 from src.data.config import Prefs
 from aiogram import Router, F
@@ -46,15 +47,22 @@ async def get_media_by_sticker(message: Message):
     
     if (custom_sticker is None): return None
     
-    await message.delete()
+    user = await db.get_user(message.from_user.id)
+    
+    try:
+        await message.delete()
+    except:
+        print("delete message error")
 
     loading_message = await bot.send_message(message.chat.id, "Ждем, пока телега распердится...")
-
+    
     media : Optional[InputFile] = get_media_by_custom_sticker(custom_sticker)
 
     if (media is None): return None
     
-    await bot.send_video(message.chat.id, media)
+    await bot.send_video(message.chat.id, media,
+                         caption=dict.media_caption(user) if (user) else "",
+                         parse_mode=ParseMode.HTML)
 
     await loading_message.delete()
         
