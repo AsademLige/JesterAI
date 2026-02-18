@@ -99,7 +99,7 @@ async def trash_loto(message: Message, state: FSMContext):
 
     # 777
     if is_jackpot:
-        award =  random.randrange(100, 200)
+        award =  random.randrange(20, 30)
         if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
             answer = await message.answer(dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award),
                                 parse_mode=ParseMode.HTML)
@@ -108,13 +108,13 @@ async def trash_loto(message: Message, state: FSMContext):
     elif is_major_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
-            length = random.randrange(5, 10)
+            length = random.randrange(3, 5)
             if (await db.update_user(user, {"length": user.length + length, "money" : user.money - loto_cost})):
                 answer = await message.answer(dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
             else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
-            award =  random.randrange(50, 100)
+            award =  random.randrange(15, 20)
             if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
                 answer = await message.answer(dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
@@ -122,7 +122,7 @@ async def trash_loto(message: Message, state: FSMContext):
 
     # Проверка на одинаковые крайние
     elif is_consolation:
-        award = 5
+        award = random.randrange(1, 5)
         if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
             answer = await message.answer(dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award),
                                 parse_mode=ParseMode.HTML)
@@ -132,13 +132,13 @@ async def trash_loto(message: Message, state: FSMContext):
     elif is_minor_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
-            length = random.randrange(1, 5)
+            length = random.randrange(1, 3)
             if (await db.update_user(user, {"length": user.length + length, "money" : user.money - loto_cost})):
                 answer = await message.answer(dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
             else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
-            award =  random.randrange(15, 20)
+            award =  random.randrange(10, 15)
             if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
                 answer = await message.answer(dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
@@ -150,8 +150,8 @@ async def trash_loto(message: Message, state: FSMContext):
         else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
 
     if (have_delete_rights):
-        await delete_old_message([result, answer, message] if (is_lose) else [result, message] 
-                                 if (is_minor_win or is_consolation) else [message])
+        await delete_old_message([result, answer, message] if (is_lose) else [message] 
+                                 if (is_major_win or is_jackpot) else [result, message])
     
 
 async def delete_old_message(messages:List[Message]):
