@@ -1,4 +1,4 @@
-from src.domain.utils.text_processing import TextProcessing as tp
+from src.domain.controllers.rights_controller import RightsController
 from src.handlers.commands import Commands as cn
 from aiogram.filters import Command, StateFilter
 from src.services.data_base.db import DataBase
@@ -69,14 +69,19 @@ async def leaderboard(message: Message, state: FSMContext):
 ###Бесполезная трата денег
 @rt.message(StateFilter(None), Command(cn.trash_loto))
 async def trash_loto(message: Message, state: FSMContext):
+    have_delete_rights = (await RightsController.check_is_admin(message.chat.id) and
+        await RightsController.check_delete_messages_rights(message.chat.id))
+    
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
-    if (user.money < 10):
+    
+    loto_cost:int = 5
+
+    if (user.money < loto_cost):
         await message.answer(dict.not_enough_money,
                             parse_mode=ParseMode.HTML)
         return
     
     result = await message.answer_dice(emoji='🎰')
-    
     await asyncio.sleep(3) 
     
     value = result.dice.value - 1
@@ -88,51 +93,72 @@ async def trash_loto(message: Message, state: FSMContext):
 
     is_minor_win = (left == middle or middle == right)
     is_major_win = (left == middle == right)
+    is_consolation = (left == right)
+    is_jackpot = value == 63
+    is_lose = not (is_jackpot or is_major_win or is_minor_win or is_consolation)
 
     # 777
-    if value == 63:
+    if is_jackpot:
         award =  random.randrange(100, 200)
-        if (await db.update_user(user, {"money" : user.money + award - 10})):
-            await message.answer(dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award),
+        if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
+            answer = await message.answer(dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award),
                                 parse_mode=ParseMode.HTML)
-        else: message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+        else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
     #тройная комбинаций
     elif is_major_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
             length = random.randrange(5, 10)
-            if (await db.update_user(user, {"length": user.length + length, "money" : user.money - 10})):
-                await message.answer(dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
+            if (await db.update_user(user, {"length": user.length + length, "money" : user.money - loto_cost})):
+                answer = await message.answer(dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
-            else: message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
             award =  random.randrange(50, 100)
-            if (await db.update_user(user, {"money" : user.money + award - 10})):
-                await message.answer(dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award),
+            if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
+                answer = await message.answer(dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
-            else: message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+
+    # Проверка на одинаковые крайние
+    elif is_consolation:
+        award = 5
+        if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
+            answer = await message.answer(dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award),
+                                parse_mode=ParseMode.HTML)
+        else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+
     # Проверка на любые две одинаковые подряд
     elif is_minor_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
             length = random.randrange(1, 5)
-            if (await db.update_user(user, {"length": user.length + length, "money" : user.money - 10})):
-                await message.answer(dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length),
+            if (await db.update_user(user, {"length": user.length + length, "money" : user.money - loto_cost})):
+                answer = await message.answer(dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
-            else: message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
-            award =  random.randrange(10, 20)
-            if (await db.update_user(user, {"money" : user.money + award - 10})):
-                await message.answer(dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award),
+            award =  random.randrange(15, 20)
+            if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
+                answer = await message.answer(dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
-            else: message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
     else:
-        if (await db.update_user(user, {"money" : user.money - 10})):
-            await message.answer(dict.trash_loto_lose(user.tg_name, user.tg_id),
+        if (await db.update_user(user, {"money" : user.money - loto_cost})):
+            answer = await message.answer(dict.trash_loto_lose(user.tg_name, user.tg_id),
                                 parse_mode=ParseMode.HTML)
-        else: message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+        else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
 
+    if (have_delete_rights):
+        await delete_old_message([result, answer, message] if (is_lose) else [result, message] 
+                                 if (is_minor_win or is_consolation) else [message])
+    
 
+async def delete_old_message(messages:List[Message]):
+    await asyncio.sleep(3) 
+    for message in messages:
+        await message.delete()
+    messages.clear()
         
 def get_last_member_check_delta(last_length_check: datetime) -> int:
     delta:timedelta = (datetime.now() - (last_length_check + timedelta(hours=member_change_reset_time)))

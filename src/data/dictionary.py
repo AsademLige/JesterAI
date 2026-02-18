@@ -39,7 +39,7 @@ class Dictionary():
 
     create_sticker_set:str = "Создать набор стикеров"
 
-    trash_loto:str = "Деньги карман жгут? Попытай удачу за 10💰"
+    trash_loto:str = "Деньги карман жгут? Попытай удачу за 5💰"
 
     ###------------------------------------------------------------
     ###Общее
@@ -122,6 +122,8 @@ class Dictionary():
     ###Описания треш лото
     ###------------------------------------------------------------
 
+    __trash_loto_consolation_money_award: str = "🍀 чут-чут повезло, держи копейку, {{user_link}}: {{money}}"
+    
     __trash_loto_minor_length_award: str = "🍆 {{user_link}} выиграл мазь для увеличения {{pencil_gen}} на целых {{length}}!"
 
     __trash_loto_minor_money_award: str = "🍀 Сегодня твой день, {{user_link}}! Выигрыш составил: {{money}}"
@@ -130,9 +132,12 @@ class Dictionary():
 
     __trash_loto_major_money_award: str = "<blockquote>🍀 ВОТ ЭТО УДАЧА!</blockquote> {{user_link}}, на твоей совести наша бабка-бухгалтер! Выигрыш составил: {{money}}"
 
-    __trash_loto_jackpot_money_award: str = "<blockquote>🍀 ДЖЕКПОТ!!!</blockquote>\n Однорукий бандит сегодня ты, {{user_link}}! Казино ОГРАБЛЕНО! Выигрыш составил: {{money}}"
+    __trash_loto_jackpot_money_award: str = "<blockquote>💎 ДЖЕКПОТ!!! 💎</blockquote>\n Однорукий бандит сегодня ты, {{user_link}}! Казино ОГРАБЛЕНО! Выигрыш составил: {{money}}"
 
-    __trash_loto_lose: str = "🎰 Жена плачет, дочь рыдает, {{user_link}} снова доливает! Минус бабки..."
+    __trash_loto_lose:List[str] = [
+        "🎰 Жена плачет, дочь рыдает, {{user_link}} снова доливает! Минус бабки...",
+        "🧻 Додеп, додеп, еще додеп! Денег нет теперь на хлеб..."
+    ]
 
     trash_loto_error:str = "Ошибочка вышла... Зато деньги твои целы!"
 
@@ -213,6 +218,12 @@ class Dictionary():
             **self.random_member(),
         })
     
+    def trash_loto_consolation_money_award(self, full_name:str, tg_id:int, money:int) -> str:
+        return tp.text_replacement(self.__trash_loto_consolation_money_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "money" : self.money_wrapper(money, False), 
+        })
+    
     def trash_loto_minor_money_award(self, full_name:str, tg_id:int, money:int) -> str:
         return tp.text_replacement(self.__trash_loto_minor_money_award, {
             "user_link" : self.get_user_link(full_name, tg_id),
@@ -240,7 +251,7 @@ class Dictionary():
     
     
     def trash_loto_lose(self, full_name:str, tg_id:int) -> str:
-        return tp.text_replacement(self.__trash_loto_lose, {
+        return tp.text_replacement(self.__trash_loto_lose[random.randint(0, len(self.__trash_loto_lose) - 1)], {
             "user_link" : self.get_user_link(full_name, tg_id),
         })
 

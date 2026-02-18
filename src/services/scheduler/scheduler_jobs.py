@@ -116,7 +116,7 @@ class SchedulerJobs():
                     draw_winner_index = random.randrange(2, len(sorted_users) - 1)
                 
                 last_winner:Optional[UserModel] = await db.get_last_day_draw_winner_in_chat(chat_id)
-                length_change:int = random.randrange(1, 7)
+                length_change:int = random.randrange(5, 10)
                 
                 await db.update_user(sorted_users[draw_winner_index],
                                      {"last_daily_draw_winner" : True,
