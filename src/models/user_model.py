@@ -14,3 +14,4 @@ class UserModel(TimedBaseModel):
     last_daily_draw_winner = sa.Column(sa.Boolean)
     last_length_check = sa.Column(sa.Date)
     role_id = sa.Column(sa.Integer, sa.ForeignKey('roles.id'))
+    games_played = sa.Column(sa.Integer, default=0)

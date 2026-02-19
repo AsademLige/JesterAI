@@ -123,6 +123,8 @@ class Dictionary():
     ###------------------------------------------------------------
 
     __trash_loto_consolation_money_award: str = "🍀 чут-чут повезло, держи копейку, {{user_link}}: {{money}}"
+
+    __trash_loto_bonus_money_award: str = "💎 {{user_link}} получает бонус за {{games_count}} игр: {{money}}"
     
     __trash_loto_minor_length_award: str = "🍆 {{user_link}} выиграл мазь для увеличения {{pencil_gen}} на целых {{length}}!"
 
@@ -222,6 +224,13 @@ class Dictionary():
         return tp.text_replacement(self.__trash_loto_consolation_money_award, {
             "user_link" : self.get_user_link(full_name, tg_id),
             "money" : self.money_wrapper(money, False), 
+        })
+    
+    def trash_loto_bonus_award(self, full_name:str, tg_id:int, money:int, games:int) -> str:
+        return tp.text_replacement(self.__trash_loto_bonus_money_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "money" : self.money_wrapper(money, False), 
+            "games_count" : f'{games}'
         })
     
     def trash_loto_minor_money_award(self, full_name:str, tg_id:int, money:int) -> str:
