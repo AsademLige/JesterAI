@@ -35,10 +35,7 @@ class SchedulerJobs():
             try:
                 await bot.get_chat(chat_id)
 
-                rewards: List[int] = [random.randrange(50, 70),
-                                random.randrange(25, 40),
-                                random.randrange(10, 20)]
-                
+                rewards: List[int] = [15, 10, 5]
                 sorted_users: List[UserModel] = sorted(indexed_users[chat_id], 
                                                     key=lambda u: u.length,
                                                     reverse=True)
@@ -61,6 +58,20 @@ class SchedulerJobs():
         """
         Ежедневная получка для работяг
         """
+        await SchedulerJobs.give_all(dict.day_salary(10), 10)
+
+    @staticmethod
+    async def tech_work_compensation():
+        """
+        Премия в честь обновления (без таймера, ручной запуск)
+        """
+        await SchedulerJobs.give_all(dict.tech_work_compensation(15), 15)
+
+    @staticmethod
+    async def give_all(message: str, money:int):
+        """
+        Общий метод выдачи монеток всем игрокам
+        """
         users: List[UserModel] = await db.get_all_users()
         indexed_users: Dict[int, List[UserModel]] = {}
 
@@ -72,13 +83,13 @@ class SchedulerJobs():
 
         for chat_id in indexed_users:
             try:
-                # Исключение чата ромашки для теста
-                # if (chat_id == -1001603124529): continue
+                # Исключение продовых чатов для теста
+                if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
 
-                await db.update_users_money_by_chat(chat_id, 10)
+                await db.update_users_money_by_chat(chat_id, money)
 
                 await bot.send_message(chat_id, 
-                                    dict.day_salary(10), 
+                                    message, 
                                     parse_mode=ParseMode.HTML)
                 
             except Exception as e:

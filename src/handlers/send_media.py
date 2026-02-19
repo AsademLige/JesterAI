@@ -8,6 +8,7 @@ from src.services.data_base.db import DataBase
 from aiogram.types import Message, InputFile
 from src.data.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
+from src.domain.utils.utils import Utils
 from aiogram.enums import ParseMode
 from typing import Optional, List
 from src.data.config import Prefs
@@ -24,11 +25,14 @@ rt = Router()
 ###Отправляем ссылку на набор стикеров
 @rt.message(StateFilter(None), Command(cn.sticker_pack))
 async def get_sticker_pack(message: Message, state: FSMContext):
+    from_chat_id: int = message.chat.id
+    await message.delete()
     sets:List[StickerSetModel] = await db.get_all_sticker_sets()
     if sets:
-        await message.answer(dict.get_sticker_set_link(sets[0].short_name))
+        answer = await bot.send_message(from_chat_id, dict.get_sticker_set_link(sets[0].short_name))
     else:
-        await message.answer("Ничего нет...")
+        answer = await bot.send_message(from_chat_id, "Ничего нет...")
+    await Utils.delete_old_message([answer], 15)
 
 @rt.message(F.sticker)
 async def get_media_by_sticker(message: Message):
@@ -47,7 +51,7 @@ async def get_media_by_sticker(message: Message):
     
     if (custom_sticker is None): return None
     
-    user = await db.get_user(message.from_user.id)
+    user = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     
     try:
         await message.delete()

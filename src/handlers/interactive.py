@@ -6,6 +6,7 @@ from src.models.user_model import UserModel
 from aiogram.fsm.context import FSMContext
 from src.data.dictionary import Dictionary
 from datetime import timedelta, datetime
+from src.domain.utils.utils import Utils
 from aiogram.enums import ParseMode
 from aiogram.types import Message
 from src.data.config import Prefs
@@ -32,28 +33,33 @@ member_change_reset_time:int = 24
 async def user_information(message: Message, state: FSMContext):
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     place_in_top:int = await db.get_place_in_top_by_member(user.tg_id, user.chat_id)
-    await message.answer(dict.user_information(user, place_in_top),
+    await message.delete()
+    answer = await bot.send_message(user.chat_id, dict.user_information(user, place_in_top),
                          parse_mode=ParseMode.HTML)
+    await Utils.delete_old_message([answer], 15)
     
 ###Попробовать изменить текущий member размер 
 @rt.message(StateFilter(None), Command(cn.pencil))
 async def pencil_change(message: Message, state: FSMContext):
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
-    last_member_check_delta:int = get_last_member_check_delta(user.last_length_check)
+    await message.delete()
+    delta:timedelta = get_last_member_check_delta(user.last_length_check)
 
-    if (last_member_check_delta < 0):
-        await message.answer(dict.member_change_not_reset(last_member_check_delta * -1), 
+    if (math.floor(delta.total_seconds() / 3600) < 0):
+        answer = await bot.send_message(user.chat_id, 
+                                        dict.member_change_not_reset(user,timedelta_to_hhmm(delta)), 
                              parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([answer], 10)
         return
 
-    action:int = random.randrange(0, sys.maxsize)
-    length_change:int = (random.randrange(1, 4) * -1) if (action % 2 == 0) else random.randrange(1, 7)
+    action = random.choices([1, 2])
+    length_change:int = (random.randrange(2, 5) * -1) if (action[0] == 1) else random.randrange(1, 7)
 
     if (await db.update_user(user, {
         "length": user.length + length_change,
         "last_length_check" : datetime.now()
     })):
-        await message.answer(dict.length_change(user.tg_name, length_change),
+        answer = bot.send_message(user.chat_id, dict.length_change(user.tg_name, length_change),
                             parse_mode=ParseMode.HTML)
 
 ###Команда отображения таблицы лидеров
@@ -63,25 +69,29 @@ async def leaderboard(message: Message, state: FSMContext):
     sorted_users: List[UserModel] = sorted(users, 
                                             key=lambda u: u.length,
                                             reverse=True)
-    await message.answer(dict.leaderboard(sorted_users),
+    await message.delete()
+    answer = await bot.send_message(users[0].chat_id, dict.leaderboard(sorted_users),
                         parse_mode=ParseMode.HTML)
+    await Utils.delete_old_message([answer], 15)
         
 ###Бесполезная трата денег
 @rt.message(StateFilter(None), Command(cn.trash_loto))
 async def trash_loto(message: Message, state: FSMContext):
     have_delete_rights = (await RightsController.check_is_admin(message.chat.id) and
         await RightsController.check_delete_messages_rights(message.chat.id))
+    await message.delete()
     
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     
     loto_cost:int = 5
 
     if (user.money < loto_cost):
-        await message.answer(dict.not_enough_money,
+        answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
                             parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([message, answer])
         return
     
-    result = await message.answer_dice(emoji='🎰')
+    result = await bot.send_dice(user.chat_id, emoji='🎰')
     await asyncio.sleep(3) 
     
     value = result.dice.value - 1
@@ -101,32 +111,32 @@ async def trash_loto(message: Message, state: FSMContext):
     if is_jackpot:
         award =  random.randrange(20, 30)
         if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
-            answer = await message.answer(dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award),
+            answer = await bot.send_message(user.chat_id, dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award),
                                 parse_mode=ParseMode.HTML)
-        else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+        else: answer = bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
     #тройная комбинаций
     elif is_major_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
             length = random.randrange(2, 4)
             if (await db.update_user(user, {"length": user.length + length, "money" : user.money - loto_cost})):
-                answer = await message.answer(dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
+                answer = bot.send_message(user.chat_id, dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
-            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
             award =  random.randrange(10, 15)
             if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
-                answer = await message.answer(dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award),
+                answer = await bot.send_message(user.chat_id, dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
-            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
 
     # Проверка на одинаковые крайние
     elif is_consolation:
         award = random.randrange(1, 5)
         if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
-            answer = await message.answer(dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award),
+            answer = await bot.send_message(user.chat_id, dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award),
                                 parse_mode=ParseMode.HTML)
-        else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+        else: answer = bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
 
     # Проверка на любые две одинаковые подряд
     elif is_minor_win:
@@ -134,34 +144,34 @@ async def trash_loto(message: Message, state: FSMContext):
         if (action[0] == 1):
             length = random.randrange(1, 3)
             if (await db.update_user(user, {"length": user.length + length, "money" : user.money - loto_cost})):
-                answer = await message.answer(dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length),
+                answer = await bot.send_message(user.chat_id, dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
-            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
             award =  random.randrange(5, 10)
             if (await db.update_user(user, {"money" : user.money + award - loto_cost})):
-                answer = await message.answer(dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award),
+                answer = await bot.send_message(user.chat_id, dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
-            else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+            else: answer = bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
     else:
         if (await db.update_user(user, {"money" : user.money - loto_cost})):
-            answer = await message.answer(dict.trash_loto_lose(user.tg_name, user.tg_id),
+            answer = await bot.send_message(user.chat_id, dict.trash_loto_lose(user.tg_name, user.tg_id),
                                 parse_mode=ParseMode.HTML)
-        else: answer = message.answer(dict.trash_loto_error, parse_mode=ParseMode.HTML)
+        else: answer = bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
 
     if (have_delete_rights):
-        await delete_old_message([result, answer, message] if (is_lose) else [message] 
-                                 if (is_major_win or is_jackpot) else [result, message])
+        await Utils.delete_old_message([result, answer] if (is_lose) else [] 
+                                 if (is_major_win or is_jackpot) else [result])
     
-
-async def delete_old_message(messages:List[Message]):
-    await asyncio.sleep(3) 
-    for message in messages:
-        await message.delete()
-    messages.clear()
         
-def get_last_member_check_delta(last_length_check: datetime) -> int:
-    delta:timedelta = (datetime.now() - (last_length_check + timedelta(hours=member_change_reset_time)))
-    return math.floor(delta.total_seconds() / 3600)
+def get_last_member_check_delta(last_length_check: datetime) -> timedelta:
+    return datetime.now() - (last_length_check + timedelta(hours=member_change_reset_time))
+
+def timedelta_to_hhmm(delta):
+    """Преобразует timedelta в строку формата ЧЧ:мм"""
+    total_seconds = int(delta.total_seconds()) * -1
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    return f"{hours:02d}:{minutes:02d}"
 
 
