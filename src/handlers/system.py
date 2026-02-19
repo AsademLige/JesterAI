@@ -36,7 +36,7 @@ async def get_all_jobs(message: Message, state: FSMContext):
 
     jobs: List[Job] = scheduler.scheduler.get_jobs()
     jobs_text:str = ""
-
+    
     for job in jobs:
         jobs_text += f"<blockquote>📅 Задача - {job.id};</blockquote>\n"\
         f"<b>Триггер:</b> <code>{job.trigger}</code>;\n"\
