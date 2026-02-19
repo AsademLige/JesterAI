@@ -84,7 +84,7 @@ class SchedulerJobs():
         for chat_id in indexed_users:
             try:
                 # Исключение продовых чатов для теста
-                if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
+                # if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
 
                 await db.update_users_money_by_chat(chat_id, money)
 
