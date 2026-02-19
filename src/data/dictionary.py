@@ -82,7 +82,7 @@ class Dictionary():
 
     __user_link_html : str = '<a href="tg://user?id={{tg_id}}">{{full_name}}</a>'
 
-    not_enough_money:str = 'У тебя карман дырявый, иди подкопи'
+    __not_enough_money:str = '🤡 {{user_link}}, у тебя карман дырявый, иди подкопи:D'
 
     ###------------------------------------------------------------
     ###Создание набора стикеров
@@ -153,6 +153,8 @@ class Dictionary():
 
     __day_salary:str = "<blockquote>💵 <b>ПОЛУЧКА</b>!</blockquote>\nРаботяги получают свои честно заработанные {{money}}! "\
                         "\nНе забывайте проставить время в карточке!"
+    
+    __tech_work_compensation:str = "<blockquote>🚧 <b>ОБНОВЛЕНИЕ!</b>!</blockquote>\nА работяги в честь праздника получают премию: {{money}}!"
 
     ###------------------------------------------------------------
     ###Описания подведения итогов
@@ -186,8 +188,8 @@ class Dictionary():
         ["пистон", "пистона", "пистону","пистон","пистоном",""]
     ]
 
-    __member_change_not_reset:str = "С тебя уже хватит, приходи позже...\n"\
-    "<blockquote>⏰ Осталось потерпеть часов: {{hours}}</blockquote>"
+    __member_change_not_reset:str = "{{user_link}}, с тебя уже хватит, приходи позже...\n"\
+    "<blockquote>⏰ Осталось потерпеть: {{time_left}}</blockquote>"
     
     ###------------------------------------------------------------
     ###Методы
@@ -209,6 +211,11 @@ class Dictionary():
         return tp.text_replacement(self.__user_link_html, {
             "tg_id" : tg_id,
             "full_name" : full_name,
+        })
+    
+    def not_enough_money(self, user:UserModel) -> str:
+        return tp.text_replacement(self.__not_enough_money, {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
         })
     
     def trash_loto_minor_length_award(self, full_name:str, tg_id:int, length:int) -> str:
@@ -277,6 +284,9 @@ class Dictionary():
     def day_salary(self, money:int) -> str:
         return tp.text_replacement(self.__day_salary, {"money" : self.money_wrapper(money)})
     
+    def tech_work_compensation(self, money:int) -> str:
+        return tp.text_replacement(self.__tech_work_compensation, {"money" : self.money_wrapper(money)})
+    
     def draw(self, user:UserModel, length_change:int) -> str:
         return tp.text_replacement(self.__draw_list[random.randint(0, len(self.__draw_list) - 1)], {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
@@ -328,6 +338,13 @@ class Dictionary():
             return tp.text_replacement(
                 f"⚠️ {self.__negative_length_change[random.randint(0, len(self.__negative_length_change) - 1)]}",
                                        params)
+        
+    def media_caption(self, user:UserModel) -> str:
+        return tp.text_replacement("Отправил: {{user_link}} {{custom_title}} - {{length}}", {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
+            "length":self.length_wrapper(user.length, False)
+        })
     
     def random_member(self) -> Dict[str, str]:
         index:int = random.randint(0, len(self.member_names) - 1)
@@ -340,8 +357,11 @@ class Dictionary():
             "pencil_prep":self.member_names[index][5]
         }
     
-    def member_change_not_reset(self, hours_left:int) -> str:
-        return tp.text_replacement(self.__member_change_not_reset, {"hours" : hours_left})
+    def member_change_not_reset(self, user:UserModel, time_left:str) -> str:
+        return tp.text_replacement(self.__member_change_not_reset, {
+            "time_left" : time_left,
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            })
     
     def length_wrapper(self, length:int, plus_visible:bool = True) -> str:
         return hcode(f'{"+" if (length > 0 and plus_visible) else ""}{length}см')
