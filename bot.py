@@ -7,7 +7,7 @@ import src.handlers.send_media as send_media
 from aiogram.filters.command import Command
 from src.data.dictionary import Dictionary
 from aiogram import Bot, Dispatcher, types
-from src.models.db_model import on_startup
+from src.models.db_model import on_startup, ensure_games_played_column
 from src.handlers.commands import Commands
 import src.handlers.system as system
 from src.data.config import Prefs
@@ -26,6 +26,7 @@ dict = Dictionary()
 scheduler = Scheduler()
 
 async def main():
+    await ensure_games_played_column()
     dp.include_routers(start.rt, 
                       create_sticker_set.rt,
                       edit_sticker_set.rt,
