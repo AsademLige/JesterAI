@@ -58,7 +58,7 @@ async def pencil_change(message: Message, state: FSMContext):
         "length": user.length + length_change,
         "last_length_check" : datetime.now()
     })):
-        answer = bot.send_message(user.chat_id, dict.length_change(user.tg_name, length_change),
+        answer = await bot.send_message(user.chat_id, dict.length_change(user.tg_name, length_change),
                             parse_mode=ParseMode.HTML)
 
 ###Команда отображения таблицы лидеров
