@@ -307,6 +307,7 @@ class Dictionary():
             f" {self.length_wrapper(user.length, False)} - "\
             f" {self.get_user_link(user.tg_name, user.tg_id)}"\
             f"{f' [{user.custom_title}] ' if type(user.custom_title) is str else ''}"\
+            f" ({self.money_wrapper(user.money, False)})"\
             f" { f'{self.money_wrapper(rewards[index])}' if (len(rewards) > index) else ''}\n"
         return winners
     
