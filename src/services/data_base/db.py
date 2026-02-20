@@ -1,11 +1,13 @@
 from src.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from src.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from src.models.custom_sticker_model import CustomStickerModel
+from src.models.bot_settings_model import BotSettingsModel
 from src.models.sticker_set_model import StickerSetModel
 from src.models.user_model import UserModel
 from src.models.role_model import RoleModel
 from typing import List, Dict, Any
 from src.data.config import Prefs
+from aiogram.types import Chat
 from typing import Optional
 from sqlalchemy import and_
 
@@ -191,6 +193,33 @@ class DataBase():
     async def delete_sticker_set_by_name(self, short_name:str):
         return await StickerSetModel.delete.\
             where(StickerSetModel.short_name == short_name).gino.status()
+    
+    ###-----------------------------------------
+    ### Методы работы с данными настроек 
+    ###-----------------------------------------
+
+    async def get_settings(self, chat: Chat) -> Optional[BotSettingsModel]:
+        try:
+            settings:Optional[BotSettingsModel] = await BotSettingsModel.query.where(BotSettingsModel.chat_id == chat.id).gino.first()
+            if (not settings):
+                settings = BotSettingsModel(
+                    chat_id=chat.id,
+                    alias = chat.full_name
+                )
+                await settings.create()
+            return settings
+        except Exception as error:
+            print(f"settings get error: {error}")
+            return None
+        
+    async def update_settings_by_chat_id(self, chat_id:int, args:Dict[str, Any] = {}) -> bool:
+        try:
+            query = BotSettingsModel.update.values(**args).where(BotSettingsModel.chat_id == chat_id)
+            await query.gino.status()
+            return True
+        except Exception as error:
+            print(f"update settings error: {error}")
+            return False
     
     ###-----------------------------------------
     ### Методы загрузки наборов данных 

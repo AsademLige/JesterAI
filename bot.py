@@ -1,4 +1,5 @@
 from src.domain.middlewares.registration_middleware import RegistrationMiddleware
+from src.domain.middlewares.captcha_middleware import CaptchaMiddleware
 import src.handlers.create_sticker_set as create_sticker_set
 import src.handlers.edit_sticker_set as edit_sticker_set
 from src.services.scheduler.scheduler import Scheduler
@@ -9,6 +10,7 @@ from src.data.dictionary import Dictionary
 from aiogram import Bot, Dispatcher, types
 from src.models.db_model import on_startup
 from src.handlers.commands import Commands
+import src.handlers.captcha as captcha
 import src.handlers.system as system
 from src.data.config import Prefs
 import src.handlers.start as start
@@ -29,10 +31,12 @@ async def main():
     dp.include_routers(start.rt, 
                       create_sticker_set.rt,
                       edit_sticker_set.rt,
-                      send_media.rt,
                       interactive.rt,
+                      send_media.rt,
+                      captcha.rt,
                       system.rt)
     dp.message.outer_middleware(RegistrationMiddleware())
+    dp.message.outer_middleware(CaptchaMiddleware())
     await on_startup(dp)
     await dict.init()
     await scheduler.init()
