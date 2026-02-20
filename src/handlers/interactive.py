@@ -95,6 +95,7 @@ async def trash_loto(message: Message, state: FSMContext):
         return
     
     if (not await db.update_user(user, {"money" : user.money - loto_cost})):
+        trash_loto_spin = True
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
         
