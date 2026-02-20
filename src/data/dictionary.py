@@ -39,7 +39,9 @@ class Dictionary():
 
     create_sticker_set:str = "Создать набор стикеров"
 
-    trash_loto:str = "Деньги карман жгут? Попытай удачу за 5💰"
+    trash_loto:str = "🎰 Деньги карман жгут? Попытай удачу за 5💰"
+
+    dice_game:str = "🎲 Кидаешь кубик и выигрываешь!"
 
     ###------------------------------------------------------------
     ###Общее
@@ -54,6 +56,8 @@ class Dictionary():
     skip:str = "⏩ Пропустить"
 
     trigger:str = "🚀 Запустить"
+
+    rules:str = "❓ Правила"
 
     bot_description:str = "Команда /sticker_pack отправит ссылку на стикеры, которые МАГИЧЕСКИМ образом превращаются в видео!\n\n"\
                         "У нас тут что-то вроде интерактивной игры, команда /me покажет небольшую сводку с твоими успехами\n\n"\
@@ -142,6 +146,45 @@ class Dictionary():
     trash_loto_error:str = "Ошибочка вышла... Зато деньги твои целы!"
 
     ###------------------------------------------------------------
+    ###Переменные игры с дайсами
+    ###------------------------------------------------------------
+    
+    dice_game_start:str = "<blockquote>🎲 Кубики!</blockquote>\n Сделай свой прогноз:"
+
+    dice_game_rules:str = "<b>🎲 Выше или ниже семи</b>\n"\
+                          "Игрок перед броском делает «ставку»: будет ли сумма двух кубиков меньше 7, больше 7 или ровно 7\n"\
+                          "<b>Выигрыш:</b> \n"\
+                          "🍀 Угадал меньше или больше 7 - <b>5</b>💰\n" \
+                          "💎 Угадал ровно 7 - <b>15</b>💰"
+    
+    __dice_lose:str = "🪗 <b>{{combination}}</b> Мимо! Повезет в следующий раз, {{user_link}}, но я не то чтобы гарантирую..."
+    __dice_minor_win:str = "🎯 <b>{{combination}}</b> Угадал! Выигрыш твой, {{user_link}}! Ну чертяка! {{money}}"
+    __dice_major_win:str = "<blockquote>💎 <b>{{combination}}</b> {{user_link}} супер угадал!</blockquote>\n"\
+                           "Забирай свои грязные бумажки! {{money}}"
+
+    __dice_combinations:Dict[List[int], List[str]] = {
+        (1, 1) : ["Змеиные глазки", "Близнецы-подкидыши", "Копейки"],
+        (1, 2) : ["Третий лишний", "Полторашка"],
+        (1, 4) : ["Четыре шлюхи и сутенёр"],
+        (2, 2) : ["Гуси лебеди"],
+        (2, 3) : ["Пятый угол"],
+        (3, 3) : ["Две косички", "Усы", "Барабаны"],
+        (3, 4) : ["Топор"],
+        (2, 5) : ["Топор", "Четвертак"],
+        (1, 6) : ["Топор"],
+        (4, 4) : ["Стулья", "Квадратная пара"],
+        (5, 5) : ["Десятка червонная"],
+        (4, 6) : ["Десятка червонная"],
+        (6, 6) : ["Чертова дюжина", "Pay Day", "Вагоны"],
+    }
+
+    dice_smaller:str = "💵 <7 💵"
+    dice_bigger:str = "💴 >7 💴"
+    dice_equal:str = "💎 =7 💎"
+
+    dice_error:str = "Ошибочка вышла..."
+
+    ###------------------------------------------------------------
     ###Описания розыгрышей
     ###------------------------------------------------------------
 
@@ -188,7 +231,7 @@ class Dictionary():
         ["пистон", "пистона", "пистону","пистон","пистоном",""]
     ]
 
-    __member_change_not_reset:str = "{{user_link}}, с тебя уже хватит, приходи позже...\n"\
+    __timer_message:str = "{{user_link}}, с тебя уже хватит, приходи позже...\n"\
     "<blockquote>⏰ Осталось потерпеть: {{time_left}}</blockquote>"
     
     ###------------------------------------------------------------
@@ -216,6 +259,38 @@ class Dictionary():
     def not_enough_money(self, user:UserModel) -> str:
         return tp.text_replacement(self.__not_enough_money, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+        })
+    
+    def dice_combination_name(self, combination:List[int]) -> str:
+        list:List[str] = []
+        
+        if (tuple(sorted(combination)) in self.__dice_combinations):
+            list = self.__dice_combinations[tuple(sorted(combination))]
+        
+        if (tuple(sorted(combination, reverse=True)) in self.__dice_combinations):
+            list = self.__dice_combinations[tuple(sorted(combination, reverse=True))]
+
+        return f"{random.choice(list)}!" if list else ""
+
+    
+    def dice_lose(self, user:UserModel, combination:List[int], ) -> str:
+        return tp.text_replacement(self.__dice_lose, {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            "combination" : self.dice_combination_name(combination)
+        })
+    
+    def dice_minor_win(self, user:UserModel, combination:List[int], money:int) -> str:
+        return tp.text_replacement(self.__dice_minor_win, {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            "combination" : self.dice_combination_name(combination),
+            "money" : self.money_wrapper(money), 
+        })
+    
+    def dice_major_win(self, user:UserModel, combination:List[int], money:int) -> str:
+        return tp.text_replacement(self.__dice_major_win, {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            "combination" : self.dice_combination_name(combination),
+            "money" : self.money_wrapper(money), 
         })
     
     def trash_loto_minor_length_award(self, full_name:str, tg_id:int, length:int) -> str:
@@ -358,8 +433,8 @@ class Dictionary():
             "pencil_prep":self.member_names[index][5]
         }
     
-    def member_change_not_reset(self, user:UserModel, time_left:str) -> str:
-        return tp.text_replacement(self.__member_change_not_reset, {
+    def timer_message(self, user:UserModel, time_left:str) -> str:
+        return tp.text_replacement(self.__timer_message, {
             "time_left" : time_left,
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             })
