@@ -38,6 +38,9 @@ class Commands():
     ###Гамба!
     trash_loto = "trash_loto"
 
+    ###Почти беспроигрышная гамба!
+    dice_game = "dice_game"
+
     ###Список активных запланированных на выполнение команд
     jobs = "jobs"
 
@@ -48,6 +51,7 @@ class Commands():
             BotCommand(command=Commands.pencil, description=dict.pencil),
             BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
             BotCommand(command=Commands.trash_loto, description=dict.trash_loto),
+            BotCommand(command=Commands.dice_game, description=dict.dice_game),
             BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
             BotCommand(command=Commands.help, description=dict.help),
         ])
