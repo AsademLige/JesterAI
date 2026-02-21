@@ -44,14 +44,18 @@ class Commands():
     ###Список активных запланированных на выполнение команд
     jobs = "jobs"
 
+    ###Данные о выигрышах пользователей
+    winners_log = "winners_log"
+
     @staticmethod
     async def setup_bot_commands():
         await bot.set_my_commands([
             BotCommand(command=Commands.me, description=dict.me),
             BotCommand(command=Commands.pencil, description=dict.pencil),
-            BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
             BotCommand(command=Commands.trash_loto, description=dict.trash_loto),
             BotCommand(command=Commands.dice_game, description=dict.dice_game),
+            BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
+            BotCommand(command=Commands.winners_log, description=dict.winners_log_description),
             BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
             BotCommand(command=Commands.help, description=dict.help),
         ])

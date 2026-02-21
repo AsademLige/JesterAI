@@ -3,13 +3,18 @@ from src.models.str_assets_positive_length_change_model import StrAssetsPositive
 from src.models.custom_sticker_model import CustomStickerModel
 from src.models.bot_settings_model import BotSettingsModel
 from src.models.sticker_set_model import StickerSetModel
+from src.models.winners_log import WinnersLog
 from src.models.user_model import UserModel
 from src.models.role_model import RoleModel
+from src.models.user_stats import UserStats
+from src.models.db_model import db
 from typing import List, Dict, Any
 from src.data.config import Prefs
 from aiogram.types import Chat
+from datetime import  datetime
 from typing import Optional
 from sqlalchemy import and_
+from math import ceil
 
 prefs = Prefs()
 
@@ -220,7 +225,63 @@ class DataBase():
         except Exception as error:
             print(f"update settings error: {error}")
             return False
+        
+    ###-----------------------------------------
+    ### Методы работы с статистикой выигрышей 
+    ###-----------------------------------------
+
+    async def get_winners_logs_page(self, page: int = 1):
+        """Получить одну страницу логов"""
+        items_per_page:int = 10
+        offset = (page - 1) * items_per_page
+        
+        logs:List[WinnersLog] = await WinnersLog.query.order_by(WinnersLog.win_date.desc())\
+            .offset(offset).limit(items_per_page).gino.all()
+        
+        logs_page_users_id:List[int] = []
+        
+        for log in logs:
+            if (not log.user_id in logs_page_users_id):
+                logs_page_users_id.append(log.user_id)
+        
+        total_logs = await db.func.count(WinnersLog.id).gino.scalar()
+        total_pages = ceil(total_logs / items_per_page)
+
+        users: List[UserModel] = await UserModel.query.where(UserModel.id.in_(logs_page_users_id)).gino.all()
+        
+        return logs, total_pages, users
     
+    async def add_win_log(self, user_id:int, event_type:int = 0, money:int = 0, length:int = 0):
+        try:
+            log = WinnersLog(
+                user_id = user_id,
+                event_type = event_type,
+                money = money,
+                length = length,
+                win_date = datetime.now()
+            )
+            await log.create()
+            return True
+        except Exception as error: 
+            print(f"log create error: {error}")
+            return False
+        
+    ###-----------------------------------------
+    ### Методы работы с статистикой пользователей
+    ###-----------------------------------------
+    
+    async def update_user_stats(self, user_id:int, args:Dict[str, Any] = {}) -> bool:
+        try:
+            user_stats:Optional[UserStats] = await UserStats.query.where(UserStats.user_id == user_id).gino.first()
+            if (not user_stats):
+                user_stats = UserStats(user_id = user_id)
+                await user_stats.create()
+            await user_stats.update(**args).apply()
+            return True
+        except Exception as error: 
+            print(f"user stats update error: {error}")
+            return False
+
     ###-----------------------------------------
     ### Методы загрузки наборов данных 
     ###-----------------------------------------
