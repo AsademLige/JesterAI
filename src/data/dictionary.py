@@ -1,7 +1,9 @@
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from src.domain.utils.text_processing import TextProcessing as tp
 from src.services.data_base.db import DataBase
+from src.models.winners_log import WinnersLog
 from src.models.user_model import UserModel
+from src.domain.utils.utils import Utils
 from typing import Optional, List, Dict
 import random
 
@@ -34,6 +36,8 @@ class Dictionary():
     leaderboard_description:str = "ЧСВ жмет? Покажи им свое место! (и их заодно)"
 
     sticker_pack:str = "Аудио стикеры!"
+
+    winners_log_description:str = "🗒 Список выигрышей игроков"
 
     edit_sticker_set:str = "Изменить набор стикеров"
 
@@ -128,11 +132,11 @@ class Dictionary():
     ###Описания треш лото
     ###------------------------------------------------------------
 
-    __trash_loto_consolation_money_award: str = "🍀 чут-чут повезло, держи копейку, {{user_link}}: {{money}}"
+    __trash_loto_consolation_money_award: str = "🌱 чут-чут повезло, держи копейку, {{user_link}}: {{money}}"
     
     __trash_loto_minor_length_award: str = "🍆 {{user_link}} выиграл мазь для увеличения {{pencil_gen}} на целых {{length}}!"
 
-    __trash_loto_minor_money_award: str = "🍀 Сегодня твой день, {{user_link}}! Выигрыш составил: {{money}}"
+    __trash_loto_minor_money_award: str = "☘️ Сегодня твой день, {{user_link}}! Выигрыш составил: {{money}}"
 
     __trash_loto_major_length_award: str = "<blockquote>🍆 ВОТ ЭТО УДАЧА!</blockquote> {{user_link}}, весь персонал казино тянул за твой {{pencil_accu}}, и вытянул на целых {{length}}!"
 
@@ -210,6 +214,8 @@ class Dictionary():
     ]
 
     __leaderboard:str = "<blockquote>🍆 Длинный {{pencil}} - это про них!</blockquote>\n{{leaderboard}}"
+
+    __winners_log:str = "<blockquote>🗓 Таблица данных о выигрышах пользователей</blockquote>\n{{logs}}"
 
     ###------------------------------------------------------------
     ###интерактивные действия изменения размера
@@ -398,6 +404,39 @@ class Dictionary():
         return tp.text_replacement(self.__leaderboard,{
             "leaderboard" : self.__generate_leaderboard(users),
             **self.random_member(),
+        })
+    
+    def __generate_winners_logs(self, logs:List[WinnersLog], users:List[UserModel]) -> str:
+        winners:str = ""
+        for index, log in enumerate(logs):
+            user:List[UserModel] = [user for user in users if user.id == log.user_id]
+
+            winners += f"{hcode(Utils.format_datetime(log.win_date))}"\
+            f" {self.__winner_log_event_by_index(log.event_type)} "\
+            f" {self.get_user_link(user[0].tg_name, user[0].tg_id)} - "\
+            f" {self.money_wrapper(log.money) if log.money > 0 else self.length_wrapper(log.length)}\n"\
+           
+        return winners
+    
+    def __winner_log_event_by_index(self, index:int) -> str:
+        if (index == 0):
+            return "🎰💎 Джекпот"
+        elif (index == 1):
+            return "🎰☘️ средняя"
+        elif (index == 2):
+            return "🎰🍀 большая"
+        elif (index == 3):
+            return "🎰🌱 мини"
+        elif (index == 4):
+            return "🎲🍀 мини"
+        elif (index == 5):
+            return "🎲💎 большая"
+        else:
+            return ""
+    
+    def winners_logs(self, logs:List[WinnersLog], users:List[UserModel]) -> str:
+        return tp.text_replacement(self.__winners_log,{
+            "logs" : self.__generate_winners_logs(logs, users),
         })
     
     def sticker_set_create_success(self, sticker_set_name:str) -> str:
