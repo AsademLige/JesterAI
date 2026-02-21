@@ -83,15 +83,6 @@ async def dice_game_menu(message: Message, state: FSMContext):
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     await message.delete()
 
-    delta:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
-    
-    if (math.floor(delta.total_seconds() / 3600) < 0):
-        answer = await bot.send_message(user.chat_id, 
-                                        dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
-                             parse_mode=ParseMode.HTML)
-        await Utils.delete_old_message([answer], 10)
-        return
-
     answer = await bot.send_message(user.chat_id, dict.dice_game_start, 
                      reply_markup = interactive_kb.dice_choice(),
                      parse_mode=ParseMode.HTML)
@@ -104,11 +95,6 @@ async def dice_game_menu(message: Message, state: FSMContext):
 async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):
     state_data = await state.get_data()
     user: UserModel = state_data["user"]
-
-    if (not await db.update_user(user, 
-            {"last_dice_play": datetime.now() })):
-        await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
-
     await callback.message.delete()
     await state.clear()
 
@@ -119,6 +105,20 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
                                                     parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([message], 60)
         return
+
+    delta:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
+    
+    if (math.floor(delta.total_seconds() / 3600) < 0):
+        answer = await bot.send_message(user.chat_id, 
+                                        dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
+                             parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([answer], 10)
+        return
+
+    if (not await db.update_user(user, 
+            {"last_dice_play": datetime.now() })):
+        await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
+
 
     dice1 = await bot.send_dice(user.chat_id, emoji='🎲')
     dice2 = await bot.send_dice(user.chat_id, emoji='🎲')
