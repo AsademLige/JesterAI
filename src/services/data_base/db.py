@@ -12,6 +12,7 @@ from typing import List, Dict, Any
 from src.data.config import Prefs
 from aiogram.types import Chat
 from datetime import  datetime
+from sqlalchemy import select
 from typing import Optional
 from sqlalchemy import and_
 from math import ceil
@@ -230,13 +231,18 @@ class DataBase():
     ### Методы работы с статистикой выигрышей 
     ###-----------------------------------------
 
-    async def get_winners_logs_page(self, page: int = 1):
+    async def get_winners_logs_page(self, chat_id:int, page: int = 1):
         """Получить одну страницу логов"""
         items_per_page:int = 10
         offset = (page - 1) * items_per_page
-        
-        logs:List[WinnersLog] = await WinnersLog.query.order_by(WinnersLog.win_date.desc())\
+
+        subquery = select([UserModel.id]).where(UserModel.chat_id == chat_id).alias()
+        logs:List[WinnersLog] = await WinnersLog.query.where(WinnersLog.user_id.in_(subquery)).order_by(WinnersLog.win_date.desc())\
             .offset(offset).limit(items_per_page).gino.all()
+
+        total_logs:int = await select([db.func.count(WinnersLog.id)]).where(
+            WinnersLog.user_id.in_(subquery)
+        ).gino.scalar()
         
         logs_page_users_id:List[int] = []
         
@@ -244,7 +250,6 @@ class DataBase():
             if (not log.user_id in logs_page_users_id):
                 logs_page_users_id.append(log.user_id)
         
-        total_logs = await db.func.count(WinnersLog.id).gino.scalar()
         total_pages = ceil(total_logs / items_per_page)
 
         users: List[UserModel] = await UserModel.query.where(UserModel.id.in_(logs_page_users_id)).gino.all()
