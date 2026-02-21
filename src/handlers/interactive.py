@@ -81,13 +81,15 @@ async def leaderboard(message: Message, state: FSMContext):
 ###Команда отображения списка выигрышей
 @rt.message(StateFilter(None), Command(cn.winners_log))
 async def winners_log(message: Message, state: FSMContext):
-    logs, total_pages, users = await db.get_winners_logs_page(1)
+    logs, total_pages, users = await db.get_winners_logs_page(message.chat.id, 1)
+    chat_id:int = message.chat.id
+    await message.delete()
 
     if not logs:
-        await message.answer("📭 Записей пока нет")
+        await bot.send_message(chat_id, "📭 Записей пока нет")
         return
     
-    await message.answer(dict.winners_logs(logs, users), 
+    await bot.send_message(chat_id, dict.winners_logs(logs, users), 
                          reply_markup=interactive_kb.get_pagination_keyboard(1, total_pages), 
                          parse_mode=ParseMode.HTML)
     
@@ -96,7 +98,7 @@ async def winners_log(message: Message, state: FSMContext):
 async def process_pagination(callback: CallbackQuery):
     page = int(callback.data.split('_')[1])
 
-    logs, total_pages, users = await db.get_winners_logs_page(page)
+    logs, total_pages, users = await db.get_winners_logs_page(callback.message.chat.id, page)
 
     await callback.message.edit_text(dict.winners_logs(logs, users), 
                          reply_markup=interactive_kb.get_pagination_keyboard(page, total_pages), 
