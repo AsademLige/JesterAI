@@ -65,6 +65,8 @@ class Dictionary():
                         "Бот все же заскамил тебя? Подожди 24 часа и пробуй еще раз!\n\n"\
                         "Каждый день проводим розыгрыш среди участников чата, а каждую пятницу подведем итоги и наградим самых крутых участников!\n\n"\
                         "<i>Все вопросы и предложения отправлять на почтовый ящик:</i> <code>2202202000651657</code>"
+    
+    __answer_restricted:str = "⛔️ Команду вызвал {{user_link}}, так что руки прочь!"
 
     ###------------------------------------------------------------
     ###Взаимодействие с пользователем
@@ -246,6 +248,12 @@ class Dictionary():
         except Exception as error:
             print(f"load assets error: {error}")
             return False
+        
+    
+    def answer_restricted(self, full_name: str, tg_id:int) -> str:
+        return tp.text_replacement(self.__answer_restricted, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+        })
     
     def get_sticker_set_link(self, sticker_set_name:str) -> str:
         return tp.text_replacement(self.__sticker_set_link, {"sticker_set_name" : sticker_set_name})

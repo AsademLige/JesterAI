@@ -83,18 +83,29 @@ async def dice_game_menu(message: Message, state: FSMContext):
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     await message.delete()
 
+    delta:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
+    
+    if (math.floor(delta.total_seconds() / 3600) < 0):
+        answer = await bot.send_message(user.chat_id, 
+                                        dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
+                             parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([answer], 10)
+        return
+
     answer = await bot.send_message(user.chat_id, dict.dice_game_start, 
                      reply_markup = interactive_kb.dice_choice(),
                      parse_mode=ParseMode.HTML)
     await state.update_data(user = user)
     await state.set_state(DiceGameSet.dice_menu_choice)
     await Utils.delete_old_message([answer], 15)
+    await state.clear()
 
 ### Выбор действия
 @rt.callback_query(DiceGameSet.dice_menu_choice, DiceGameCF.filter())
 async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):
     state_data = await state.get_data()
     user: UserModel = state_data["user"]
+
     await callback.message.delete()
     await state.clear()
 
@@ -104,15 +115,6 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
         message = await bot.send_message(user.chat_id, dict.dice_game_rules, 
                                                     parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([message], 60)
-        return
-
-    delta:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
-    
-    if (math.floor(delta.total_seconds() / 3600) < 0):
-        answer = await bot.send_message(user.chat_id, 
-                                        dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
-                             parse_mode=ParseMode.HTML)
-        await Utils.delete_old_message([answer], 10)
         return
 
     if (not await db.update_user(user, 
@@ -208,7 +210,7 @@ async def trash_loto(message: Message, state: FSMContext):
     elif is_major_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
-            length = random.randrange(2, 4)
+            length = random.randrange(2, 3)
             if (await db.update_user(user, {"length": UserModel.length + length, "money" : user.money})):
                 answer = await bot.send_message(user.chat_id, dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
@@ -232,7 +234,7 @@ async def trash_loto(message: Message, state: FSMContext):
     elif is_minor_win:
         action = random.choices([1, 2])
         if (action[0] == 1):
-            length = random.randrange(1, 3)
+            length = 1
             if (await db.update_user(user, {"length": UserModel.length + length, "money" : user.money})):
                 answer = await bot.send_message(user.chat_id, dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
@@ -248,8 +250,8 @@ async def trash_loto(message: Message, state: FSMContext):
                             parse_mode=ParseMode.HTML)
     
     if (have_delete_rights):
-        await Utils.delete_old_message([result, answer] if (is_lose) else [] 
-                                 if (is_major_win or is_jackpot) else [result], 5)
+        await Utils.delete_old_message([] if (is_major_win or is_jackpot) 
+                                       else [result, answer], 5)
     
 
 
