@@ -20,7 +20,7 @@ class CaptchaMiddleware(BaseMiddleware):
             event: TelegramObject,
             data: Dict[str, Any]
     ) -> Any:
-        if not isinstance(event, Message) and not event.text or not event.text.startswith(f"/{Commands.pencil}"):
+        if not event.text or (not isinstance(event, Message) and not event.text.startswith(f"/{Commands.pencil}")):
             return await handler(event, data)
         
         settings = await SettingsController.get_settings(event.chat)
@@ -57,7 +57,11 @@ class CaptchaMiddleware(BaseMiddleware):
         state: FSMContext = data['state']
         await state.set_state(CaptchaStates.waiting_for_button)
         await state.update_data(captcha_message_id=captcha.message_id)
-        await event.delete()
+        
+        try:
+            await event.delete()
 
-        await Utils.delete_old_message([captcha], 10)
-        await state.clear()
+            await Utils.delete_old_message([captcha], 10)
+            await state.clear()
+        except:
+            print("event not found")
