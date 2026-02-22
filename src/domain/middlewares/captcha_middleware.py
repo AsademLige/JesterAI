@@ -20,8 +20,10 @@ class CaptchaMiddleware(BaseMiddleware):
             event: TelegramObject,
             data: Dict[str, Any]
     ) -> Any:
-        if not event.text or (not isinstance(event, Message) and not event.text.startswith(f"/{Commands.pencil}")):
-            return await handler(event, data)
+        if (not event.text or (isinstance(event, Message) and event.text and not event.text.startswith(f"/{Commands.pencil}"))):
+            if (event): 
+                return await handler(event, data) 
+            else: return
         
         settings = await SettingsController.get_settings(event.chat)
 
