@@ -186,13 +186,12 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
                                          dict.dice_lose(user, [dice1.dice.value, 
                                                                dice2.dice.value]), 
                                                     parse_mode=ParseMode.HTML)
-        
-    if (not await db.update_user(user, 
-            {"money" : UserModel.money + (minor_win_award if is_minor_win else major_win_award),
-             })):
-        await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
-
     if (is_minor_win or is_major_win):
+        if (not await db.update_user(user, 
+                {UserModel.money.name : UserModel.money + (minor_win_award if is_minor_win else major_win_award),
+                    })):
+            await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
+
         await db.add_win_log(user.id, 
                                 event_type=4 if is_minor_win else 5, 
                                 money=5 if is_minor_win else 15)
