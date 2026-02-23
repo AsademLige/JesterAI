@@ -1,6 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from src.keyboards.callback_fabrics import StickerSetCF
-from src.models.sticker_set_model import StickerSetModel
+from src.models.sticker_set_model import StickerSet
 from aiogram.types import InlineKeyboardMarkup
 from src.data.dictionary import Dictionary
 from src.data.config import Prefs
@@ -13,7 +13,7 @@ class EditStickerSetKeyboard():
     def __init__(self):
         pass
 
-    def sticker_set_list_button(self, sticker_sets: List[StickerSetModel]) -> InlineKeyboardMarkup:
+    def sticker_set_list_button(self, sticker_sets: List[StickerSet]) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
         for set in sticker_sets:

@@ -1,12 +1,12 @@
 from src.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from src.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
-from src.models.custom_sticker_model import CustomStickerModel
-from src.models.bot_settings_model import BotSettingsModel
-from src.models.sticker_set_model import StickerSetModel
-from src.models.winners_log import WinnersLog
-from src.models.user_model import UserModel
-from src.models.role_model import RoleModel
-from src.models.user_stats import UserStats
+from src.models.custom_sticker_model import CustomSticker
+from src.models.bot_settings_model import BotSettings
+from src.models.sticker_set_model import StickerSet
+from src.models.winners_log_model import WinnersLog
+from src.models.user_stats_model import UserStats
+from src.models.user_model import User
+from src.models.role_model import Role
 from src.models.db_model import db
 from typing import List, Dict, Any
 from src.data.config import Prefs
@@ -25,44 +25,44 @@ class DataBase():
     ###--------------------------------------
     ### Методы работы с данными пользователей 
     ###--------------------------------------
-    async def get_user(self, tg_id: int) -> Optional[UserModel]:
+    async def get_user(self, tg_id: int) -> Optional[User]:
         try:
-            return await UserModel.query.where(UserModel.tg_id == tg_id).gino.first()
+            return await User.query.where(User.tg_id == tg_id).gino.first()
         except:
             return None
         
-    async def get_last_day_draw_winner_in_chat(self, chat_id: int) -> Optional[UserModel]:
+    async def get_last_day_draw_winner_in_chat(self, chat_id: int) -> Optional[User]:
         try:
-            return await UserModel.query.where(and_(UserModel.chat_id == chat_id, 
-                                               UserModel.last_daily_draw_winner == True)).gino.first()
+            return await User.query.where(and_(User.chat_id == chat_id, 
+                                               User.last_daily_draw_winner == True)).gino.first()
         except:
             return None
         
-    async def get_user_by_id(self, id: int) -> Optional[UserModel]:
+    async def get_user_by_id(self, id: int) -> Optional[User]:
         try:
-            return await UserModel.query.where(UserModel.id == id).gino.first()
+            return await User.query.where(User.id == id).gino.first()
         except:
             return None
         
-    async def get_user_by_chat_id(self, tg_id: int, chat_id: int) -> Optional[UserModel]:
+    async def get_user_by_chat_id(self, tg_id: int, chat_id: int) -> Optional[User]:
         try:
-            return await UserModel.query.where(and_(UserModel.chat_id == chat_id,
-                                                    UserModel.tg_id == tg_id)).gino.first()
+            return await User.query.where(and_(User.chat_id == chat_id,
+                                                    User.tg_id == tg_id)).gino.first()
         except:
             return None
         
-    async def get_all_users(self) ->  List[UserModel]: 
-        return await UserModel.query.gino.all()
+    async def get_all_users(self) ->  List[User]: 
+        return await User.query.gino.all()
     
-    async def get_all_users_by_chat(self, chat_id: int) ->  List[UserModel]: 
-        return await UserModel.query.where(and_(UserModel.chat_id == chat_id)).gino.all()
+    async def get_all_users_by_chat(self, chat_id: int) ->  List[User]: 
+        return await User.query.where(and_(User.chat_id == chat_id)).gino.all()
     
-    async def get_daily_draw_participants(self) ->  List[UserModel]: 
-        return await UserModel.query.where(UserModel.last_daily_draw_winner == False).gino.all()
+    async def get_daily_draw_participants(self) ->  List[User]: 
+        return await User.query.where(User.last_daily_draw_winner == False).gino.all()
     
     async def add_user(self, tg_id: int, tg_name: str, length: int, custom_title: str, chat_id:int):
         try:
-            user = UserModel(tg_id = tg_id, 
+            user = User(tg_id = tg_id, 
                              tg_name = tg_name, 
                              length = length, 
                              role_id = await self.get_role_id_by_name("member"),
@@ -75,8 +75,8 @@ class DataBase():
             return False
         
     async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:
-        users:List[UserModel] = await UserModel.query.where(UserModel.chat_id == chat_id).\
-                                        order_by(UserModel.length.desc()).gino.all()
+        users:List[User] = await User.query.where(User.chat_id == chat_id).\
+                                        order_by(User.length.desc()).gino.all()
         for i in range(len(users)):
             if (users[i].tg_id == tg_id):
                 return i + 1
@@ -85,13 +85,13 @@ class DataBase():
     
     async def update_user_by_id(self, tg_id: int, args:Dict[str, Any] = {}) -> bool:
         try:
-            await UserModel.update.values(**args).where(UserModel.tg_id == tg_id).gino.status()
+            await User.update.values(**args).where(User.tg_id == tg_id).gino.status()
             return True
         except Exception as error:
             print(f"update user error: {error}")
             return False
         
-    async def update_user(self, user: UserModel, args:Dict[str, Any] = {}) -> bool:
+    async def update_user(self, user: User, args:Dict[str, Any] = {}) -> bool:
         try:
             await user.update(**args).apply()
             return True
@@ -101,8 +101,8 @@ class DataBase():
         
     async def update_users_money_by_chat(self, chat_id: int, money:int) -> bool:
         try:
-            await UserModel.update.where(UserModel.chat_id == chat_id).values(
-                money=UserModel.money + money).gino.status()
+            await User.update.where(User.chat_id == chat_id).values(
+                money=User.money + money).gino.status()
             return True
         except Exception as error:
             print(f"update user error: {error}")
@@ -110,7 +110,7 @@ class DataBase():
         
     async def get_role_id_by_name(self, name: str) -> int:
         try:
-            role = await RoleModel.query.where(RoleModel.name == name).gino.first()
+            role = await Role.query.where(Role.name == name).gino.first()
             return role.id
         except:
             return None
@@ -124,9 +124,9 @@ class DataBase():
             print(f"check role error: {error}")
             return False
     
-    async def get_admins_list(self) ->  List[UserModel]:
+    async def get_admins_list(self) ->  List[User]:
         try:
-            return await UserModel.query.where(UserModel.role_id == 1).gino.all()
+            return await User.query.where(User.role_id == 1).gino.all()
         except:
             return []
         
@@ -136,7 +136,7 @@ class DataBase():
 
     async def add_sticker_set(self, short_name:str, title:str):
         try:
-            sticker_set = StickerSetModel(short_name = short_name, title = title)
+            sticker_set = StickerSet(short_name = short_name, title = title)
             await sticker_set.create()
             return True
         except Exception as error: 
@@ -145,7 +145,7 @@ class DataBase():
         
     async def add_custom_sticker(self, media_path: str, sticker_id:str, sticker_set_name:str):
         try:
-            custom_sticker = CustomStickerModel(media_path = media_path, 
+            custom_sticker = CustomSticker(media_path = media_path, 
                                                 sticker_id = sticker_id, 
                                                 sticker_set_name = sticker_set_name)
             await custom_sticker.create()
@@ -154,10 +154,10 @@ class DataBase():
             print(f"custom sticker create error: {error}")
             return False
         
-    async def get_custom_sticker_by_id(self, sticker_id:str,) -> Optional[CustomStickerModel]:
+    async def get_custom_sticker_by_id(self, sticker_id:str,) -> Optional[CustomSticker]:
         try:
-            custom_sticker : CustomStickerModel = await CustomStickerModel.\
-            query.where(CustomStickerModel.sticker_id == sticker_id).gino.first()
+            custom_sticker : CustomSticker = await CustomSticker.\
+            query.where(CustomSticker.sticker_id == sticker_id).gino.first()
 
             return custom_sticker
         except Exception as error:
@@ -166,30 +166,30 @@ class DataBase():
         
     async def delete_custom_sticker_by_id(self, sticker_id:str) -> bool:
         try:
-            return await CustomStickerModel.delete.\
-                where(CustomStickerModel.sticker_id == sticker_id).gino.status()
+            return await CustomSticker.delete.\
+                where(CustomSticker.sticker_id == sticker_id).gino.status()
         except Exception as error:
             print(f"custom sticker media delete error: {error}")
             return False
         
     async def get_custom_stickers_by_set_name(self,
-                                              sticker_set_name:str) -> Optional[List[CustomStickerModel]]:
+                                              sticker_set_name:str) -> Optional[List[CustomSticker]]:
         try:
-            custom_stickers : List[CustomStickerModel] = await CustomStickerModel.\
-            query.where(CustomStickerModel.sticker_set_name == sticker_set_name).gino.all()
+            custom_stickers : List[CustomSticker] = await CustomSticker.\
+            query.where(CustomSticker.sticker_set_name == sticker_set_name).gino.all()
 
             return custom_stickers
         except Exception as error:
             print(f"custom stickers media get error: {error}")
             return None
 
-    async def get_all_sticker_sets(self) ->  List[StickerSetModel]: 
-        return await StickerSetModel.query.gino.all()
+    async def get_all_sticker_sets(self) ->  List[StickerSet]: 
+        return await StickerSet.query.gino.all()
     
-    async def get_sticker_set_by_id(self, set_id:str,) -> Optional[StickerSetModel]:
+    async def get_sticker_set_by_id(self, set_id:str,) -> Optional[StickerSet]:
         try:
-            custom_sticker : StickerSetModel = await StickerSetModel.\
-            query.where(StickerSetModel.id == set_id).gino.first()
+            custom_sticker : StickerSet = await StickerSet.\
+            query.where(StickerSet.id == set_id).gino.first()
 
             return custom_sticker
         except Exception as error:
@@ -197,18 +197,18 @@ class DataBase():
             return None
     
     async def delete_sticker_set_by_name(self, short_name:str):
-        return await StickerSetModel.delete.\
-            where(StickerSetModel.short_name == short_name).gino.status()
+        return await StickerSet.delete.\
+            where(StickerSet.short_name == short_name).gino.status()
     
     ###-----------------------------------------
     ### Методы работы с данными настроек 
     ###-----------------------------------------
 
-    async def get_settings(self, chat: Chat) -> Optional[BotSettingsModel]:
+    async def get_settings(self, chat: Chat) -> Optional[BotSettings]:
         try:
-            settings:Optional[BotSettingsModel] = await BotSettingsModel.query.where(BotSettingsModel.chat_id == chat.id).gino.first()
+            settings:Optional[BotSettings] = await BotSettings.query.where(BotSettings.chat_id == chat.id).gino.first()
             if (not settings):
-                settings = BotSettingsModel(
+                settings = BotSettings(
                     chat_id=chat.id,
                     alias = chat.full_name
                 )
@@ -220,7 +220,7 @@ class DataBase():
         
     async def update_settings_by_chat_id(self, chat_id:int, args:Dict[str, Any] = {}) -> bool:
         try:
-            query = BotSettingsModel.update.values(**args).where(BotSettingsModel.chat_id == chat_id)
+            query = BotSettings.update.values(**args).where(BotSettings.chat_id == chat_id)
             await query.gino.status()
             return True
         except Exception as error:
@@ -236,7 +236,7 @@ class DataBase():
         items_per_page:int = 10
         offset = (page - 1) * items_per_page
 
-        subquery = select([UserModel.id]).where(UserModel.chat_id == chat_id).alias()
+        subquery = select([User.id]).where(User.chat_id == chat_id).alias()
         logs:List[WinnersLog] = await WinnersLog.query.where(WinnersLog.user_id.in_(subquery)).order_by(WinnersLog.win_date.desc())\
             .offset(offset).limit(items_per_page).gino.all()
 
@@ -252,7 +252,7 @@ class DataBase():
         
         total_pages = ceil(total_logs / items_per_page)
 
-        users: List[UserModel] = await UserModel.query.where(UserModel.id.in_(logs_page_users_id)).gino.all()
+        users: List[User] = await User.query.where(User.id.in_(logs_page_users_id)).gino.all()
         
         return logs, total_pages, users
     

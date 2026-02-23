@@ -1,8 +1,8 @@
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from src.domain.utils.text_processing import TextProcessing as tp
 from src.services.data_base.db import DataBase
-from src.models.winners_log import WinnersLog
-from src.models.user_model import UserModel
+from src.models.winners_log_model import WinnersLog
+from src.models.user_model import User
 from src.domain.utils.utils import Utils
 from typing import Optional, List, Dict
 import random
@@ -46,6 +46,8 @@ class Dictionary():
     trash_loto:str = "🎰 Деньги карман жгут? Попытай удачу за 5💰"
 
     dice_game:str = "🎲 Кидаешь кубик и выигрываешь!"
+
+    store:str = "🛒 Торгомат DICKSI"
 
     ###------------------------------------------------------------
     ###Общее
@@ -270,7 +272,7 @@ class Dictionary():
             "full_name" : full_name,
         })
     
-    def not_enough_money(self, user:UserModel) -> str:
+    def not_enough_money(self, user:User) -> str:
         return tp.text_replacement(self.__not_enough_money, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
         })
@@ -287,20 +289,20 @@ class Dictionary():
         return f"{random.choice(list)}!" if list else ""
 
     
-    def dice_lose(self, user:UserModel, combination:List[int], ) -> str:
+    def dice_lose(self, user:User, combination:List[int], ) -> str:
         return tp.text_replacement(self.__dice_lose, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "combination" : self.dice_combination_name(combination)
         })
     
-    def dice_minor_win(self, user:UserModel, combination:List[int], money:int) -> str:
+    def dice_minor_win(self, user:User, combination:List[int], money:int) -> str:
         return tp.text_replacement(self.__dice_minor_win, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "combination" : self.dice_combination_name(combination),
             "money" : self.money_wrapper(money), 
         })
     
-    def dice_major_win(self, user:UserModel, combination:List[int], money:int) -> str:
+    def dice_major_win(self, user:User, combination:List[int], money:int) -> str:
         return tp.text_replacement(self.__dice_major_win, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "combination" : self.dice_combination_name(combination),
@@ -360,7 +362,7 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:UserModel, place_in_top:int) -> str:
+    def user_information(self, user:User, place_in_top:int) -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
@@ -376,20 +378,20 @@ class Dictionary():
     def tech_work_compensation(self, money:int) -> str:
         return tp.text_replacement(self.__tech_work_compensation, {"money" : self.money_wrapper(money)})
     
-    def draw(self, user:UserModel, length_change:int) -> str:
+    def draw(self, user:User, length_change:int) -> str:
         return tp.text_replacement(self.__draw_list[random.randint(0, len(self.__draw_list) - 1)], {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(), 
             "length":self.length_wrapper(length_change), 
         })
     
-    def weekly_winners(self, users:List[UserModel], rewards:List[int]) -> str:
+    def weekly_winners(self, users:List[User], rewards:List[int]) -> str:
         return tp.text_replacement(self.__weekly_winners[random.randint(0, len(self.__weekly_winners) - 1)],{
             "winners" : self.__generate_leaderboard(users, rewards),
             **self.random_member(),
         })
     
-    def __generate_leaderboard(self, users:List[UserModel], rewards:List[int] = []) -> str:
+    def __generate_leaderboard(self, users:List[User], rewards:List[int] = []) -> str:
         winners:str = ""
         for index, user in enumerate(users):
             winners += f"{self.get_medal_emoji(index+1, True)}"\
@@ -400,16 +402,16 @@ class Dictionary():
             f" { f'{self.money_wrapper(rewards[index])}' if (len(rewards) > index) else ''}\n"
         return winners
     
-    def leaderboard(self, users:List[UserModel]) -> str:
+    def leaderboard(self, users:List[User]) -> str:
         return tp.text_replacement(self.__leaderboard,{
             "leaderboard" : self.__generate_leaderboard(users),
             **self.random_member(),
         })
     
-    def __generate_winners_logs(self, logs:List[WinnersLog], users:List[UserModel]) -> str:
+    def __generate_winners_logs(self, logs:List[WinnersLog], users:List[User]) -> str:
         winners:str = ""
         for index, log in enumerate(logs):
-            user:List[UserModel] = [user for user in users if user.id == log.user_id]
+            user:List[User] = [user for user in users if user.id == log.user_id]
 
             winners += f"{hcode(Utils.format_datetime(log.win_date))}"\
             f" {self.__winner_log_event_by_index(log.event_type)} "\
@@ -434,7 +436,7 @@ class Dictionary():
         else:
             return ""
     
-    def winners_logs(self, logs:List[WinnersLog], users:List[UserModel]) -> str:
+    def winners_logs(self, logs:List[WinnersLog], users:List[User]) -> str:
         return tp.text_replacement(self.__winners_log,{
             "logs" : self.__generate_winners_logs(logs, users),
         })
@@ -462,7 +464,7 @@ class Dictionary():
                 f"⚠️ {self.__negative_length_change[random.randint(0, len(self.__negative_length_change) - 1)]}",
                                        params)
         
-    def media_caption(self, user:UserModel) -> str:
+    def media_caption(self, user:User) -> str:
         return tp.text_replacement("Отправил: {{user_link}} {{custom_title}} - {{length}}", {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
@@ -480,7 +482,7 @@ class Dictionary():
             "pencil_prep":self.member_names[index][5]
         }
     
-    def timer_message(self, user:UserModel, time_left:str) -> str:
+    def timer_message(self, user:User, time_left:str) -> str:
         return tp.text_replacement(self.__timer_message, {
             "time_left" : time_left,
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),

@@ -2,7 +2,7 @@ from src.models.db_model import TimedBaseModel
 import sqlalchemy as sa
 
 
-class UserModel(TimedBaseModel):
+class User(TimedBaseModel):
     __tablename__ = "users"
     id = sa.Column(sa.Integer, primary_key=True)
     tg_id = sa.Column(sa.BigInteger)
