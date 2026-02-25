@@ -84,7 +84,9 @@ class Dictionary():
     
     __user_information : str = f'{hblockquote("🔍 {{user_link}} {{custom_title}} Имеет {{pencil_accu}} длинной {{length}}!")}\n'\
     '{{medal}} Место в топе: {{place_in_top}}\n'\
-    '💰 Монет на руках: {{money}}'
+    '💰 Монет на руках: {{money}}\n'\
+    '⏰ Время до pencil: {{time_to_pencil}}\n'\
+    '⏰ Время до dice_game: {{time_to_dice}}'
 
     private_messages_restriction: str = "🚧 Здесь тебе(🤡) делать нечего 🚧"
 
@@ -360,7 +362,7 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:UserModel, place_in_top:int) -> str:
+    def user_information(self, user:UserModel, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
@@ -368,7 +370,9 @@ class Dictionary():
                                     "medal": self.get_medal_emoji(place_in_top),
                                     "place_in_top": place_in_top,
                                     "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
-                                    "length":self.length_wrapper(user.length, False)})
+                                    "length":self.length_wrapper(user.length, False),
+                                    "time_to_pencil" : time_to_pencil,
+                                    "time_to_dice" : time_to_dice})
     
     def day_salary(self, money:int) -> str:
         return tp.text_replacement(self.__day_salary, {"money" : self.money_wrapper(money)})

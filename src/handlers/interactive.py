@@ -37,8 +37,25 @@ member_change_reset_time:int = 24
 async def user_information(message: Message, state: FSMContext):
     user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     place_in_top:int = await db.get_place_in_top_by_member(user.tg_id, user.chat_id)
+    
+    # Получаем оставшееся время до возможности использовать pencil
+    delta_pencil:timedelta = Utils.get_last_member_check_delta(user.last_length_check)
+    # Если оставшееся время отрицательное, значит можно использовать команду
+    if math.floor(delta_pencil.total_seconds() / 3600) < 0:
+        time_to_pencil = Utils.timedelta_to_hhmm(delta_pencil)
+    else:
+        time_to_pencil = "Готов"
+    
+    # Получаем оставшееся время до возможности использовать dice_game
+    delta_dice:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
+    # Если оставшееся время отрицательное, значит можно использовать команду
+    if math.floor(delta_dice.total_seconds() / 3600) < 0:
+        time_to_dice = Utils.timedelta_to_hhmm(delta_dice)
+    else:
+        time_to_dice = "Готов"
+    
     await message.delete()
-    answer = await bot.send_message(user.chat_id, dict.user_information(user, place_in_top),
+    answer = await bot.send_message(user.chat_id, dict.user_information(user, place_in_top, time_to_pencil, time_to_dice),
                          parse_mode=ParseMode.HTML)
     await Utils.delete_old_message([answer], 15)
     
