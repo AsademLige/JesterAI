@@ -6,8 +6,8 @@ from src.handlers.commands import Commands as cn
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from src.services.data_base.db import DataBase
-from src.models.user_model import UserModel
-from src.models.user_stats import UserStats
+from src.models.user_model import User
+from src.models.user_stats_model import UserStats
 from aiogram.fsm.context import FSMContext
 from src.data.dictionary import Dictionary
 from datetime import timedelta, datetime
@@ -35,7 +35,7 @@ member_change_reset_time:int = 24
 ###Получение информации о пользователе
 @rt.message(StateFilter(None), Command(cn.me))
 async def user_information(message: Message, state: FSMContext):
-    user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
+    user: User = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     place_in_top:int = await db.get_place_in_top_by_member(user.tg_id, user.chat_id)
     
     # Получаем оставшееся время до возможности использовать pencil
@@ -62,7 +62,7 @@ async def user_information(message: Message, state: FSMContext):
 ###Попробовать изменить текущий member размер 
 @rt.message(StateFilter(None), Command(cn.pencil))
 async def pencil_change(message: Message, state: FSMContext):
-    user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
+    user: User = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     await message.delete()
     delta:timedelta = Utils.get_last_member_check_delta(user.last_length_check)
 
@@ -86,8 +86,8 @@ async def pencil_change(message: Message, state: FSMContext):
 ###Команда отображения таблицы лидеров
 @rt.message(StateFilter(None), Command(cn.leaderboard))
 async def leaderboard(message: Message, state: FSMContext):
-    users: List[UserModel] = await db.get_all_users_by_chat(message.chat.id)
-    sorted_users: List[UserModel] = sorted(users, 
+    users: List[User] = await db.get_all_users_by_chat(message.chat.id)
+    sorted_users: List[User] = sorted(users, 
                                             key=lambda u: u.length,
                                             reverse=True)
     await message.delete()
@@ -129,11 +129,10 @@ async def delete_winners_log_table(callback: CallbackQuery):
 ###Полезный заработок денег
 @rt.message(StateFilter(None), Command(cn.dice_game))
 async def dice_game_menu(message: Message, state: FSMContext):
-    user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
+    user: User = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     await message.delete()
 
     delta:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
-    
     if (math.floor(delta.total_seconds() / 3600) < 0):
         answer = await bot.send_message(user.chat_id, 
                                         dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
@@ -153,7 +152,7 @@ async def dice_game_menu(message: Message, state: FSMContext):
 @rt.callback_query(DiceGameSet.dice_menu_choice, DiceGameCF.filter())
 async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):
     state_data = await state.get_data()
-    user: UserModel = state_data["user"]
+    user: User = state_data["user"]
 
     await callback.message.delete()
     await state.clear()
@@ -167,7 +166,7 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
         return
 
     if (not await db.update_user(user, 
-            {UserModel.last_dice_play.name: datetime.now() })):
+            {User.last_dice_play.name: datetime.now() })):
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
 
 
@@ -205,7 +204,7 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
                                                     parse_mode=ParseMode.HTML)
     if (is_minor_win or is_major_win):
         if (not await db.update_user(user, 
-                {UserModel.money.name : UserModel.money + (minor_win_award if is_minor_win else major_win_award),
+                {User.money.name : User.money + (minor_win_award if is_minor_win else major_win_award),
                     })):
             await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
 
@@ -228,7 +227,7 @@ async def trash_loto(message: Message, state: FSMContext):
     have_delete_rights = (await RightsController.check_is_admin(message.chat.id) and
         await RightsController.check_delete_messages_rights(message.chat.id))
     
-    user: UserModel = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
+    user: User = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     
     loto_cost:int = 5
 
@@ -238,7 +237,7 @@ async def trash_loto(message: Message, state: FSMContext):
         await Utils.delete_old_message([message, answer])
         return
     
-    if (not await db.update_user(user, {"money" : UserModel.money - loto_cost})):
+    if (not await db.update_user(user, {"money" : User.money - loto_cost})):
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
         
@@ -264,7 +263,7 @@ async def trash_loto(message: Message, state: FSMContext):
     # 777
     if is_jackpot:
         award =  random.randrange(20, 30)
-        if (await db.update_user(user, {"money" : UserModel.money + award})):
+        if (await db.update_user(user, {"money" : User.money + award})):
             answer = await bot.send_message(user.chat_id, dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award),
                                 parse_mode=ParseMode.HTML)
             await db.add_win_log(user.id, event_type=0, money=award)
@@ -274,14 +273,14 @@ async def trash_loto(message: Message, state: FSMContext):
         action = random.choices([1, 2])
         if (action[0] == 1):
             length = random.randrange(2, 3)
-            if (await db.update_user(user, {"length": UserModel.length + length, "money" : user.money})):
+            if (await db.update_user(user, {"length": User.length + length, "money" : user.money})):
                 answer = await bot.send_message(user.chat_id, dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
                 await db.add_win_log(user.id, event_type=2, length=length)
             else: answer = await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
             award =  random.randrange(10, 15)
-            if (await db.update_user(user, {"money" : UserModel.money + award})):
+            if (await db.update_user(user, {"money" : User.money + award})):
                 answer = await bot.send_message(user.chat_id, dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
                 await db.add_win_log(user.id, event_type=2, money=award)
@@ -290,7 +289,7 @@ async def trash_loto(message: Message, state: FSMContext):
     # Проверка на одинаковые крайние
     elif is_consolation:
         award = random.randrange(1, 5)
-        if (await db.update_user(user, {"money" : UserModel.money + award})):
+        if (await db.update_user(user, {"money" : User.money + award})):
             answer = await bot.send_message(user.chat_id, dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award),
                                 parse_mode=ParseMode.HTML)
             await db.add_win_log(user.id, event_type=3, money=award)
@@ -301,14 +300,14 @@ async def trash_loto(message: Message, state: FSMContext):
         action = random.choices([1, 2])
         if (action[0] == 1):
             length = 1
-            if (await db.update_user(user, {"length": UserModel.length + length, "money" : user.money})):
+            if (await db.update_user(user, {"length": User.length + length, "money" : user.money})):
                 answer = await bot.send_message(user.chat_id, dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length),
                                     parse_mode=ParseMode.HTML)
                 await db.add_win_log(user.id, event_type=1, length=length)
             else: answer = await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         else:
             award =  random.randrange(5, 10)
-            if (await db.update_user(user, {"money" : UserModel.money + award})):
+            if (await db.update_user(user, {"money" : User.money + award})):
                 answer = await bot.send_message(user.chat_id, dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award),
                                     parse_mode=ParseMode.HTML)
                 await db.add_win_log(user.id, event_type=1, money=award)

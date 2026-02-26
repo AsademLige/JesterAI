@@ -2,7 +2,7 @@ from src.models.db_model import BaseModel
 import sqlalchemy as sa
 
 
-class StickerSetModel(BaseModel):
+class StickerSet(BaseModel):
     __tablename__ = "sticker_sets"
     id = sa.Column(sa.Integer, primary_key=True)
     short_name = sa.Column(sa.Text)

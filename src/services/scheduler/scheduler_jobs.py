@@ -1,6 +1,6 @@
 from src.domain.utils.app_herald import AppHerald
 from src.services.data_base.db import DataBase
-from src.models.user_model import UserModel
+from src.models.user_model import User
 from src.data.dictionary import Dictionary
 from typing import Dict, List, Optional
 from aiogram.enums import ParseMode
@@ -22,8 +22,8 @@ class SchedulerJobs():
         Еженедельное подведение итогов размера {{pencil_accu}}
         Каждая группа имеет свой топ и своих победителей
         """
-        users: List[UserModel] = await db.get_all_users()
-        indexed_users: Dict[int, List[UserModel]] = {}
+        users: List[User] = await db.get_all_users()
+        indexed_users: Dict[int, List[User]] = {}
 
         for user in users:
             if (user.chat_id is not None):
@@ -36,7 +36,7 @@ class SchedulerJobs():
                 await bot.get_chat(chat_id)
 
                 rewards: List[int] = [15, 10, 5]
-                sorted_users: List[UserModel] = sorted(indexed_users[chat_id], 
+                sorted_users: List[User] = sorted(indexed_users[chat_id], 
                                                     key=lambda u: u.length,
                                                     reverse=True)
                 for index, reward in enumerate(rewards):
@@ -72,8 +72,8 @@ class SchedulerJobs():
         """
         Общий метод выдачи монеток всем игрокам
         """
-        users: List[UserModel] = await db.get_all_users()
-        indexed_users: Dict[int, List[UserModel]] = {}
+        users: List[User] = await db.get_all_users()
+        indexed_users: Dict[int, List[User]] = {}
 
         for user in users:
             if (user.chat_id is not None):
@@ -101,8 +101,8 @@ class SchedulerJobs():
         Ежедневный розыгрыш мази увеличения {{pencil_accu}}
         Каждая группа получает своего победителя
         """
-        users: List[UserModel] = await db.get_daily_draw_participants()
-        indexed_users: Dict[int, List[UserModel]] = {}
+        users: List[User] = await db.get_daily_draw_participants()
+        indexed_users: Dict[int, List[User]] = {}
 
         for user in users:
             if (user.chat_id is not None):
@@ -115,7 +115,7 @@ class SchedulerJobs():
                 await bot.get_chat(chat_id)
                 if (not indexed_users[chat_id]): continue
 
-                sorted_users: List[UserModel] = sorted(indexed_users[chat_id], 
+                sorted_users: List[User] = sorted(indexed_users[chat_id], 
                                                     key=lambda u: u.length,
                                                     reverse=True)
                 
@@ -126,7 +126,7 @@ class SchedulerJobs():
                 else:
                     draw_winner_index = random.randrange(2, len(sorted_users) - 1)
                 
-                last_winner:Optional[UserModel] = await db.get_last_day_draw_winner_in_chat(chat_id)
+                last_winner:Optional[User] = await db.get_last_day_draw_winner_in_chat(chat_id)
                 length_change:int = random.randrange(5, 10)
                 
                 await db.update_user(sorted_users[draw_winner_index],

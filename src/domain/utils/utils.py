@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
+from typing import List, Any, Optional
 from aiogram.types import Message
-from typing import List
 import asyncio
 
 class Utils():
@@ -91,3 +91,16 @@ class Utils():
             return f"{days} дня назад"
         else:
             return f"{days} дней назад"
+    
+    @staticmethod
+    def try_parse_int(value: str) -> Optional[int]:
+        """Пытается преобразовать строку в int, возвращает None при ошибке"""
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+    
+    @staticmethod
+    def is_valid_index(list: List[Any], index: int) -> bool:
+        """Проверяет, существует ли индекс в списке"""
+        return 0 <= index < len(list)

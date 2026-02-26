@@ -1,5 +1,5 @@
 from moviepy import VideoFileClip, TextClip, CompositeVideoClip
-from src.models.custom_sticker_model import CustomStickerModel
+from src.models.custom_sticker_model import CustomSticker
 from aiogram.types import InputFile, BufferedInputFile
 from src.domain.utils.consts import Consts
 from typing import BinaryIO, Optional
@@ -72,7 +72,7 @@ async def make_sticker_webm_video(bot: Bot, id: str, clip_text: Optional[str]) -
     assert raw_file
     return process_media(raw_file, clip_text, extension)
 
-def get_media_by_custom_sticker(custom_sticker: CustomStickerModel) -> Optional[InputFile]:
+def get_media_by_custom_sticker(custom_sticker: CustomSticker) -> Optional[InputFile]:
     try:
         with open(custom_sticker.media_path, "rb") as output_file_handler:
             return BufferedInputFile(output_file_handler.read(), custom_sticker.sticker_id)

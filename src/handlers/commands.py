@@ -41,6 +41,9 @@ class Commands():
     ###Почти беспроигрышная гамба!
     dice_game = "dice_game"
 
+    ###Магазин
+    store = "store"
+
     ###Список активных запланированных на выполнение команд
     jobs = "jobs"
 
@@ -56,6 +59,7 @@ class Commands():
             BotCommand(command=Commands.dice_game, description=dict.dice_game),
             BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
             BotCommand(command=Commands.winners_log, description=dict.winners_log_description),
+            BotCommand(command=Commands.store, description=dict.store),
             BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
             BotCommand(command=Commands.help, description=dict.help),
         ])
