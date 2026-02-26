@@ -1,5 +1,5 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from src.models.sticker_set_model import StickerSetModel
+from src.models.sticker_set_model import StickerSet
 from src.keyboards.callback_fabrics import JobsCF
 from aiogram.types import InlineKeyboardMarkup
 from src.data.dictionary import Dictionary

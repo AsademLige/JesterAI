@@ -11,12 +11,14 @@
         "пипиролькой",
         "стикера",
         "стикеру",
+        "Торгомат",
         "чучундрик",
         "чучундрика",
         "чучундриком",
         "чучундрику",
         "aiogram",
         "boto",
+        "DICKSI",
         "getbuffer",
         "hblockquote",
         "hbold",
@@ -33,4 +35,10 @@
         "pytz",
         "quantumrandom"
     ],
+    "explorer.decorations.colors": true,
+    "explorer.decorations.badges": true,
+    "workbench.colorCustomizations": {
+        "gitDecoration.addedResourceForeground": "#3EB58F",
+        "gitDecoration.modifiedResourceForeground": "#3EB58F",
+    },
 }

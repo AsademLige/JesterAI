@@ -1,10 +1,14 @@
+import re
+
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from src.domain.utils.text_processing import TextProcessing as tp
+from src.models.winners_log_model import WinnersLog
+from src.models.store_item_model import StoreItem
+from typing import Optional, List, Dict, Tuple
 from src.services.data_base.db import DataBase
-from src.models.winners_log import WinnersLog
-from src.models.user_model import UserModel
 from src.domain.utils.utils import Utils
-from typing import Optional, List, Dict
+from src.models.user_model import User
+from src.models.warehouse import Warehouse
 import random
 
 class Dictionary():
@@ -46,6 +50,8 @@ class Dictionary():
     trash_loto:str = "🎰 Деньги карман жгут? Попытай удачу за 5💰"
 
     dice_game:str = "🎲 Кидаешь кубик и выигрываешь!"
+
+    store:str = "🛒 Торгомат DICKSI"
 
     ###------------------------------------------------------------
     ###Общее
@@ -191,6 +197,28 @@ class Dictionary():
     dice_error:str = "Ошибочка вышла..."
 
     ###------------------------------------------------------------
+    ###Текстовые переменные магазина
+    ###------------------------------------------------------------
+
+    __store_description:str = "<blockquote>🛒 Приветствуем в <b>DICKSI</b>, {{user_link}}!</blockquote>\n"\
+                              "Пакетик брать будете или Вы со своим?:\n{{products}}"
+    
+    __product_description:str = "<blockquote>{{title}}</blockquote>\n<i>{{description}}</i>\n\n<b>Стоимость</b>: {{price}}"
+    
+    __buttons_types:List[str] = ['🈶','🈚️','🈸','🈺', '🈷️']
+
+    __store_exit:List[str] = [
+        "🚪 {{user_link}}, не задерживайте очередь, там за вами бабушка с 30 мешками сахара в руках уже сознание теряет!",
+        "🚪 Ты бы еще консервных банок насобирал! Как проветришься, заходи...",
+        "🚪 {{user_link}} стоит, копейки свои дрочит! Пропусти людей, не задерживай очередь!",
+        "🚪 Слил вcю котлету треш лото, чудик, теперь даже на пакет денег нет"
+    ]
+
+    __product_buying_thanks:List[str] = ["💳 Оплата прошла, спасибо за покупку, {{user_link}}!", 
+                                         "💳 Не желаете гречку по акции, корм для голубей, передние стойки стабилизатора на гранту? Спасибо за покупку, {{user_link}}, приходите еще!",
+                                         "💳 За покупку вам бонус в виде наклейки! Наклеите 999 штук на свой {{pencil}}, и он увеличится на <b>1cm</b>"]
+
+    ###------------------------------------------------------------
     ###Описания розыгрышей
     ###------------------------------------------------------------
 
@@ -233,8 +261,13 @@ class Dictionary():
     ### 5 - Предложный 
     member_names:List[List[str]] = [
         ["член", "члена", "члену","член","членом",""],
-        ["Нефритовый стержень", "Нефритового стержня", "Нефритовому стержню","Нефритовый стержень","Нефритовым стержнем",""],
+        ["нефритовый стержень", "нефритового стержня", "нефритовому стержню","нефритовый стержень","нефритовым стержнем",""],
         ["питон", "питона", "питону","питон","питоном",""],
+        ["смычок", "смычка", "смычку","смычок","смычком",""],
+        ["дрын", "дрына", "дрыну","дрын","дрыном",""],
+        ["хер", "хера", "херу","хер","хером",""],
+        ["болт", "болта", "болту","болт","болтом",""],
+        ["прибор", "прибора", "прибору","прибор","прибором",""],
         ["чучундрик", "чучундрика", "чучундрику","чучундрик","чучундриком",""],
         ["пистон", "пистона", "пистону","пистон","пистоном",""]
     ]
@@ -255,6 +288,41 @@ class Dictionary():
             print(f"load assets error: {error}")
             return False
         
+    def store_description(self, products:List[Tuple[Warehouse, StoreItem]], user_name:str, user_tg_id:int) -> str:
+        return tp.text_replacement(self.__store_description, {
+            "user_link" : self.get_user_link(user_name, user_tg_id),
+            "products": self.__generate_products_list(products),
+            **self.random_member(),
+        }, recursive_parse_args = True)
+    
+    def __generate_products_list(self, products:List[Tuple[Warehouse, StoreItem]]) -> str:
+        products_str:str = ""
+        index:int = 1
+        for warehouse_item, product in products:
+            products_str += f"<b>({index})</b> {random.choice(self.__buttons_types)} {hcode(product.title)}<b>({warehouse_item.quantity}/{warehouse_item.max_capacity})</b> - {self.price_wrapper(product.price)}\n"
+            index+=1
+
+        return products_str
+    
+    def product_description(self, product:Tuple[Warehouse, StoreItem]) -> str:
+        return tp.text_replacement(self.__product_description, {
+            "title": product[1].title,
+            "description": product[1].description,
+            "price": self.price_wrapper(product[1].price) if (product[0].quantity > 0) else "<b>Нет в наличии!</b>",
+            **self.random_member(),
+        }, recursive_parse_args = True)
+    
+    def store_exit(self, user:User) -> str:
+        return tp.text_replacement(random.choice(self.__store_exit), {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            **self.random_member(),
+        })
+    
+    def product_buying_thanks(self, user:User) -> str:
+        return tp.text_replacement(random.choice(self.__product_buying_thanks), {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            **self.random_member(),
+        })
     
     def answer_restricted(self, full_name: str, tg_id:int) -> str:
         return tp.text_replacement(self.__answer_restricted, {
@@ -270,7 +338,7 @@ class Dictionary():
             "full_name" : full_name,
         })
     
-    def not_enough_money(self, user:UserModel) -> str:
+    def not_enough_money(self, user:User) -> str:
         return tp.text_replacement(self.__not_enough_money, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
         })
@@ -287,20 +355,20 @@ class Dictionary():
         return f"{random.choice(list)}!" if list else ""
 
     
-    def dice_lose(self, user:UserModel, combination:List[int], ) -> str:
+    def dice_lose(self, user:User, combination:List[int], ) -> str:
         return tp.text_replacement(self.__dice_lose, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "combination" : self.dice_combination_name(combination)
         })
     
-    def dice_minor_win(self, user:UserModel, combination:List[int], money:int) -> str:
+    def dice_minor_win(self, user:User, combination:List[int], money:int) -> str:
         return tp.text_replacement(self.__dice_minor_win, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "combination" : self.dice_combination_name(combination),
             "money" : self.money_wrapper(money), 
         })
     
-    def dice_major_win(self, user:UserModel, combination:List[int], money:int) -> str:
+    def dice_major_win(self, user:User, combination:List[int], money:int) -> str:
         return tp.text_replacement(self.__dice_major_win, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "combination" : self.dice_combination_name(combination),
@@ -360,7 +428,7 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:UserModel, place_in_top:int) -> str:
+    def user_information(self, user:User, place_in_top:int) -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
@@ -376,20 +444,20 @@ class Dictionary():
     def tech_work_compensation(self, money:int) -> str:
         return tp.text_replacement(self.__tech_work_compensation, {"money" : self.money_wrapper(money)})
     
-    def draw(self, user:UserModel, length_change:int) -> str:
+    def draw(self, user:User, length_change:int) -> str:
         return tp.text_replacement(self.__draw_list[random.randint(0, len(self.__draw_list) - 1)], {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(), 
             "length":self.length_wrapper(length_change), 
         })
     
-    def weekly_winners(self, users:List[UserModel], rewards:List[int]) -> str:
+    def weekly_winners(self, users:List[User], rewards:List[int]) -> str:
         return tp.text_replacement(self.__weekly_winners[random.randint(0, len(self.__weekly_winners) - 1)],{
             "winners" : self.__generate_leaderboard(users, rewards),
             **self.random_member(),
         })
     
-    def __generate_leaderboard(self, users:List[UserModel], rewards:List[int] = []) -> str:
+    def __generate_leaderboard(self, users:List[User], rewards:List[int] = []) -> str:
         winners:str = ""
         for index, user in enumerate(users):
             winners += f"{self.get_medal_emoji(index+1, True)}"\
@@ -400,16 +468,16 @@ class Dictionary():
             f" { f'{self.money_wrapper(rewards[index])}' if (len(rewards) > index) else ''}\n"
         return winners
     
-    def leaderboard(self, users:List[UserModel]) -> str:
+    def leaderboard(self, users:List[User]) -> str:
         return tp.text_replacement(self.__leaderboard,{
             "leaderboard" : self.__generate_leaderboard(users),
             **self.random_member(),
         })
     
-    def __generate_winners_logs(self, logs:List[WinnersLog], users:List[UserModel]) -> str:
+    def __generate_winners_logs(self, logs:List[WinnersLog], users:List[User]) -> str:
         winners:str = ""
         for index, log in enumerate(logs):
-            user:List[UserModel] = [user for user in users if user.id == log.user_id]
+            user:List[User] = [user for user in users if user.id == log.user_id]
 
             winners += f"{hcode(Utils.format_datetime(log.win_date))}"\
             f" {self.__winner_log_event_by_index(log.event_type)} "\
@@ -434,7 +502,7 @@ class Dictionary():
         else:
             return ""
     
-    def winners_logs(self, logs:List[WinnersLog], users:List[UserModel]) -> str:
+    def winners_logs(self, logs:List[WinnersLog], users:List[User]) -> str:
         return tp.text_replacement(self.__winners_log,{
             "logs" : self.__generate_winners_logs(logs, users),
         })
@@ -462,7 +530,7 @@ class Dictionary():
                 f"⚠️ {self.__negative_length_change[random.randint(0, len(self.__negative_length_change) - 1)]}",
                                        params)
         
-    def media_caption(self, user:UserModel) -> str:
+    def media_caption(self, user:User) -> str:
         return tp.text_replacement("Отправил: {{user_link}} {{custom_title}} - {{length}}", {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
@@ -470,17 +538,17 @@ class Dictionary():
         })
     
     def random_member(self) -> Dict[str, str]:
-        index:int = random.randint(0, len(self.member_names) - 1)
+        member:List[str] = random.choice(self.member_names)
         return {
-            "pencil":self.member_names[index][0],
-            "pencil_gen":self.member_names[index][1],
-            "pencil_dat":self.member_names[index][2],
-            "pencil_accu":self.member_names[index][3],
-            "pencil_inst":self.member_names[index][4],
-            "pencil_prep":self.member_names[index][5]
+            "pencil":member[0],
+            "pencil_gen":member[1],
+            "pencil_dat":member[2],
+            "pencil_accu":member[3],
+            "pencil_inst":member[4],
+            "pencil_prep":member[5]
         }
     
-    def timer_message(self, user:UserModel, time_left:str) -> str:
+    def timer_message(self, user:User, time_left:str) -> str:
         return tp.text_replacement(self.__timer_message, {
             "time_left" : time_left,
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
@@ -491,6 +559,9 @@ class Dictionary():
     
     def money_wrapper(self, money:int, plus_visible:bool = True) -> str:
         return hbold(f'{"+" if (money > 0 and plus_visible) else ""}{money}💰')
+    
+    def price_wrapper(self, money:int) -> str:
+        return hbold(f'{money - 1},99💰')
     
     def get_medal_emoji(self, place_in_top:int, only_tops:bool = False):
         if (place_in_top == 1):

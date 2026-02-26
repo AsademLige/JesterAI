@@ -11,3 +11,7 @@ class JobsCF(CallbackData, prefix="fab_jobs"):
 
 class DiceGameCF(CallbackData, prefix="dice_game"):
     action: str
+
+class StoreCF(CallbackData, prefix="fab_store"):
+    action: str
+    id: Optional[int] = None

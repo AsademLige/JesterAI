@@ -2,7 +2,7 @@ from src.models.db_model import BaseModel
 import sqlalchemy as sa
 
 
-class CustomStickerModel(BaseModel):
+class CustomSticker(BaseModel):
     __tablename__ = "custom_sticker"
     id = sa.Column(sa.Integer, primary_key=True)
     sticker_id = sa.Column(sa.Text)
