@@ -1,10 +1,14 @@
+import re
+
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from src.domain.utils.text_processing import TextProcessing as tp
-from src.services.data_base.db import DataBase
 from src.models.winners_log_model import WinnersLog
-from src.models.user_model import User
+from src.models.store_item_model import StoreItem
+from typing import Optional, List, Dict, Tuple
+from src.services.data_base.db import DataBase
 from src.domain.utils.utils import Utils
-from typing import Optional, List, Dict
+from src.models.user_model import User
+from src.models.warehouse import Warehouse
 import random
 
 class Dictionary():
@@ -193,6 +197,28 @@ class Dictionary():
     dice_error:str = "Ошибочка вышла..."
 
     ###------------------------------------------------------------
+    ###Текстовые переменные магазина
+    ###------------------------------------------------------------
+
+    __store_description:str = "<blockquote>🛒 Приветствуем в <b>DICKSI</b>, {{user_link}}!</blockquote>\n"\
+                              "Пакетик брать будете или Вы со своим?:\n{{products}}"
+    
+    __product_description:str = "<blockquote>{{title}}</blockquote>\n<i>{{description}}</i>\n\n<b>Стоимость</b>: {{price}}"
+    
+    __buttons_types:List[str] = ['🈶','🈚️','🈸','🈺', '🈷️']
+
+    __store_exit:List[str] = [
+        "🚪 {{user_link}}, не задерживайте очередь, там за вами бабушка с 30 мешками сахара в руках уже сознание теряет!",
+        "🚪 Ты бы еще консервных банок насобирал! Как проветришься, заходи...",
+        "🚪 {{user_link}} стоит, копейки свои дрочит! Пропусти людей, не задерживай очередь!",
+        "🚪 Слил вcю котлету треш лото, чудик, теперь даже на пакет денег нет"
+    ]
+
+    __product_buying_thanks:List[str] = ["💳 Оплата прошла, спасибо за покупку, {{user_link}}!", 
+                                         "💳 Не желаете гречку по акции, корм для голубей, передние стойки стабилизатора на гранту? Спасибо за покупку, {{user_link}}, приходите еще!",
+                                         "💳 За покупку вам бонус в виде наклейки! Наклеите 999 штук на свой {{pencil}}, и он увеличится на <b>1cm</b>"]
+
+    ###------------------------------------------------------------
     ###Описания розыгрышей
     ###------------------------------------------------------------
 
@@ -235,8 +261,13 @@ class Dictionary():
     ### 5 - Предложный 
     member_names:List[List[str]] = [
         ["член", "члена", "члену","член","членом",""],
-        ["Нефритовый стержень", "Нефритового стержня", "Нефритовому стержню","Нефритовый стержень","Нефритовым стержнем",""],
+        ["нефритовый стержень", "нефритового стержня", "нефритовому стержню","нефритовый стержень","нефритовым стержнем",""],
         ["питон", "питона", "питону","питон","питоном",""],
+        ["смычок", "смычка", "смычку","смычок","смычком",""],
+        ["дрын", "дрына", "дрыну","дрын","дрыном",""],
+        ["хер", "хера", "херу","хер","хером",""],
+        ["болт", "болта", "болту","болт","болтом",""],
+        ["прибор", "прибора", "прибору","прибор","прибором",""],
         ["чучундрик", "чучундрика", "чучундрику","чучундрик","чучундриком",""],
         ["пистон", "пистона", "пистону","пистон","пистоном",""]
     ]
@@ -257,6 +288,41 @@ class Dictionary():
             print(f"load assets error: {error}")
             return False
         
+    def store_description(self, products:List[Tuple[Warehouse, StoreItem]], user_name:str, user_tg_id:int) -> str:
+        return tp.text_replacement(self.__store_description, {
+            "user_link" : self.get_user_link(user_name, user_tg_id),
+            "products": self.__generate_products_list(products),
+            **self.random_member(),
+        }, recursive_parse_args = True)
+    
+    def __generate_products_list(self, products:List[Tuple[Warehouse, StoreItem]]) -> str:
+        products_str:str = ""
+        index:int = 1
+        for warehouse_item, product in products:
+            products_str += f"<b>({index})</b> {random.choice(self.__buttons_types)} {hcode(product.title)}<b>({warehouse_item.quantity}/{warehouse_item.max_capacity})</b> - {self.price_wrapper(product.price)}\n"
+            index+=1
+
+        return products_str
+    
+    def product_description(self, product:Tuple[Warehouse, StoreItem]) -> str:
+        return tp.text_replacement(self.__product_description, {
+            "title": product[1].title,
+            "description": product[1].description,
+            "price": self.price_wrapper(product[1].price) if (product[0].quantity > 0) else "<b>Нет в наличии!</b>",
+            **self.random_member(),
+        }, recursive_parse_args = True)
+    
+    def store_exit(self, user:User) -> str:
+        return tp.text_replacement(random.choice(self.__store_exit), {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            **self.random_member(),
+        })
+    
+    def product_buying_thanks(self, user:User) -> str:
+        return tp.text_replacement(random.choice(self.__product_buying_thanks), {
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            **self.random_member(),
+        })
     
     def answer_restricted(self, full_name: str, tg_id:int) -> str:
         return tp.text_replacement(self.__answer_restricted, {
@@ -472,14 +538,14 @@ class Dictionary():
         })
     
     def random_member(self) -> Dict[str, str]:
-        index:int = random.randint(0, len(self.member_names) - 1)
+        member:List[str] = random.choice(self.member_names)
         return {
-            "pencil":self.member_names[index][0],
-            "pencil_gen":self.member_names[index][1],
-            "pencil_dat":self.member_names[index][2],
-            "pencil_accu":self.member_names[index][3],
-            "pencil_inst":self.member_names[index][4],
-            "pencil_prep":self.member_names[index][5]
+            "pencil":member[0],
+            "pencil_gen":member[1],
+            "pencil_dat":member[2],
+            "pencil_accu":member[3],
+            "pencil_inst":member[4],
+            "pencil_prep":member[5]
         }
     
     def timer_message(self, user:User, time_left:str) -> str:
@@ -493,6 +559,9 @@ class Dictionary():
     
     def money_wrapper(self, money:int, plus_visible:bool = True) -> str:
         return hbold(f'{"+" if (money > 0 and plus_visible) else ""}{money}💰')
+    
+    def price_wrapper(self, money:int) -> str:
+        return hbold(f'{money - 1},99💰')
     
     def get_medal_emoji(self, place_in_top:int, only_tops:bool = False):
         if (place_in_top == 1):

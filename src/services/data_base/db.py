@@ -1,14 +1,17 @@
+from src.models.user_inventory_item_model import UserInventoryItem
 from src.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from src.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from src.models.custom_sticker_model import CustomSticker
 from src.models.bot_settings_model import BotSettings
 from src.models.sticker_set_model import StickerSet
 from src.models.winners_log_model import WinnersLog
+from src.models.store_item_model import StoreItem
 from src.models.user_stats_model import UserStats
+from src.models.warehouse import Warehouse
+from typing import List, Dict, Any, Tuple
 from src.models.user_model import User
 from src.models.role_model import Role
 from src.models.db_model import db
-from typing import List, Dict, Any
 from src.data.config import Prefs
 from aiogram.types import Chat
 from datetime import  datetime
@@ -130,6 +133,35 @@ class DataBase():
         except:
             return []
         
+    async def get_user_inventory(self, user:User) -> List[UserInventoryItem]:
+        try:
+            items : List[UserInventoryItem] = await UserInventoryItem.\
+            query.where(UserInventoryItem.user_id == user.id).gino.all()
+            return items
+        except Exception as error:
+            print(f"get user inventory error: {error}")
+            return []
+        
+    async def add_to_user_inventory(self, user:User, item:Tuple[Warehouse, StoreItem], quantity:int = 1) -> bool:
+        try:
+            existed_item:UserInventoryItem = await UserInventoryItem.\
+                query.where(UserInventoryItem.product_id == item[1].id).gino.first()
+            
+            if (existed_item):
+                await UserInventoryItem.update.where(UserInventoryItem.id == item[1].id).values(
+                quantity=UserInventoryItem.quantity + quantity).gino.status()
+            else:
+                new_item = UserInventoryItem(
+                    user_id = user.id,
+                    product_id = item[1].id,
+                    quantity = quantity
+                )
+            await new_item.create()
+            return True
+        except Exception as error:
+            print(f"add to inventory error: {error}")
+            return False
+        
     ###-----------------------------------------
     ### Методы работы с данными наборов стикеров 
     ###-----------------------------------------
@@ -227,6 +259,26 @@ class DataBase():
             print(f"update settings error: {error}")
             return False
         
+    ###-----------------------------------------
+    ### Методы работы с магазином
+    ###-----------------------------------------
+
+    async def get_store_goods_with_quantity(self) -> List[Tuple[Warehouse, StoreItem]]:
+        query = StoreItem.join(Warehouse).select()
+        return await query.gino.load((Warehouse, StoreItem)).all()
+    
+    async def update_item_quantity(self, item:Tuple[Warehouse, StoreItem], quantity:int = 1) -> bool:
+        try:
+            if (item[0].quantity - quantity >= 0):
+                await Warehouse.update.where(Warehouse.id == item[0].id).values(
+                    quantity=Warehouse.quantity - quantity).gino.status()
+                return True
+            else:
+                return False
+        except Exception as error:
+            print(f"update warehouse error: {error}")
+            return False
+
     ###-----------------------------------------
     ### Методы работы с статистикой выигрышей 
     ###-----------------------------------------
