@@ -133,22 +133,24 @@ class DataBase():
         except:
             return []
         
-    async def get_user_inventory(self, user:User) -> List[UserInventoryItem]:
+    async def get_user_inventory(self, user:User) -> List[Tuple[UserInventoryItem, StoreItem]]:
         try:
-            items : List[UserInventoryItem] = await UserInventoryItem.\
-            query.where(UserInventoryItem.user_id == user.id).gino.all()
-            return items
+            query = StoreItem.join(UserInventoryItem).select().where(and_(UserInventoryItem.user_id == user.id,
+                                                                          UserInventoryItem.quantity > 0))
+            return await query.gino.load((UserInventoryItem, StoreItem)).all()
         except Exception as error:
             print(f"get user inventory error: {error}")
             return []
         
-    async def add_to_user_inventory(self, user:User, item:Tuple[Warehouse, StoreItem], quantity:int = 1) -> bool:
+    async def update_item_in_user_inventory(self, user:User, item:Tuple[Warehouse, StoreItem], quantity:int = 1) -> bool:
         try:
             existed_item:UserInventoryItem = await UserInventoryItem.\
-                query.where(UserInventoryItem.product_id == item[1].id).gino.first()
+                query.where(and_(UserInventoryItem.product_id == item[1].id,
+                                 UserInventoryItem.user_id == user.id)).gino.first()
             
             if (existed_item):
-                await UserInventoryItem.update.where(UserInventoryItem.id == item[1].id).values(
+                await UserInventoryItem.update.where(and_(UserInventoryItem.product_id == item[1].id,
+                                                          UserInventoryItem.user_id == user.id)).values(
                 quantity=UserInventoryItem.quantity + quantity).gino.status()
             else:
                 new_item = UserInventoryItem(
@@ -156,7 +158,7 @@ class DataBase():
                     product_id = item[1].id,
                     quantity = quantity
                 )
-            await new_item.create()
+                await new_item.create()
             return True
         except Exception as error:
             print(f"add to inventory error: {error}")
