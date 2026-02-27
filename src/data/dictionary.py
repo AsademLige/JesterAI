@@ -1,14 +1,13 @@
-import re
-
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
+from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
 from src.models.winners_log_model import WinnersLog
 from src.models.store_item_model import StoreItem
 from typing import Optional, List, Dict, Tuple
 from src.services.data_base.db import DataBase
+from src.models.warehouse import Warehouse
 from src.domain.utils.utils import Utils
 from src.models.user_model import User
-from src.models.warehouse import Warehouse
 import random
 
 class Dictionary():
@@ -82,19 +81,40 @@ class Dictionary():
     ###Взаимодействие с пользователем
     ###------------------------------------------------------------
     
-    __first_meet : str = 'А тебя я раньше здесь не видел... Ты, значится, {{user_link}}! '\
+    __first_meet:str = 'А тебя я раньше здесь не видел... Ты, значится, {{user_link}}! '\
     'А я Шут. Ромашковый.🤡 Я работаю на мобильных разработчиков в их мобильном подвале. '\
     'Дай-ка я на тебя взгляну...\nИзмерим твой {{pencil}}...'\
     '\nОго! Вот это питон! {{length}}\n'\
     '{{custom_title}}'
     
-    __user_information : str = f'{hblockquote("🔍 {{user_link}} {{custom_title}} Имеет {{pencil_accu}} длинной {{length}}!")}\n'\
+    __user_information:str = f'{hblockquote("🔍 {{user_link}} {{custom_title}} Имеет {{pencil_accu}} длинной {{length}}!")}\n'\
     '{{medal}} Место в топе: {{place_in_top}}\n'\
-    '💰 Монет на руках: {{money}}\n'\
-    '⏰ Время до pencil: {{time_to_pencil}}\n'\
-    '⏰ Время до dice_game: {{time_to_dice}}'
+    '💰 Монет на руках: {{money}}\n\n'\
+    '⏰ <i>До проверки {{pencil_gen}}: {{time_to_pencil}}</i>\n'\
+    '⏰ <i>До игры в кости: {{time_to_dice}}</i>'
 
-    private_messages_restriction: str = "🚧 Здесь тебе(🤡) делать нечего 🚧"
+    __inventory_info:str = "<blockquote>🎒 Инвентарь {{user_link}}</blockquote>\n{{items}}"
+
+    __inventory_item_info:str = "<blockquote>{{title}}</blockquote>\n<i>{{description}}</i>"
+
+    select_target:str = "🎁 Кто получит твой подарок?"
+
+    use_myself:str = "📤 Использовать на себя"
+    use_target:str = "🎯 Выбрать цель"
+
+    pencil_timer_decresc_target:str = "⏰ {{user_link1}} использовал {{item_title}} на {{user_link2}} и сбросил его таймер на проверку {{pencil_gen}}"
+    pencil_timer_decresc:str = "⏰ {{user_link1}} использовал {{item_title}} на себя и сбросил таймер на проверку {{pencil_gen}}"
+
+    dice_game_timer_decresc_target:str = "⏰ {{user_link1}} использовал {{item_title}} на {{user_link2}} и сбросил его таймер на игру в кости"
+    dice_game_timer_decresc:str = "⏰ {{user_link1}} использовал {{item_title}} на себя и сбросил таймер на игру в кости"
+
+    length_decresc_target:str = "🔪 {{user_link1}} взял <code>{{item_title}}</code> и отрезал у {{user_link2}} {{length}} {{pencil_gen}}!"
+    length_decresc:str = "🔪 {{user_link1}} взял {{item_title}} и отрезал у себя {{length}} {{pencil_gen}}, ненормальный..."
+
+    length_add_target:str = "💊 {{user_link1}} взял {{item_title}} и увеличил у {{user_link2}} {{pencil_accu}} на {{length}}!"
+    length_add:str = "💊 {{user_link1}} взял {{item_title}} и увеличил {{pencil_accu}} на {{length}}!"
+
+    private_messages_restriction:str = "🚧 Здесь тебе(🤡) делать нечего 🚧"
 
     __user_link_m2 : str = '[{{full_name}}](tg://user?id={{tg_id}})'
 
@@ -203,7 +223,7 @@ class Dictionary():
     ###------------------------------------------------------------
 
     __store_description:str = "<blockquote>🛒 Приветствуем в <b>DICKSI</b>, {{user_link}}!</blockquote>\n"\
-                              "Пакетик брать будете или Вы со своим?:\n{{products}}"
+                              "<i>Пакетик брать будете или Вы со своим?</i>\n{{products}}"
     
     __product_description:str = "<blockquote>{{title}}</blockquote>\n<i>{{description}}</i>\n\n<b>Стоимость</b>: {{price}}"
     
@@ -430,7 +450,7 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:UserModel, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
+    def user_information(self, user:User, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
@@ -441,6 +461,29 @@ class Dictionary():
                                     "length":self.length_wrapper(user.length, False),
                                     "time_to_pencil" : time_to_pencil,
                                     "time_to_dice" : time_to_dice})
+    
+    def user_inventory(self, user:User, items:List[Tuple[UserInventoryItem, StoreItem]]) -> str:
+        return tp.text_replacement(self.__inventory_info, {
+            "items" : self.__generate_inventory_items_list(items) if items else "<b>В рюкзаке пусто!</b>",
+            "user_link": self.get_user_link(user.tg_name, user.tg_id),
+            **self.random_member(), 
+        }, recursive_parse_args = True)
+    
+    def __generate_inventory_items_list(self, items:List[Tuple[UserInventoryItem, StoreItem]]) -> str:
+        items_str:str = ""
+        index:int = 1
+        for inventory_item, store_item in items:
+            items_str += f"<b>({index})</b> {hcode(store_item.title)}<b>({inventory_item.quantity}шт.)</b>\n"
+            index+=1
+
+        return items_str
+    
+    def inventory_item_info(self, item:Tuple[UserInventoryItem, StoreItem]) -> str:
+        return tp.text_replacement(self.__inventory_item_info, {
+            "title": item[1].title,
+            "description": item[1].description,
+            **self.random_member(),
+        }, recursive_parse_args = True)
     
     def day_salary(self, money:int) -> str:
         return tp.text_replacement(self.__day_salary, {"money" : self.money_wrapper(money)})

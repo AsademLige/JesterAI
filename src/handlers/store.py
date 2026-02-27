@@ -56,17 +56,19 @@ async def store(message: Message, state: FSMContext):
 @rt.callback_query(StoreSet.choice_product, StoreCF.filter())
 async def choice_product(callback: CallbackQuery, callback_data: StoreCF, state: FSMContext):
     global products
-    product:Tuple[Warehouse, StoreItem] = next((p for p in products if p[1].id == callback_data.id), None)
     state_data = await state.get_data()
     user: User = state_data["user"]
-    answer:Message
+    answer:Message = None
 
     if (callback_data.action == "choice"):
+        product:Tuple[Warehouse, StoreItem] = next((p for p in products if p[1].id == callback_data.id), None)
+        await state.update_data(product = product)
         await callback.message.edit_caption(caption=dict.product_description(product),
             reply_markup = store_kb.product_buying(product),
             parse_mode=ParseMode.HTML
         )
     elif (callback_data.action == "buy"):
+        product: Tuple[Warehouse, StoreItem] = state_data["product"]
         await callback.message.delete()
 
         if (user.money < product[1].price):
@@ -78,7 +80,7 @@ async def choice_product(callback: CallbackQuery, callback_data: StoreCF, state:
             return
 
         if (await db.update_item_quantity(product) and 
-            await db.add_to_user_inventory(user, product) and
+            await db.update_item_in_user_inventory(user, product) and
             await db.update_user(user, {
                 User.money.name: User.money - product[1].price,
             })):
@@ -99,6 +101,7 @@ async def choice_product(callback: CallbackQuery, callback_data: StoreCF, state:
         answer = await bot.send_message(user.chat_id, dict.store_exit(user),parse_mode=ParseMode.HTML)
         await state.clear()
         products.clear()
-
-    await Utils.delete_old_message([answer], 5)
+        
+    if (answer):
+        await Utils.delete_old_message([answer], 5)
 
