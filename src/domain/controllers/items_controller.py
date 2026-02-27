@@ -34,7 +34,7 @@ class ItemsController():
         action = json.loads(item[1].action)
         effects = action[ItemActions.effects.name]
         user_link:str = dict.get_user_link(user.tg_name, user.tg_id)
-        target_link:str = dict.get_user_link(user.tg_name, user.tg_id) if target else ""
+        target_link:str = dict.get_user_link(target.tg_name, target.tg_id) if target else ""
         usage_result:str = ""
 
         if (ItemActions.subtract_length.name in effects and
