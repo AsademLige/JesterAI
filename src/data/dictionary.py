@@ -116,9 +116,9 @@ class Dictionary():
 
     private_messages_restriction:str = "🚧 Здесь тебе(🤡) делать нечего 🚧"
 
-    __user_link_m2:str = '[{{full_name}}](https://t.me/{{tg_id}})'
+    __user_link_m2 : str = '[{{full_name}}](tg://user?id={{tg_id}})'
 
-    __user_link_html:str = '<a href="https://t.me/{{tg_id}}">{{full_name}}</a>'
+    __user_link_html : str = '<a href="tg://user?id={{tg_id}}">{{full_name}}</a>'
 
     __not_enough_money:str = '🤡 {{user_link}}, у тебя карман дырявый, иди подкопи:D'
 
