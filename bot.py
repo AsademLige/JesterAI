@@ -5,15 +5,15 @@ import src.handlers.edit_sticker_set as edit_sticker_set
 from src.services.scheduler.scheduler import Scheduler
 import src.handlers.interactive as interactive
 import src.handlers.send_media as send_media
-from aiogram.filters.command import Command
 from src.data.dictionary import Dictionary
-from aiogram import Bot, Dispatcher, types
 from src.models.db_model import on_startup
 from src.handlers.commands import Commands
 import src.handlers.captcha as captcha
 import src.handlers.system as system
-from src.data.config import Prefs
+from aiogram import Bot, Dispatcher
+import src.handlers.store as store
 import src.handlers.start as start
+from src.data.config import Prefs
 import logging
 import asyncio
 
@@ -34,7 +34,9 @@ async def main():
                       interactive.rt,
                       send_media.rt,
                       captcha.rt,
-                      system.rt)
+                      system.rt,
+                      store.rt,
+                      )
     dp.message.outer_middleware(RegistrationMiddleware())
     dp.message.outer_middleware(CaptchaMiddleware())
     await on_startup(dp)

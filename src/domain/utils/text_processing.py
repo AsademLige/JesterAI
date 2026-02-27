@@ -5,7 +5,9 @@ import re
 
 class TextProcessing():
     #TODO:Надо добавить возможность делать первую букву значения заглавной
-    def text_replacement(text:str, args: Dict[str, Any], parse_mode:ParseMode = ParseMode.HTML) -> str:
+    def text_replacement(text:str, args: Dict[str, Any], 
+                         parse_mode:ParseMode = ParseMode.HTML, 
+                         recursive_parse_args:bool = False) -> str:
         """
         Экранируем символы входящей строки,
         затем подменяем args значения по ключам.
@@ -30,7 +32,7 @@ class TextProcessing():
         for key, value in buf_list.items():
             text = text.replace(key, f"{value}")
 
-        return text
+        return text if (not recursive_parse_args) else TextProcessing.text_replacement(text, args, recursive_parse_args=False)
 
     def escape_md2(text:str) -> str:
         """

@@ -1,5 +1,10 @@
+from typing import List, Tuple
+
+from src.models.user_model import User
+from src.models.store_item_model import StoreItem
+from src.models.user_inventory_item_model import UserInventoryItem
+from src.keyboards.callback_fabrics import DiceGameCF, InventoryCF
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from src.keyboards.callback_fabrics import DiceGameCF
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
 from src.data.dictionary import Dictionary
@@ -11,6 +16,68 @@ dict = Dictionary()
 class InteractiveKeyboard():
     def __init__(self):
         pass
+
+    def user_information_buttons(self, user:User) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.add(InlineKeyboardButton(text="🎒 Инвентарь",
+                callback_data=InventoryCF(action="inventory", 
+                                          user_id=user.tg_id).pack()))
+        builder.add(InlineKeyboardButton(text=dict.exit,
+                callback_data=InventoryCF(action="exit", 
+                                          user_id=user.tg_id).pack()))
+        builder.adjust(2) 
+        return builder.as_markup()
+    
+    def inventory_items(self, items: List[Tuple[UserInventoryItem, StoreItem]], user:User) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        for i, item in enumerate(items):
+            if (item[0].quantity > 0):
+                builder.button(text=f"{i+1}",
+                    callback_data=InventoryCF(action="inventory_choice", 
+                                                item_id=item[1].id,
+                                                user_id=user.tg_id))
+            
+        builder.button(text=dict.exit,
+            callback_data=InventoryCF(action="exit",
+                                      user_id=user.tg_id))
+        
+        builder.adjust(2)
+        return builder.as_markup()
+    
+    def item_keyboard(self, user:User) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+
+        builder.button(text=dict.use_myself,
+        callback_data=InventoryCF(action="use_myself",
+                                  user_id=user.tg_id))
+
+        builder.button(text=dict.use_target,
+        callback_data=InventoryCF(action="use_target",
+                                  user_id=user.tg_id))
+
+        builder.button(text=dict.back,
+        callback_data=InventoryCF(action="cancel",
+                                  user_id=user.tg_id))
+        
+        builder.adjust(2)
+        return builder.as_markup()
+    
+    def select_target(self, users:List[User], except_user:User) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        
+        for user in users:
+            if (not except_user.id == user.id):
+                builder.button(text=f"{user.tg_name}-{user.length}см",
+                    callback_data=InventoryCF(action="target_selected",
+                                              item_id=user.id,
+                                              user_id=except_user.tg_id))
+            
+        builder.button(text=dict.back,
+        callback_data=InventoryCF(action="target_cancel",
+                                  user_id=except_user.tg_id))
+
+        builder.adjust(2)
+        return builder.as_markup()
     
     def dice_choice(self) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
@@ -31,7 +98,6 @@ class InteractiveKeyboard():
             callback_data=DiceGameCF(action="exit").pack()))
         
         builder.adjust(3, 2) 
-        
         return builder.as_markup()
     
     def get_pagination_keyboard(self, current_page: int, total_pages: int, 
@@ -62,6 +128,5 @@ class InteractiveKeyboard():
         builder.add(InlineKeyboardButton(text = "❌ Закрыть", 
                                          callback_data="close_pagination"))
         
-        builder.adjust(3, 1) 
-        
+        builder.adjust(3, 1)
         return builder.as_markup()

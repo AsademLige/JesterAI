@@ -1,10 +1,10 @@
 from src.keyboards.create_sticker_set_keyboard import CreateStickerSetKeyboard
 from src.keyboards.edit_sticker_set_keyboard import EditStickerSetKeyboard
-from src.models.custom_sticker_model import CustomStickerModel
+from src.models.custom_sticker_model import CustomSticker
 from src.domain.states.edit_sticker_set import EditStickerSet
 from aiogram.types import Message, InputSticker, FSInputFile
 from aiogram.types import Message, CallbackQuery, StickerSet
-from src.models.sticker_set_model import StickerSetModel
+from src.models.sticker_set_model import StickerSet
 from src.keyboards.callback_fabrics import StickerSetCF
 from src.handlers.commands import Commands as cn
 from aiogram.filters import Command, StateFilter
@@ -34,7 +34,7 @@ async def sticker_set_choice_handler(message: Message, state: FSMContext):
     await state.update_data(user_id = message.from_user.id)
     
     await state.set_state(EditStickerSet.edit_sticker_set)
-    sticker_set_list:List[StickerSetModel] = await db.get_all_sticker_sets()
+    sticker_set_list:List[StickerSet] = await db.get_all_sticker_sets()
     if (sticker_set_list):
         await message.answer(dict.choice_sticker_set, 
                          reply_markup = edit_kb.sticker_set_list_button(sticker_set_list))
@@ -71,7 +71,7 @@ async def edit_sticker_set_handler(callback: CallbackQuery, callback_data: Stick
 @rt.message(EditStickerSet.delete_sticker_from_set)
 async def delete_sticker_from_set_handler(message: Message, state: FSMContext):
     if (message.sticker is not None):
-         custom_sticker : Optional[CustomStickerModel] = await db.\
+         custom_sticker : Optional[CustomSticker] = await db.\
             get_custom_sticker_by_id(message.sticker.file_unique_id)
          if (custom_sticker is not None):
             if (await bot.delete_sticker_from_set(message.sticker.file_id)
@@ -124,7 +124,7 @@ async def add_sticker_set_media_choice_file_callback_handler(callback: CallbackQ
                          reply_markup=create_kb.media_choice)
         await state.set_state(EditStickerSet.add_sticker_complete)
     else:
-        state.clear()
+        await state.clear()
 
 ### Завершение создания стикера
 @rt.message(EditStickerSet.add_sticker_complete)
@@ -151,8 +151,8 @@ async def create_sticker_set_complete_callback_handler(callback: CallbackQuery, 
 ###Методы
 ###-----------------------------------
 async def delete_sticker_set(set_id:int) -> str:
-    db_set:StickerSetModel = await db.get_sticker_set_by_id(set_id)
-    custom_stickers: List[CustomStickerModel] = await db.get_custom_stickers_by_set_name(db_set.short_name)
+    db_set:StickerSet = await db.get_sticker_set_by_id(set_id)
+    custom_stickers: List[CustomSticker] = await db.get_custom_stickers_by_set_name(db_set.short_name)
     if (await db.delete_sticker_set_by_name(db_set.short_name)):
         for custom_sticker in custom_stickers:
             media.delete_file(custom_sticker.media_path)
@@ -171,7 +171,7 @@ async def create_sticker(state_data: Dict[str, Any]) -> str:
     raw_sticker = InputSticker(sticker=FSInputFile(path=video_paths[0]), 
                                format="video", emoji_list=[state_data["sticker_emoji"]])
     
-    db_set:StickerSetModel = await db.get_sticker_set_by_id(state_data["set_id"])
+    db_set:StickerSet = await db.get_sticker_set_by_id(state_data["set_id"])
     
     if (await bot.add_sticker_to_set(state_data["user_id"], db_set.short_name, raw_sticker)):
         sticker_set: StickerSet = await bot.get_sticker_set(db_set.short_name)
