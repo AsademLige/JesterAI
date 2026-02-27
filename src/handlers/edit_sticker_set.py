@@ -124,7 +124,7 @@ async def add_sticker_set_media_choice_file_callback_handler(callback: CallbackQ
                          reply_markup=create_kb.media_choice)
         await state.set_state(EditStickerSet.add_sticker_complete)
     else:
-        state.clear()
+        await state.clear()
 
 ### Завершение создания стикера
 @rt.message(EditStickerSet.add_sticker_complete)
