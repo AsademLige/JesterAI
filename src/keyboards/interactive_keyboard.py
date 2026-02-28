@@ -23,7 +23,7 @@ class InteractiveKeyboard():
                 callback_data=InventoryCF(action="inventory", 
                                           user_id=user.tg_id).pack()))
         builder.add(InlineKeyboardButton(text=dict.exit,
-                callback_data=InventoryCF(action="exit", 
+                callback_data=InventoryCF(action="me_close", 
                                           user_id=user.tg_id).pack()))
         builder.adjust(2) 
         return builder.as_markup()
@@ -38,7 +38,7 @@ class InteractiveKeyboard():
                                                 user_id=user.tg_id))
             
         builder.button(text=dict.exit,
-            callback_data=InventoryCF(action="exit",
+            callback_data=InventoryCF(action="me_close",
                                       user_id=user.tg_id))
         
         builder.adjust(2)
@@ -51,12 +51,12 @@ class InteractiveKeyboard():
         callback_data=InventoryCF(action="use_myself",
                                   user_id=user.tg_id))
 
-        builder.button(text=dict.use_target,
-        callback_data=InventoryCF(action="use_target",
+        builder.button(text=dict.select_target,
+        callback_data=InventoryCF(action="select_target",
                                   user_id=user.tg_id))
 
         builder.button(text=dict.back,
-        callback_data=InventoryCF(action="cancel",
+        callback_data=InventoryCF(action="inventory",
                                   user_id=user.tg_id))
         
         builder.adjust(2)
@@ -68,12 +68,12 @@ class InteractiveKeyboard():
         for user in users:
             if (not except_user.id == user.id):
                 builder.button(text=f"{user.tg_name}-{user.length}см",
-                    callback_data=InventoryCF(action="target_selected",
+                    callback_data=InventoryCF(action="inventory_target_selected",
                                               item_id=user.id,
                                               user_id=except_user.tg_id))
             
         builder.button(text=dict.back,
-        callback_data=InventoryCF(action="target_cancel",
+        callback_data=InventoryCF(action="target_select_cancel",
                                   user_id=except_user.tg_id))
 
         builder.adjust(2)
