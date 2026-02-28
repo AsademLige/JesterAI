@@ -86,6 +86,9 @@ class DataBase():
             
         return -1
     
+    async def get_user_stats(self, user:User) -> UserStats:
+        return await UserStats.query.where(UserStats.user_id == user.id).gino.first()
+    
     async def update_user_by_id(self, tg_id: int, args:Dict[str, Any] = {}) -> bool:
         try:
             await User.update.values(**args).where(User.tg_id == tg_id).gino.status()
