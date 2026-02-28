@@ -1,16 +1,12 @@
-from src.domain.controllers.items_controller import ItemsController
 from src.domain.controllers.rights_controller import RightsController
-from src.domain.states.user_information_set import UserInformationSet
-from src.models.user_inventory_item_model import UserInventoryItem
 from src.keyboards.interactive_keyboard import InteractiveKeyboard
-from src.keyboards.callback_fabrics import DiceGameCF, InventoryCF
 from src.domain.states.dice_game_set import DiceGameSet
+from src.keyboards.callback_fabrics import DiceGameCF
 from src.models.user_stats_model import UserStats
 from src.handlers.commands import Commands as cn
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from src.services.data_base.db import DataBase
-from src.models.store_item_model import StoreItem
 from aiogram.fsm.context import FSMContext
 from src.data.dictionary import Dictionary
 from datetime import timedelta, datetime
@@ -19,7 +15,7 @@ from src.models.user_model import User
 from aiogram.enums import ParseMode
 from src.data.config import Prefs
 from aiogram.types import Message
-from typing import List, Tuple
+from typing import List
 import asyncio
 import random
 import math
@@ -35,109 +31,6 @@ db = DataBase()
 rt = Router()
 
 member_change_reset_time:int = 24
-
-###Получение информации о пользователе
-@rt.message(StateFilter(None), Command(cn.me))
-async def user_information(message: Message, state: FSMContext):
-    user: User = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
-    place_in_top:int = await db.get_place_in_top_by_member(user.tg_id, user.chat_id)
-
-    await state.update_data(user=user)
-    await state.set_state(UserInformationSet.detail)
-    
-    # Получаем оставшееся время до возможности использовать pencil
-    delta_pencil:timedelta = Utils.get_last_member_check_delta(user.last_length_check)
-    # Если оставшееся время отрицательное, значит можно использовать команду
-    if math.floor(delta_pencil.total_seconds() / 3600) < 0:
-        time_to_pencil = Utils.timedelta_to_hhmm(delta_pencil)
-    else:
-        time_to_pencil = "Готов"
-    
-    # Получаем оставшееся время до возможности использовать dice_game
-    delta_dice:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
-    # Если оставшееся время отрицательное, значит можно использовать команду
-    if math.floor(delta_dice.total_seconds() / 3600) < 0:
-        time_to_dice = Utils.timedelta_to_hhmm(delta_dice)
-    else:
-        time_to_dice = "Готов"
-    
-    await message.delete()
-    answer = await bot.send_message(user.chat_id, dict.user_information(user, place_in_top, time_to_pencil, time_to_dice),
-                         reply_markup=interactive_kb.user_information_buttons(user),
-                         parse_mode=ParseMode.HTML)
-    await Utils.delete_old_message([answer], 90)
-    if (await state.get_state() == UserInformationSet.detail):
-        await state.clear()
-
-###Выбор действия
-@rt.callback_query(UserInformationSet.detail, InventoryCF.filter())
-async def user_information_detail(callback: CallbackQuery, callback_data: InventoryCF, state: FSMContext):
-    state_data = await state.get_data()
-    user: User = state_data["user"]
-    
-    if (user.tg_id != callback_data.user_id):
-        return
-
-    if (callback_data.action == "inventory"):
-        inventory:List[Tuple[UserInventoryItem, StoreItem]] = await db.get_user_inventory(user)
-        await state.update_data(inventory=inventory)
-        await callback.message.edit_text(dict.user_inventory(user, inventory),
-                                         reply_markup=interactive_kb.inventory_items(inventory, user),
-                                         parse_mode=ParseMode.HTML)
-    
-    elif (callback_data.action == "inventory_choice"):
-        inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-        item:Tuple[UserInventoryItem, StoreItem] = next((p for p in inventory if p[1].id == callback_data.item_id), None)
-        await state.update_data(item=item)
-        await callback.message.edit_text(dict.inventory_item_info(item),
-                                         reply_markup=interactive_kb.item_keyboard(user),
-                                         parse_mode=ParseMode.HTML)
-        
-    elif (callback_data.action == "use_myself"):
-        inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-        item:Tuple[UserInventoryItem, StoreItem] = state_data["item"]
-
-        use_status:str = await ItemsController.use_item(user, item)
-        if (use_status):
-            await callback.message.delete()
-            await bot.send_message(user.chat_id, use_status, parse_mode=ParseMode.HTML)
-        await state.clear()
-        await Utils.delete_old_message([callback.message],5)
-        return
-    elif (callback_data.action == "use_target"):
-        inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-        users: List[User] = await db.get_all_users_by_chat(user.chat_id)
-        await callback.message.edit_text(dict.select_target,
-                                         reply_markup=interactive_kb.select_target(users, user),
-                                         parse_mode=ParseMode.HTML)
-    elif (callback_data.action == "target_selected"):
-        target: User = await db.get_user_by_id(callback_data.item_id)
-        inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-        item:Tuple[UserInventoryItem, StoreItem] = state_data["item"]
-        use_status:str = await ItemsController.use_item(user, item, target)
-        if (use_status):
-            await callback.message.delete()
-            await bot.send_message(user.chat_id, use_status, parse_mode=ParseMode.HTML)
-        await state.clear()
-        await Utils.delete_old_message([callback.message],5)
-        return
-    elif (callback_data.action == "target_cancel"): 
-        inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-        user: User = state_data["user"]
-        await callback.message.edit_text(dict.user_inventory(user, inventory),
-                                         reply_markup=interactive_kb.inventory_items(inventory, user),
-                                         parse_mode=ParseMode.HTML)
-    elif (callback_data.action == "cancel"): 
-        inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-        user: User = state_data["user"]
-        await callback.message.edit_text(dict.user_inventory(user, inventory),
-                                         reply_markup=interactive_kb.inventory_items(inventory, user),
-                                         parse_mode=ParseMode.HTML)
-    elif (callback_data.action == "exit"): 
-        await callback.message.delete()
-        await state.clear()
-        return
-
     
 ###Попробовать изменить текущий member размер 
 @rt.message(StateFilter(None), Command(cn.pencil))

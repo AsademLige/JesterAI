@@ -3,6 +3,7 @@ from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
 from src.models.winners_log_model import WinnersLog
 from src.models.store_item_model import StoreItem
+from src.models.user_stats_model import UserStats
 from typing import Optional, List, Dict, Tuple
 from src.services.data_base.db import DataBase
 from src.models.warehouse import Warehouse
@@ -90,6 +91,7 @@ class Dictionary():
     __user_information:str = f'{hblockquote("🔍 {{user_link}} {{custom_title}} Имеет {{pencil_accu}} длинной {{length}}!")}\n'\
     '{{medal}} Место в топе: {{place_in_top}}\n'\
     '💰 Монет на руках: {{money}}\n\n'\
+    '{{user_stats}}\n\n'\
     '⏰ <i>До проверки {{pencil_gen}}: {{time_to_pencil}}</i>\n'\
     '⏰ <i>До игры в кости: {{time_to_dice}}</i>'
 
@@ -100,7 +102,7 @@ class Dictionary():
     select_target:str = "🎁 Кто получит твой подарок?"
 
     use_myself:str = "📤 Использовать на себя"
-    use_target:str = "🎯 Выбрать цель"
+    select_target:str = "🎯 Выбрать цель"
 
     pencil_timer_decresc_target:str = "⏰ {{user_link1}} использовал {{item_title}} на {{user_link2}} и сбросил его таймер на проверку {{pencil_gen}}"
     pencil_timer_decresc:str = "⏰ {{user_link1}} использовал {{item_title}} на себя и сбросил таймер на проверку {{pencil_gen}}"
@@ -450,17 +452,27 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:User, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
+    def user_information(self, user:User, place_in_top:int, user_stats:UserStats, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
                                     "money": user.money,
                                     "medal": self.get_medal_emoji(place_in_top),
+                                    "user_stats": self.generate_user_stats(user_stats),
                                     "place_in_top": place_in_top,
                                     "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
                                     "length":self.length_wrapper(user.length, False),
                                     "time_to_pencil" : time_to_pencil,
                                     "time_to_dice" : time_to_dice})
+    
+    def generate_user_stats(self, user_stats:UserStats) -> str:
+        stats_str:str = ""
+
+        stats_str += f"🎰 Всего спинов\джекпотов: <b>{user_stats.trash_loto_spins} \ {user_stats.trash_loto_jackpots}</b>\n"
+        stats_str += f"🍀 Выигрыш в треш-лото: <b>{self.money_wrapper(user_stats.trash_loto_money_wins)} \ {self.length_wrapper(user_stats.trash_loto_length_wins)}</b>\n"
+        stats_str += f"🎲 Статистика игры в кости: <b>{user_stats.dice_games} \ 🎯{user_stats.dice_minor_wins + user_stats.dice_major_wins}</b>"
+
+        return stats_str
     
     def user_inventory(self, user:User, items:List[Tuple[UserInventoryItem, StoreItem]]) -> str:
         return tp.text_replacement(self.__inventory_info, {
