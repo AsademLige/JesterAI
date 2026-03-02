@@ -284,6 +284,15 @@ class DataBase():
             print(f"update warehouse error: {error}")
             return False
 
+
+    async def update_warehouse(self) -> bool:
+        try:
+            await Warehouse.update.where(Warehouse.quantity < Warehouse.max_capacity).values(
+                    quantity=Warehouse.max_capacity).gino.status()
+        except Exception as error:
+            print(f"warehouse items get error: {error}")
+            return False
+
     ###-----------------------------------------
     ### Методы работы с статистикой выигрышей 
     ###-----------------------------------------

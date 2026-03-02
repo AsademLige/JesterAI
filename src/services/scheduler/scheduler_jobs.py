@@ -140,3 +140,27 @@ class SchedulerJobs():
                                     parse_mode=ParseMode.HTML)
             except Exception as e:
                 logger.send_log("apscheduler", logging.WARNING, f"day_draw - {e}")
+
+    @staticmethod
+    async def warehouse_update():
+        """
+        Ежедневное пополнение остатков магазина
+        """
+        try:
+            if (await db.update_warehouse()):
+                users: List[User] = await db.get_all_users()
+                indexed_users: Dict[int, List[User]] = {}
+                for user in users:
+                    if (user.chat_id is not None):
+                        if (user.chat_id not in indexed_users):
+                            indexed_users[user.chat_id] = []
+                        indexed_users[user.chat_id].append(user)
+
+                for chat_id in indexed_users: 
+                    await bot.send_message(chat_id, "🏪 Обновление остатков магазина, бегом за покупками!\n" \
+                                                    "<i>Поторопись опередить бабок в гонке за просрочкой</i>", 
+                                    parse_mode=ParseMode.HTML)     
+        except Exception as e:
+            logger.send_log("apscheduler", logging.WARNING, f"warehouse_update - {e}")
+
+                

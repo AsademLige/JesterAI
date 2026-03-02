@@ -40,18 +40,14 @@ class Scheduler():
         self.scheduler.add_job(self.jobs.day_salary, 'cron', id='day_salary', 
                                replace_existing=True, misfire_grace_time=15,
                                hour=18, minute=00)
+        self.scheduler.add_job(self.jobs.warehouse_update, 'cron', id='warehouse_update', 
+                               replace_existing=True, misfire_grace_time=15,
+                               hour=9, minute=00)
         # Команда без автоматического выполнения (проще дергать из одного списка задач в случае необходимости)
         self.scheduler.add_job(self.jobs.tech_work_compensation, 'date', run_date=datetime.now() + timedelta(days=1000), id='tech_work_compensation', 
                                replace_existing=True)
     
         self.scheduler.start()
-        
-        #TODO(Илья): Убрать после релиза 0.0.3
-        try:
-            self.scheduler.remove_job('weekly_top')
-            print("Job 'my_job_id' removed successfully.")
-        except:
-            print("Job not found or already removed.")
 
         print(f"Scheduler init, active jobs: {len(self.scheduler.get_jobs())}")
         
