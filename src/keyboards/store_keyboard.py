@@ -1,6 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
-from src.models.store_item_model import StoreItem
+from src.models.item_model import Item
 from src.keyboards.callback_fabrics import StoreCF
 from src.models.warehouse import Warehouse
 from src.data.dictionary import Dictionary
@@ -14,7 +14,7 @@ class StoreKeyboard():
     def __init__(self):
         pass
 
-    def store_products(self, products: List[Tuple[Warehouse, StoreItem]]) -> InlineKeyboardMarkup:
+    def store_products(self, products: List[Tuple[Warehouse, Item]]) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         for i, product in enumerate(products):
             builder.button(text=f"{i+1}",
@@ -27,7 +27,7 @@ class StoreKeyboard():
         
         return builder.as_markup()
     
-    def product_buying(self, product:Tuple[Warehouse, StoreItem]) -> InlineKeyboardMarkup:
+    def product_buying(self, product:Tuple[Warehouse, Item]) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
         if (product[0].quantity > 0):

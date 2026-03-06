@@ -14,6 +14,7 @@ from aiogram import Bot, Dispatcher
 import src.handlers.store as store
 import src.handlers.start as start
 from src.data.config import Prefs
+import src.handlers.hunt as hunt
 import src.handlers.user as user
 import logging
 import asyncio
@@ -37,6 +38,7 @@ async def main():
                       captcha.rt,
                       system.rt,
                       store.rt,
+                      hunt.rt,
                       user.rt,
                       )
     dp.message.outer_middleware(RegistrationMiddleware())

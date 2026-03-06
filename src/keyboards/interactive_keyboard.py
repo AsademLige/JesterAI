@@ -1,7 +1,5 @@
-from typing import List, Tuple
-
 from src.models.user_model import User
-from src.models.store_item_model import StoreItem
+from src.models.item_model import Item
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.keyboards.callback_fabrics import DiceGameCF, InventoryCF
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -9,6 +7,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
 from src.data.dictionary import Dictionary
 from src.data.config import Prefs
+from typing import List, Tuple
 
 prefs = Prefs()
 dict = Dictionary()
@@ -28,7 +27,7 @@ class InteractiveKeyboard():
         builder.adjust(2) 
         return builder.as_markup()
     
-    def inventory_items(self, items: List[Tuple[UserInventoryItem, StoreItem]], user:User) -> InlineKeyboardMarkup:
+    def inventory_items(self, items: List[Tuple[UserInventoryItem, Item]], user:User) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         for i, item in enumerate(items):
             if (item[0].quantity > 0):

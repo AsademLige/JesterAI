@@ -1,8 +1,9 @@
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
+from src.models.monster_model import Monster
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
 from src.models.winners_log_model import WinnersLog
-from src.models.store_item_model import StoreItem
+from src.models.item_model import Item
 from src.models.user_stats_model import UserStats
 from typing import Optional, List, Dict, Tuple
 from src.services.data_base.db import DataBase
@@ -52,6 +53,8 @@ class Dictionary():
     dice_game:str = "🎲 Кидаешь кубик и выигрываешь!"
 
     store:str = "🛒 Торгомат DICKSI"
+
+    hunt:str = "⚔️ Бери наперевес свой pencil и вперед, геройствовать!"
 
     ###------------------------------------------------------------
     ###Общее
@@ -137,7 +140,7 @@ class Dictionary():
     __sticker_set_create_success: str = "🟢 Набор стикеров создан: https://t.me/addstickers/{{sticker_set_name}}"
 
     ###------------------------------------------------------------
-    ###изменение набора стикеров
+    ###Изменение набора стикеров
     ###------------------------------------------------------------
 
     __sticker_add_to_set_success: str = "🟢 Стикер добавлен: https://t.me/addstickers/{{sticker_set_name}}"
@@ -159,7 +162,7 @@ class Dictionary():
     delete_sticker_from_set:str = "🗑️ Удалить стикер"
 
     ###------------------------------------------------------------
-    ###Описания треш лото
+    ###Текстовые переменные треш лото
     ###------------------------------------------------------------
 
     __trash_loto_consolation_money_award: str = "🌱 чут-чут повезло, держи копейку, {{user_link}}: {{money}}"
@@ -182,7 +185,7 @@ class Dictionary():
     trash_loto_error:str = "Ошибочка вышла... Зато деньги твои целы!"
 
     ###------------------------------------------------------------
-    ###Переменные игры с дайсами
+    ###Текстовые переменные игры с дайсами
     ###------------------------------------------------------------
     
     dice_game_start:str = "<blockquote>🎲 Кубики!</blockquote>\n Сделай свой прогноз:"
@@ -219,6 +222,24 @@ class Dictionary():
     dice_equal:str = "💎 =7 💎"
 
     dice_error:str = "Ошибочка вышла..."
+
+    ###------------------------------------------------------------
+    ###Текстовые переменные битвы
+    ###------------------------------------------------------------
+    
+    combat_interface:str = "⚔️ {{fight_name}}! ⚔️\n\n"\
+                             "🗡 : {{player1}}\n"\
+                             "HP: {{health1}}\n\n"\
+                             "🆚 СУПРОТИВ 🆚\n\n"\
+                             "🛡 : {{player2}}\n"\
+                             "HP: {{health2}}\n"\
+                             "━━━━━━━━━━━━━\n"\
+                             "💥 Ход: {{player_turn}}\n"\
+                             "⏳ Таймер: {{timer}}"
+    
+    __monster_meeting:List[str] = [
+        "❗️ Из кустов выползает <code>{{monster_name}}</code>, а его {{pencil}}, готовый к бою, смотрит прямо на тебя! Что будешь делать?"
+    ]
 
     ###------------------------------------------------------------
     ###Текстовые переменные магазина
@@ -290,6 +311,7 @@ class Dictionary():
         ["смычок", "смычка", "смычку","смычок","смычком",""],
         ["дрын", "дрына", "дрыну","дрын","дрыном",""],
         ["хер", "хера", "херу","хер","хером",""],
+        ["елда", "елды", "елде","елда","елдой",""],
         ["болт", "болта", "болту","болт","болтом",""],
         ["прибор", "прибора", "прибору","прибор","прибором",""],
         ["чучундрик", "чучундрика", "чучундрику","чучундрик","чучундриком",""],
@@ -312,14 +334,20 @@ class Dictionary():
             print(f"load assets error: {error}")
             return False
         
-    def store_description(self, products:List[Tuple[Warehouse, StoreItem]], user_name:str, user_tg_id:int) -> str:
+    def monster_meeting(self, monster:Monster) -> str:
+        return tp.text_replacement(random.choice(self.__monster_meeting), {
+            "monster_name": monster.name,
+            **self.random_member(),
+        })
+        
+    def store_description(self, products:List[Tuple[Warehouse, Item]], user_name:str, user_tg_id:int) -> str:
         return tp.text_replacement(self.__store_description, {
             "user_link" : self.get_user_link(user_name, user_tg_id),
             "products": self.__generate_products_list(products),
             **self.random_member(),
         }, recursive_parse_args = True)
     
-    def __generate_products_list(self, products:List[Tuple[Warehouse, StoreItem]]) -> str:
+    def __generate_products_list(self, products:List[Tuple[Warehouse, Item]]) -> str:
         products_str:str = ""
         index:int = 1
         for warehouse_item, product in products:
@@ -328,7 +356,7 @@ class Dictionary():
 
         return products_str
     
-    def product_description(self, product:Tuple[Warehouse, StoreItem]) -> str:
+    def product_description(self, product:Tuple[Warehouse, Item]) -> str:
         return tp.text_replacement(self.__product_description, {
             "title": product[1].title,
             "description": product[1].description,
@@ -474,14 +502,14 @@ class Dictionary():
 
         return stats_str
     
-    def user_inventory(self, user:User, items:List[Tuple[UserInventoryItem, StoreItem]]) -> str:
+    def user_inventory(self, user:User, items:List[Tuple[UserInventoryItem, Item]]) -> str:
         return tp.text_replacement(self.__inventory_info, {
             "items" : self.__generate_inventory_items_list(items) if items else "<b>В рюкзаке пусто!</b>",
             "user_link": self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(), 
         }, recursive_parse_args = True)
     
-    def __generate_inventory_items_list(self, items:List[Tuple[UserInventoryItem, StoreItem]]) -> str:
+    def __generate_inventory_items_list(self, items:List[Tuple[UserInventoryItem, Item]]) -> str:
         items_str:str = ""
         index:int = 1
         for inventory_item, store_item in items:
@@ -490,7 +518,7 @@ class Dictionary():
 
         return items_str
     
-    def inventory_item_info(self, item:Tuple[UserInventoryItem, StoreItem]) -> str:
+    def inventory_item_info(self, item:Tuple[UserInventoryItem, Item]) -> str:
         return tp.text_replacement(self.__inventory_item_info, {
             "title": item[1].title,
             "description": item[1].description,

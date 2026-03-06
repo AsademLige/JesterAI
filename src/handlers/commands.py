@@ -50,6 +50,9 @@ class Commands():
     ###Данные о выигрышах пользователей
     winners_log = "winners_log"
 
+    ###Охота на монстров
+    hunt = "hunt"
+
     @staticmethod
     async def setup_bot_commands():
         await bot.set_my_commands([
@@ -57,9 +60,10 @@ class Commands():
             BotCommand(command=Commands.pencil, description=dict.pencil),
             BotCommand(command=Commands.trash_loto, description=dict.trash_loto),
             BotCommand(command=Commands.dice_game, description=dict.dice_game),
+            BotCommand(command=Commands.hunt, description=dict.hunt),
+            BotCommand(command=Commands.store, description=dict.store),
             BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
             BotCommand(command=Commands.winners_log, description=dict.winners_log_description),
-            BotCommand(command=Commands.store, description=dict.store),
             BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
             BotCommand(command=Commands.help, description=dict.help),
         ])

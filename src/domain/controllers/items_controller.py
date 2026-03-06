@@ -1,13 +1,12 @@
-from datetime import datetime, timedelta
-
-from src.domain.utils.utils import Utils
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
-from src.models.store_item_model import StoreItem
 from src.services.data_base.db import DataBase
 from src.data.dictionary import Dictionary
+from src.domain.utils.utils import Utils
+from datetime import datetime, timedelta
 from aiogram.utils.markdown import hcode
 from src.models.user_model import User
+from src.models.item_model import Item
 from typing import Optional, Tuple
 from src.data.config import Prefs
 from random import Random
@@ -29,7 +28,7 @@ class ItemActions(Enum):
 
 class ItemsController():
     @staticmethod
-    async def use_item(user: User, item: Tuple[UserInventoryItem, StoreItem], 
+    async def use_item(user: User, item: Tuple[UserInventoryItem, Item], 
                        target:Optional[User] = None) -> Optional[str]:
         action = json.loads(item[1].action)
         effects = action[ItemActions.effects.name]
@@ -82,7 +81,6 @@ class ItemsController():
     
     @staticmethod
     async def length_change_effect(user: User, target:User, item:UserInventoryItem, length_change:int) -> bool:
-        print(f"cdlog {target.chat_id} {target.tg_id} {target.id}")
         if (await db.update_user(target, {
                 User.length.name: User.length + length_change,
             }) and await db.update_item_in_user_inventory(user, item, -1)):

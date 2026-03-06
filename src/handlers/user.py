@@ -3,7 +3,7 @@ from src.models.user_inventory_item_model import UserInventoryItem
 from src.keyboards.interactive_keyboard import InteractiveKeyboard
 from src.keyboards.callback_fabrics import InventoryCF
 from src.models.user_stats_model import UserStats
-from src.models.store_item_model import StoreItem
+from src.models.item_model import Item
 from src.handlers.commands import Commands as cn
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -73,7 +73,7 @@ async def on_inventory_open(callback: CallbackQuery, callback_data: InventoryCF,
     if (user.tg_id != callback_data.user_id):
         return
     
-    inventory:List[Tuple[UserInventoryItem, StoreItem]] = await db.get_user_inventory(user)
+    inventory:List[Tuple[UserInventoryItem, Item]] = await db.get_user_inventory(user)
     await state.update_data(inventory=inventory)
     await callback.message.edit_text(dict.user_inventory(user, inventory),
                                         reply_markup=interactive_kb.inventory_items(inventory, user),
@@ -89,8 +89,8 @@ async def on_inventory_item_select(callback: CallbackQuery, callback_data: Inven
     if (user.tg_id != callback_data.user_id):
         return
 
-    inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-    item:Tuple[UserInventoryItem, StoreItem] = next((p for p in inventory if p[1].id == callback_data.item_id), None)
+    inventory: List[Tuple[UserInventoryItem, Item]] = state_data["inventory"]
+    item:Tuple[UserInventoryItem, Item] = next((p for p in inventory if p[1].id == callback_data.item_id), None)
     await state.update_data(item=item)
     await callback.message.edit_text(dict.inventory_item_info(item),
                                         reply_markup=interactive_kb.item_keyboard(user),
@@ -106,7 +106,7 @@ async def on_item_use_myself(callback: CallbackQuery, callback_data: InventoryCF
     if (user.tg_id != callback_data.user_id):
         return
 
-    item:Tuple[UserInventoryItem, StoreItem] = state_data["item"]
+    item:Tuple[UserInventoryItem, Item] = state_data["item"]
 
     use_status:str = await ItemsController.use_item(user, item)
     if (use_status):
@@ -140,7 +140,7 @@ async def on_item_target_selected(callback: CallbackQuery, callback_data: Invent
         return
     
     target: User = await db.get_user_by_id(callback_data.item_id)
-    item:Tuple[UserInventoryItem, StoreItem] = state_data["item"]
+    item:Tuple[UserInventoryItem, Item] = state_data["item"]
     use_status:str = await ItemsController.use_item(user, item, target)
     if (use_status):
         await callback.message.delete()
@@ -157,7 +157,7 @@ async def on_target_select_cancel(callback: CallbackQuery, callback_data: Invent
     if (user.tg_id != callback_data.user_id):
         return
     
-    inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
+    inventory: List[Tuple[UserInventoryItem, Item]] = state_data["inventory"]
     user: User = state_data["user"]
     await callback.message.edit_text(dict.user_inventory(user, inventory),
                                         reply_markup=interactive_kb.inventory_items(inventory, user),

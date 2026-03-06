@@ -1,7 +1,7 @@
 from src.keyboards.interactive_keyboard import InteractiveKeyboard
 from aiogram.types import FSInputFile, Message, CallbackQuery
 from src.keyboards.store_keyboard import StoreKeyboard
-from src.models.store_item_model import StoreItem
+from src.models.item_model import Item
 from src.keyboards.callback_fabrics import StoreCF
 from src.handlers.commands import Commands as cn
 from src.domain.states.store_set import StoreSet
@@ -26,7 +26,7 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
-products:List[Tuple[Warehouse, StoreItem]] = []
+products:List[Tuple[Warehouse, Item]] = []
 store_kb = StoreKeyboard()
 db = DataBase()
 rt = Router()
@@ -61,14 +61,14 @@ async def choice_product(callback: CallbackQuery, callback_data: StoreCF, state:
     answer:Message = None
 
     if (callback_data.action == "choice"):
-        product:Tuple[Warehouse, StoreItem] = next((p for p in products if p[1].id == callback_data.id), None)
+        product:Tuple[Warehouse, Item] = next((p for p in products if p[1].id == callback_data.id), None)
         await state.update_data(product = product)
         await callback.message.edit_caption(caption=dict.product_description(product),
             reply_markup = store_kb.product_buying(product),
             parse_mode=ParseMode.HTML
         )
     elif (callback_data.action == "buy"):
-        product: Tuple[Warehouse, StoreItem] = state_data["product"]
+        product: Tuple[Warehouse, Item] = state_data["product"]
         await callback.message.delete()
 
         if (user.money < product[1].price):
