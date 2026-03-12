@@ -9,3 +9,8 @@ class Monster(BaseModel):
     name = sa.Column(sa.Text)
     description = sa.Column(sa.Text)
     drop_rules = sa.Column(sa.Text)
+    utf8_icon = sa.Column(sa.Text)
+    min_damage = sa.Column(sa.Integer)
+    max_damage = sa.Column(sa.Integer)
+    miss_chance = sa.Column(sa.Integer)
+    crit_chance = sa.Column(sa.Integer)

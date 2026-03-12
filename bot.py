@@ -1,5 +1,6 @@
 from src.domain.middlewares.registration_middleware import RegistrationMiddleware
 from src.domain.middlewares.captcha_middleware import CaptchaMiddleware
+from src.domain.controllers.game_controller import GameController
 import src.handlers.create_sticker_set as create_sticker_set
 import src.handlers.edit_sticker_set as edit_sticker_set
 from src.services.scheduler.scheduler import Scheduler
@@ -28,6 +29,8 @@ bot = Bot(token=prefs.bot_token)
 dp = Dispatcher()
 dict = Dictionary()
 scheduler = Scheduler()
+
+game_controller = GameController()
 
 async def main():
     dp.include_routers(start.rt, 

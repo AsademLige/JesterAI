@@ -1,11 +1,12 @@
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
+from src.models.battle_member_model import BodyParts
 from src.models.monster_model import Monster
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
 from src.models.winners_log_model import WinnersLog
 from src.models.item_model import Item
 from src.models.user_stats_model import UserStats
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Union
 from src.services.data_base.db import DataBase
 from src.models.warehouse import Warehouse
 from src.domain.utils.utils import Utils
@@ -227,18 +228,73 @@ class Dictionary():
     ###Текстовые переменные битвы
     ###------------------------------------------------------------
     
-    combat_interface:str = "⚔️ {{fight_name}}! ⚔️\n\n"\
-                             "🗡 : {{player1}}\n"\
+    combat_interface:str = "{{fight_name}}\n\n"\
+                             "{{player1_icon}} : {{player1}}\n"\
                              "HP: {{health1}}\n\n"\
-                             "🆚 СУПРОТИВ 🆚\n\n"\
-                             "🛡 : {{player2}}\n"\
+                             "{{player2_icon}} : {{player2}}\n"\
                              "HP: {{health2}}\n"\
                              "━━━━━━━━━━━━━\n"\
-                             "💥 Ход: {{player_turn}}\n"\
-                             "⏳ Таймер: {{timer}}"
+                             "⏳ Таймер: {{timer}}\n"\
     
     __monster_meeting:List[str] = [
-        "❗️ Из кустов выползает <code>{{monster_name}}</code>, а его {{pencil}}, готовый к бою, смотрит прямо на тебя! Что будешь делать?"
+        "❗️ Из кустов выползает <code>{{monster_name}}</code>, а его {{pencil}} смотрит прямо на тебя! Что будешь делать?"
+    ]
+
+    __battle_escape:List[str] = [
+        "💨 {{member}} бежит, роняя кал и спотыкаясь о {{pencil_accu}}...",
+        "💨 Ну что, {{member}}, помог тебе {{pencil}} {{length}}?",
+        "💨 Пора дать на пятку, пока при памяти!"
+    ]
+
+    battle_protect_description:List[str] = [
+        "прячется за {{pencil_inst}}",
+        "спасается бегством за ближайший камень",
+        "игнорирует любые попытки атаки",
+        "не чувствует урона",
+        "взывает к здравому смыслу и не получает урон",
+        "демонстративно закатывает глаза, игнорируя урон",
+        "использует режим бога и игнорирует любой урон",
+        "отпрыгивает в последний момент",
+        "делает вид, что это не больно",
+        "жалуется на качество удара",
+        "выставляет вперед стажера из тестеров, заблокировав им урон",
+        "отрицает существование оппонента",
+        "откатывается к прошлому состоянию без урона"
+    ]
+
+    battle_attacked_description:List[str] = [
+        "получает урон",
+        "драматично берется за окровавленное место",
+        "выдает синий экран смерти",
+        "падает, прижимая руки к {{part_dat}}",
+        "медленно оседает на пол",
+        "хватается за {{pencil}}, хотя били в {{part_accu}}",
+        "закатывает глаза и падает плашмя",
+        "готовиться к флешбекам перед паверапом",
+        "смотрит на новую дырень в теле, но делает вид, что так и было",
+        "выдает ошибку <b>404 (ebalo not found)</b>",
+        "вытирает пот со лба и кровь с {{pencil_gen}}",
+    ]
+
+    battle_attack_description:List[str] = [
+        "выходит на удушающий {{pencil_inst}}",
+        "прописывает двоечку в {{part_accu}}",
+        "проводит психологическую атаку",
+        "распахивает плащ",
+        "стреляет сомнительной жидкостью",
+        "давит интеплектом",
+        "пытается насадить на {{pencil_accu}}",
+        "втыкает {{pencil_accu}} в {{part}} оппонента",
+        "начинает газлайтинг",
+        "ломает через колено {{pencil_accu}} оппонента",
+        "спамит один удар",
+        "натягивает {{pencil_accu}} оппонента на глобус"
+    ]
+
+    battle_dead_description:List[str] = [
+        "сдох, обоссавшись и обосравшись!",
+        "прикрывает рукой  {{part_accu}}, затем падает без дыхания",
+        "становиться отрицательно живым"
     ]
 
     ###------------------------------------------------------------
@@ -311,7 +367,7 @@ class Dictionary():
         ["смычок", "смычка", "смычку","смычок","смычком",""],
         ["дрын", "дрына", "дрыну","дрын","дрыном",""],
         ["хер", "хера", "херу","хер","хером",""],
-        ["елда", "елды", "елде","елда","елдой",""],
+        ["елда", "елды", "елде","елду","елдой",""],
         ["болт", "болта", "болту","болт","болтом",""],
         ["прибор", "прибора", "прибору","прибор","прибором",""],
         ["чучундрик", "чучундрика", "чучундрику","чучундрик","чучундриком",""],
@@ -335,8 +391,18 @@ class Dictionary():
             return False
         
     def monster_meeting(self, monster:Monster) -> str:
-        return tp.text_replacement(random.choice(self.__monster_meeting), {
+        return tp.text_replacement(random.choice(self.__monster_meeting) + \
+                                   f"\n\n❤️ <b>Здоровье: {monster.health}</b>\n"\
+                                   f"🔪 <b>Атака: {monster.min_damage}-{monster.max_damage}</b>\n"\
+                                   f"\n<b>Описание:</b> <i>{monster.description}</i>", {
             "monster_name": monster.name,
+            **self.random_member(),
+        })
+    
+    def battle_escape(self, member:Union[User, Monster]) -> str:
+        return tp.text_replacement(random.choice(self.__battle_escape), {
+            "member" : self.get_user_link(member.tg_name, member.tg_id) if type(member) is User else f"<code>{member.name}</code>",
+            "length": self.length_wrapper(member.length if type(member) is User else random.randint(1, 30)), 
             **self.random_member(),
         })
         
@@ -617,8 +683,8 @@ class Dictionary():
                 f"⚠️ {self.__negative_length_change[random.randint(0, len(self.__negative_length_change) - 1)]}",
                                        params)
         
-    def media_caption(self, user:User) -> str:
-        return tp.text_replacement("Отправил: {{user_link}} {{custom_title}} - {{length}}", {
+    def user_wrapper(self, user:User, show_length:bool = True) -> str:
+        return tp.text_replacement("{{user_link}} {{custom_title}}" + " - {{length}}" if (show_length) else "", {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
             "length":self.length_wrapper(user.length, False)
@@ -634,6 +700,38 @@ class Dictionary():
             "pencil_inst":member[4],
             "pencil_prep":member[5]
         }
+    
+    def get_part_cases(self, part:BodyParts) -> Dict[str, str]:
+        parts:dict[BodyParts, dict[str, str]] = {
+            BodyParts.HEAD: {
+                f"part": "голова",
+                "part_gen": "головы",
+                "part_dat": "голове",
+                "part_accu": "голову",
+                "part_inst": "головой",
+                "part_prep": "о голове",
+                "part_prep_ob": "об голову",
+            },
+            BodyParts.CHEST: {
+                "part": "грудь",
+                "part_gen": "груди",
+                "part_dat": "груди",
+                "part_accu": "грудь",
+                "part_inst": "грудью",
+                "part_prep": "о груди",
+                "part_prep_ob": "о грудь",
+            },
+            BodyParts.KNEES: {
+                "part": "колени",
+                "part_gen": "коленей",
+                "part_dat": "коленям",
+                "part_accu": "колени",
+                "part_inst": "коленями",
+                "part_prep": "о коленях",
+                "part_prep_ob": "о колени",
+            },
+        }
+        return parts[part]
     
     def timer_message(self, user:User, time_left:str) -> str:
         return tp.text_replacement(self.__timer_message, {
