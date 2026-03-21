@@ -5,6 +5,7 @@ import src.handlers.create_sticker_set as create_sticker_set
 import src.handlers.edit_sticker_set as edit_sticker_set
 from src.services.scheduler.scheduler import Scheduler
 import src.handlers.interactive as interactive
+import src.handlers.gamba_house as gamba_house
 import src.handlers.send_media as send_media
 from src.data.dictionary import Dictionary
 from src.models.db_model import on_startup
@@ -37,6 +38,7 @@ async def main():
                       create_sticker_set.rt,
                       edit_sticker_set.rt,
                       interactive.rt,
+                      gamba_house.rt,
                       send_media.rt,
                       captcha.rt,
                       system.rt,

@@ -90,6 +90,11 @@ class DataBase():
     async def get_user_stats(self, user:User) -> UserStats:
         return await UserStats.query.where(UserStats.user_id == user.id).gino.first()
     
+    async def get_users_stat_by_chat(self, chat_id:int) -> List[UserStats]:
+        subquery = select([User.id]).where(User.chat_id == chat_id).alias()
+        stats:List[UserStats] = await UserStats.query.where(UserStats.user_id.in_(subquery)).gino.all()
+        return stats
+    
     async def update_user_by_id(self, tg_id: int, args:Dict[str, Any] = {}) -> bool:
         try:
             await User.update.values(**args).where(User.tg_id == tg_id).gino.status()
@@ -298,8 +303,8 @@ class DataBase():
     ### Методы работы с монстрами
     ###-----------------------------------------
 
-    async def get_random_monster(self):
-        random_monster:Monster = await Monster.query.order_by(func.random()).gino.first()
+    async def get_random_monsters(self, monster_count:int = 1) -> List[Monster]:
+        random_monster:List[Monster] = await Monster.query.order_by(func.random()).limit(monster_count).gino.all()
         return random_monster
 
 
@@ -351,7 +356,7 @@ class DataBase():
     ### Методы работы с статистикой пользователей
     ###-----------------------------------------
     
-    async def update_user_stats(self, user_id:int, args:Dict[str, Any] = {}) -> bool:
+    async def update_user_status(self, user_id:int, args:Dict[str, Any] = {}) -> bool:
         try:
             user_stats:Optional[UserStats] = await UserStats.query.where(UserStats.user_id == user_id).gino.first()
             if (not user_stats):

@@ -1,5 +1,5 @@
-from src.models.battle_member_model import BodyParts
-from src.domain.controllers.battle_controller import BattlePhases
+from src.models.battle_member_model import BattleMember, BodyParts, MemberStrategy
+from src.domain.controllers.battle_controller import BattleController, BattlePhases
 from src.keyboards.battle_keyboard import BattleKeyboard
 from src.keyboards.callback_fabrics import BattleCF
 from typing import Any, Dict, List, Optional, Tuple
@@ -43,11 +43,11 @@ async def hunt_init(message: Message, state: FSMContext):
     await state.update_data(user=user)
 
     answer = await bot.send_message(user.chat_id, await game_controller.prepare_hunt(user),
-                                    reply_markup=combat_kb.hunt_start(user),
+                                    reply_markup=combat_kb.battle_keyboard(user, game_controller.get_battle(user)),
                                     parse_mode=ParseMode.HTML)
 
 ###Начало боя
-@rt.callback_query(BattleCF.filter(F.action == "fight"))
+@rt.callback_query(BattleCF.filter(F.action.in_([a.value for a in MemberStrategy])))
 async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
     state_data = await state.get_data()
     if (not 'user' in state_data): return
@@ -57,15 +57,19 @@ async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF, state
         return
     
     global game_controller
-    if (game_controller.get_battle(user).phase == BattlePhases.PREPARE):
+    battle:BattleController = game_controller.get_battle(user)
+    if (battle.phase == BattlePhases.PREPARE):
         game_controller.start_battle(user, callback.message)
-    status:Optional[Tuple[str, BattlePhases]] = game_controller.get_battle_status(user)
+
+    battle.active_member.choice_strategy(MemberStrategy(callback_data.action))
+
+    status:Optional[Tuple[str, BattlePhases, BattleMember]] = await game_controller.get_battle_status(user)
     if (status):
         await callback.message.edit_text(status[0],
-                                        reply_markup=combat_kb.parts_selector(user, status[1]),
+                                        reply_markup=combat_kb.battle_keyboard(user, battle),
                                         parse_mode=ParseMode.HTML)
-        
-###Начало хода
+
+###Действие атаки
 @rt.callback_query(BattleCF.filter(F.action == "attack"))
 async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
     state_data = await state.get_data()
@@ -76,14 +80,17 @@ async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF, state
         return
     
     global game_controller
-    status:Optional[Tuple[str, BattlePhases]] = game_controller.battle_next_phase(user, 
-                                                    list(BodyParts)[callback_data.part])
+    battle:BattleController = game_controller.get_battle(user)
+    battle.active_member.take_aim(list(BodyParts)[callback_data.part])
+    status:Optional[Tuple[str, BattlePhases, BattleMember]] = await game_controller.get_battle_status(user)
+
     if (status):
         await callback.message.edit_text(status[0],
-                                        reply_markup=combat_kb.parts_selector(user, status[1]),
+                                        reply_markup=combat_kb.battle_keyboard(user, battle) \
+                                        if (not status[1] == BattlePhases.BATTLE_END) else None,
                                         parse_mode=ParseMode.HTML)
 
-###Конец хода
+###Действие защиты
 @rt.callback_query(BattleCF.filter(F.action == "defense"))
 async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
     state_data = await state.get_data()
@@ -94,11 +101,12 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
         return
     
     global game_controller
-    status:Optional[Tuple[str, BattlePhases]] = game_controller.battle_next_phase(user, 
-                                                    list(BodyParts)[callback_data.part])
+    battle:BattleController = game_controller.get_battle(user)
+    battle.active_member.protect(list(BodyParts)[callback_data.part])
+    status:Optional[Tuple[str, BattlePhases, BattleMember]] = await game_controller.get_battle_status(user)
     if (status):
         await callback.message.edit_text(status[0],
-                                        reply_markup=combat_kb.hunt_start(user) \
+                                        reply_markup=combat_kb.battle_keyboard(user, battle) \
                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
                                         parse_mode=ParseMode.HTML)
 

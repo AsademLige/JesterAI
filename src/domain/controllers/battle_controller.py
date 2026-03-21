@@ -1,11 +1,11 @@
-from src.models.battle_member_model import AttackStatus, BattleMember, BodyParts
+from src.models.battle_member_model import AttackStatus, BattleMember, MemberStand, MemberStrategy
+from src.domain.utils.enums import BattleMode, BattlePhases, MemberStatus
 from src.domain.utils.text_processing import TextProcessing as tp
 from typing import Any, Dict, List, Optional, Tuple, Union
 from src.services.data_base.db import DataBase
 from src.models.monster_model import Monster
 from src.data.dictionary import Dictionary
 from datetime import datetime, timedelta
-from aiogram.types import Message, Chat
 from src.models.user_model import User
 from src.data.config import Prefs
 from random import Random
@@ -13,41 +13,64 @@ from aiogram import Bot
 from enum import Enum
 import random
 
-class BattleMode(Enum):
-    HUNT = 0
-    DUEL = 1
-    GLADIATORS = 2
-
-class BattlePhases(Enum):
-    PREPARE = 0
-    ATTACK = 1
-    DEFENSE = 2
-    BATTLE_END = 3
-
 class BattleController():
     db = DataBase()
     dict = Dictionary()
     prefs = Prefs()
     members:List[BattleMember]
-    mode:BattleMode
-    phase:BattlePhases
+    __mode:BattleMode
+    __phase:BattlePhases
 
-    turn:int = -1
-    round:int = 1
-    battle_timer:timedelta
+    __active_member:Optional[BattleMember] = None
+    __round:int = 0
+    
+    __battle_timer:timedelta
+    __add_time_per_turn:timedelta
     battle_started:datetime
+    motions_per_turn:int = 2
+
+    @property
+    def active_member(self) -> BattleMember:
+        return self.__active_member
+    
+    @property
+    def round(self) -> int:
+        return self.__round
+    
+    @property
+    def phase(self) -> int:
+        return self.__phase
+    
+    @property
+    def battle_timer(self) -> int:
+        return self.__battle_timer
+    
+    @property
+    def mode(self) -> int:
+        return self.__mode
 
     def __init__(self, members:List[Union[Monster, User]], mode:BattleMode):
         self.members = [BattleMember(entity) for entity in members]
-        self.mode = mode
-        self.phase = BattlePhases.PREPARE
+        self.__mode = mode
+        self.__phase = BattlePhases.PREPARE
         pass
 
     @classmethod
-    def hunt(cls, members:List[Union[Monster, User]]):
+    async def hunt(cls, hunter:User, monster_count:int = 1):
+        members:List[Union[Monster, User]] = [hunter]
+        monsters:List[Monster] = await cls.db.get_random_monsters(monster_count)
+        members.extend(monsters)
         return cls(
             members = members,
             mode = BattleMode.HUNT
+        )
+    
+    @classmethod
+    async def gladiators(cls, monster_count:int = 2):
+        monsters:List[Monster] = await cls.db.get_random_monsters(monster_count)
+        return cls(
+            members = monsters,
+            mode = BattleMode.GLADIATORS
         )
     
     @classmethod
@@ -58,165 +81,143 @@ class BattleController():
         )
     
     def prepare_battle(self):
-        if (self.mode == BattleMode.HUNT):
+        if (self.__mode == BattleMode.HUNT):
             #TODO: Можно будет расширить возможности боя на несколько монстров
+            self.__active_member = self.members[0]
             return self.dict.monster_meeting(self.members[1].entity)
+        if (self.__mode == BattleMode.GLADIATORS):
+            self.__active_member = self.members[0]
+            return self.dict.gladiators_introduce(self.members, self.__get_ui_data())
         
-    def start_battle(self, timer:timedelta = timedelta(seconds=30)):
-        self.phase = BattlePhases.ATTACK
-        self.turn = 0
-        self.battle_timer = timer
+    def start_battle(self, timer:timedelta = timedelta(seconds=30), 
+                     add_time_per_turn:timedelta = timedelta(seconds=15)):
+        self.__phase = BattlePhases.MOTION
+        self.__round += 1
+        self.__battle_timer = timer
+        self.__add_time_per_turn = add_time_per_turn
         self.battle_started = datetime.now()
         
-    def get_turn_ui(self) -> str:
-        return tp.text_replacement(self.dict.combat_interface + ("💥 {{turn}}, выбери, куда ударить:" 
-                                    if self.phase == BattlePhases.ATTACK else "🛡 {{turn}}, выбери, что защитить:"),
+    def get_status(self) -> Optional[Tuple[str, BattlePhases, BattleMember]]:
+        """str: текстовое описание текущего статуса боя
+           BattlePhases: статус боя (для кнопок)
+           BattleMember: активный в данный момент боец
+        """
+
+        if (self.mode == BattleMode.GLADIATORS and self.__phase == BattlePhases.MOTION):
+            return self.__end_turn()
+
+        if (self.__active_member.status == MemberStatus.EXHAUSTED):
+            return self.__start_action()
+        else:
+            self.__phase = BattlePhases.MOTION
+
+
+        ui:str = tp.text_replacement(self.dict.combat_interface + ("💥 {{turn}}, выбери, куда ударить:" 
+                                    if self.__active_member.stand == MemberStand.ATTACK else "🛡 {{turn}}, выбери, что защитить:"),
                                    {
-                                       **self.__get_members_ui(),
-                                       "timer": f"{round((self.battle_started + self.battle_timer - datetime.now()).total_seconds())} сек",
-                                       "fight_name": f"🏹 <b>ОХОТА!</b>🏹 <code>Раунд: {self.round}</code>" 
-                                            if self.mode == BattleMode.HUNT else 
-                                        f"⚔️ <b>ДРЫНОСТОЯНИЕ!</b>⚔️ <code>Раунд: {self.round}</code>",
+                                       **self.__get_ui_data(),
+                                       "timer": f"{round((self.battle_started + self.__battle_timer - datetime.now()).total_seconds())} сек",
+                                       "fight_name": f"🏹 <b>ОХОТА!</b>🏹 <code>Раунд: {self.__round}</code>" 
+                                            if self.__mode == BattleMode.HUNT else 
+                                        f"⚔️ <b>ДРЫНОСТОЯНИЕ!</b>⚔️ <code>Раунд: {self.__round}</code>",
                                    })
+        
+        if (self.mode == BattleMode.GLADIATORS and self.__phase == BattlePhases.REST):
+            self.__phase = BattlePhases.MOTION
+
+        return (ui, self.__phase, self.__active_member)
     
-    def __get_members_ui(self):
+    def __get_ui_data(self) -> Dict[str, str]:
         members_ui:Dict[str, str] = {}
 
         for i in range(len(self.members)):
 
-            members_ui[f"player{i+1}"] = self.members[i].full_battle_name
+            bet:str = f" (<b>{self.members[i].bet_money}💰</b>)" if (self.members[i].bet_money > 0) else ""
+
+            members_ui[f"player{i+1}"] = self.members[i].full_battle_name + bet
             members_ui[f"player{i+1}_icon"] = self.members[i].utf8_icon
             members_ui[f"health{i+1}"] = self.health_bar(self.members[i].hp, self.members[i].entity.health \
                                         if (type(self.members[i].entity) is Monster) else 30)
             
-            if (i == self.turn):
-                members_ui["turn"] = self.members[i].link
+            if (self.members[i] == self.__active_member):
+                members_ui["turn"] = f"<b>({self.__active_member.motions_left}/2)</b> {self.members[i].link}"
             
         return members_ui
         
-    def escape(self):
+    def escape(self) -> Optional[str]:
         """Побег из боя участника, которому принадлежит ход"""
-        self.phase = BattlePhases.BATTLE_END
-        return self.dict.battle_escape(self.members[self.turn if (self.turn >= 0) else 0].entity)
+        if (self.__active_member):
+            self.__phase = BattlePhases.BATTLE_END
+            return self.dict.battle_escape(self.__active_member.entity)
 
-    def turn_loop(self, part:BodyParts) -> Tuple[str, BattlePhases]:
+    def __start_action(self) -> Tuple[str, BattlePhases, BattleMember]:
         """Основной цикл боя, в котором сменяются фазы, и передается очередность хода"""
-        if (self.phase == BattlePhases.ATTACK):
-            self.members[self.turn].attack_target = part
-            self.phase = BattlePhases.DEFENSE
-        elif (self.phase == BattlePhases.DEFENSE):
-            self.members[self.turn].protect = part
-            self.phase = BattlePhases.ATTACK
-            self.round += 1
-
-            if (self.mode == BattleMode.HUNT or self.turn == len(self.members) - 1):
-                result = self.end_turn()
-                self.turn = 0
-                return result
-            elif (self.mode == BattleMode.DUEL):
-                self.turn = 0 if (self.turn == len(self.members) - 1) else self.turn + 1
+        self.__phase = BattlePhases.REST
+        self.__active_member.rest()
+        self.__round += 1
         
-        return (self.get_turn_ui(), self.phase)
-                
+        next_index:int = self.members.index(self.__active_member) + 1
+        if (self.__mode == BattleMode.HUNT or next_index > len(self.members) - 1):
+            result = self.__end_turn()
+            return result
+        elif (self.__mode == BattleMode.DUEL):
+            self.__active_member = 0 if (next_index > len(self.members) - 1) else self.members[next_index]
         
-    def end_turn(self) -> Tuple[str, BattlePhases, Optional[User]]:
+        return (self.get_status(), self.__phase, self.__active_member)
+        
+    def __end_turn(self) -> Tuple[str, BattlePhases, BattleMember]:
+        self.__battle_timer += self.__add_time_per_turn
         self.__simulate_mobs()
         
-        opponent:BattleMember = self.__get_opponent()
-        
-        hit:int = self.members[self.turn].get_hit()
-        opponent_hit:int = opponent.get_hit()
+        opponent:BattleMember = self.__get_opponent()    
+
+        print(f"cdlog {self.active_member.attack_target} : {opponent.attack_target}")
 
         turn_result:str = ""
-        status:AttackStatus = self.members[self.turn].attacked(opponent.attack_target, opponent_hit)
-        opponent_status:Optional[AttackStatus] = opponent.attacked(self.members[self.turn].attack_target, hit)
+        status:Optional[Tuple[AttackStatus, int, bool]] = self.__active_member.attacked(opponent)
+        opponent_status:Optional[Tuple[AttackStatus, int, bool]] = opponent.attacked(self.__active_member)
 
-        if (not self.mode == BattleMode.HUNT and status == AttackStatus.KILLED and opponent_status == AttackStatus.KILLED):
-            self.phase = BattlePhases.BATTLE_END
-            return ("Оба сдохли", self.phase, None)
-        elif (opponent_status == AttackStatus.KILLED):
-            self.phase = BattlePhases.BATTLE_END
-            turn_result = tp.text_replacement("🎯 {{player1}} {{dead}}", {
-                "player1": opponent.short_battle_name,
-                "dead": tp.text_replacement(random.choice(self.dict.battle_dead_description), {
-                    **self.dict.random_member(),
-                    **self.dict.get_part_cases(opponent.protect),
-                })
-            })
-            return (turn_result, self.phase, self.members[self.turn].entity)
-        elif (status == AttackStatus.KILLED):
-            self.phase = BattlePhases.BATTLE_END
-            turn_result = tp.text_replacement("☠️ {{player1}} {{dead}}", {
-                "player1": self.members[self.turn].short_battle_name,
-                "dead": tp.text_replacement(random.choice(self.dict.battle_dead_description), {
-                    **self.dict.random_member(),
-                    **self.dict.get_part_cases(opponent.protect),
-                })
-            })
+        print(f"cdlog {opponent_status[1]} : {status[1]}")
+
+
+        if (not self.__mode == BattleMode.HUNT and status[0] == AttackStatus.KILLED and opponent_status[0] == AttackStatus.KILLED):
+            self.__phase = BattlePhases.BATTLE_END
+            return ("Оба сдохли", self.__phase, self.__active_member)
+        elif (opponent_status and opponent_status[0] == AttackStatus.KILLED):
+            self.__phase = BattlePhases.BATTLE_END
+            turn_result = self.dict.battle_end(opponent, self.__mode, (status[1], status[2]))
+            return (turn_result, self.__phase, self.__active_member)
+        elif (status[0] == AttackStatus.KILLED):
+            self.__phase = BattlePhases.BATTLE_END
+            turn_result = self.dict.battle_end(self.__active_member, self.__mode, (status[1], status[2]))
         
-        if (status == AttackStatus.DEFENDED and opponent_status == AttackStatus.DEFENDED):
-            turn_result = tp.text_replacement("🛡🛡 {{player1}} {{protect1}}, также как и {{player2}} {{protect2}}",{
-                "player1": self.members[self.turn].short_battle_name,
-                "player2": opponent.short_battle_name,
-                "protect1": tp.text_replacement(random.choice(self.dict.battle_protect_description), 
-                                                {**self.dict.get_part_cases(self.members[self.turn].protect),
-                                                 **self.dict.random_member()}),
-                "protect2": tp.text_replacement(random.choice(self.dict.battle_protect_description), 
-                                                {**self.dict.get_part_cases(opponent.protect),
-                                                 **self.dict.random_member()}),
-            })
-        elif (status == AttackStatus.DAMAGED and opponent_status == AttackStatus.DEFENDED):
-            turn_result = tp.text_replacement("🩸🛡 {{player2}} {{attack}}! {{player1}} {{attacked}} на <code>💥{{opponent_hit}}</code>, пока {{player2}} {{protect}}",{
-                "player1": self.members[self.turn].short_battle_name,
-                "player2": opponent.short_battle_name,
-                "protect": tp.text_replacement(random.choice(self.dict.battle_protect_description),
-                                               {**self.dict.get_part_cases(opponent.protect),
-                                                 **self.dict.random_member()}),
-                "attacked": tp.text_replacement(random.choice(self.dict.battle_attacked_description), {
-                    **self.dict.get_part_cases(self.members[self.turn].protect),
-                    **self.dict.random_member()
-                }),
-                "attack": tp.text_replacement(random.choice(self.dict.battle_attack_description), {
-                    **self.dict.get_part_cases(opponent.attack_target),
-                                            **self.dict.random_member()
-                }),
-                "opponent_hit" : opponent_hit,
-            })
-        elif (status == AttackStatus.DEFENDED and opponent_status == AttackStatus.DAMAGED):
-            turn_result = tp.text_replacement("🛡🩸 {{player1}} {{protect}}, затем {{attack}}! {{player2}} {{attacked}} на <code>💥{{hit}}</code>",{
-                "player1": self.members[self.turn].short_battle_name,
-                "player2": opponent.short_battle_name,
-                "protect": tp.text_replacement(random.choice(self.dict.battle_protect_description), {
-                    **self.dict.get_part_cases(self.members[self.turn].protect),
-                                            **self.dict.random_member()
-                }),
-                "attacked": tp.text_replacement(random.choice(self.dict.battle_attacked_description), {
-                    **self.dict.get_part_cases(opponent.protect),
-                                    **self.dict.random_member()
-                }),
-                "attack": tp.text_replacement(random.choice(self.dict.battle_attack_description), {
-                    **self.dict.get_part_cases(self.members[self.turn].attack_target),
-                                        **self.dict.random_member()
-                }),
-                "hit" : hit,
-            })
-        elif (status == AttackStatus.DAMAGED and opponent_status == AttackStatus.DAMAGED):
-            turn_result = tp.text_replacement("🩸🩸 {{player1}} {{attacked1}} на <code>💥{{opponent_hit}}</code>, но и {{player2}} {{attacked2}} на <code>💥{{hit}}</code>",{
-                "player1": self.members[self.turn].short_battle_name,
-                "player2": opponent.short_battle_name,
-                "attacked1": tp.text_replacement(random.choice(self.dict.battle_attacked_description), {
-                    **self.dict.get_part_cases(self.members[self.turn].protect),
-                        **self.dict.random_member()
-                }),
-                "attacked2": tp.text_replacement(random.choice(self.dict.battle_attacked_description), {
-                     **self.dict.get_part_cases(opponent.protect),
-                        **self.dict.random_member()
-                }),
-                "opponent_hit" : opponent_hit,
-                "hit" : hit,
-            })
+        if (status[0] == AttackStatus.DEFENDED and opponent_status[0] == AttackStatus.DEFENDED):
+            turn_result = self.dict.battle_turn_draft_protected(self.__active_member, 
+                                                                opponent)
+        elif (status[0] == AttackStatus.DAMAGED and opponent_status[0] == AttackStatus.DEFENDED):
+            turn_result = self.dict.battle_turn_first_attacked(self.__active_member, opponent, 
+                                                               (status[1], status[2]))
 
-        return (turn_result, self.phase, None)
+        elif (status[0] == AttackStatus.DEFENDED and opponent_status[0] == AttackStatus.DAMAGED):
+            turn_result = self.dict.battle_turn_sec_attacked(self.__active_member, 
+                                                             opponent, 
+                                                             (opponent_status[1], opponent_status[2]))
+            
+        elif (status[0] == AttackStatus.DAMAGED and opponent_status[0] == AttackStatus.DAMAGED):
+            turn_result = self.dict.battle_turn_both_attacked(self.__active_member, 
+                                                              opponent, 
+                                                              (opponent_status[1], opponent_status[2]), 
+                                                              (status[1], status[2]))
+
+        if (self.__mode == BattleMode.HUNT and not status[0] == AttackStatus.KILLED):
+            turn_result += f"\n\n⏳ Таймер: {round((self.battle_started + self.__battle_timer - datetime.now()).total_seconds())} сек"
+            if (not self.active_member.strategy == MemberStrategy.DEFENSE):
+                turn_result += "\n<i>❗️ Побег и лечение невозможны, сначала нужно уйти в защиту!</i>"
+
+        if (self.__mode == BattleMode.GLADIATORS and not self.__phase == BattlePhases.BATTLE_END):
+            turn_result += tp.text_replacement(f"\n\n{self.dict.gladiators_interface}", {**self.__get_ui_data()})
+
+        return (turn_result, self.__phase, self.__active_member)
     
     def __simulate_mobs(self):
         for member in self.members:
@@ -224,7 +225,12 @@ class BattleController():
                 member.simulate_actions()
     
     def __get_opponent(self) -> BattleMember:
-        return self.members[self.turn+1] if (self.turn+1 < len(self.members)) else self.members[0]
+        other_members:List = list(self.members)
+        other_members.pop(self.members.index(self.__active_member))
+        return random.choice(other_members)
+    
+    def get_bet_gladiator(self) -> Optional[BattleMember]:
+        return next((gld for gld in self.members if gld.bet_money > 0), None)
 
     def health_bar(self, current, maximum, length=10):
         """Создает полоску здоровья"""

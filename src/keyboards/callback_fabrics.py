@@ -13,6 +13,21 @@ class JobsCF(CallbackData, prefix="fab_jobs"):
 
 class DiceGameCF(CallbackData, prefix="fab_dice_game"):
     action: str
+    user_id: Optional[int] = None
+
+class GladiatorsCF(CallbackData, prefix="fab_gladiators"):
+    action: str
+    gladiator_id:Optional[int] = None
+    bet:Optional[int] = None
+    user_id: Optional[int] = None
+
+class TrashLotoCF(CallbackData, prefix="fab_trash_loto"):
+    action: str
+    user_id: Optional[int] = None
+
+class GambaChoiceCF(CallbackData, prefix="fab_gamba_choice"):
+    action: str
+    user_id: Optional[int] = None
 
 class InventoryCF(CallbackData, prefix="fab_inventory"):
     action: str

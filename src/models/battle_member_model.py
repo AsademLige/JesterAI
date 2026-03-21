@@ -1,62 +1,181 @@
-from src.models.user_model import User
+from __future__ import annotations
+from src.domain.utils.enums import AttackStatus, BodyParts, MemberStatus
+from typing import List, Optional, Tuple, Union
 from src.models.monster_model import Monster
-from typing import Optional, Union
+from src.models.user_model import User
 from enum import Enum
 import random
 
-class BodyParts(Enum):
-    HEAD = 0
-    CHEST = 1
-    KNEES = 2
+class MemberStrategy(Enum):
+    AGGRESSIVE = "aggressive_strategy"
+    CONTR_STRIKE = "contr_strike_strategy"
+    DEFENSE = "defense_strategy"
 
-class AttackStatus(Enum):
-    DAMAGED = 0
-    DEFENDED = 1
-    KILLED = 2
-
-class MemberStatus(Enum):
-    ALIVE = 0
-    DEAD = 1
+class MemberStand(Enum):
+    ATTACK = 0
+    DEFENSE = 1
 
 class BattleMember():
     entity:Union[Monster, User]
     utf8_icon:str
 
-    attack_target:Optional[BodyParts] = None
-    protect:Optional[BodyParts] = None
+    __attack_target:List[BodyParts]
+    __protected_parts:List[BodyParts]
 
-    status:MemberStatus = MemberStatus.ALIVE
+    __status:MemberStatus = MemberStatus.FULL_OF_ENERGY
 
     __hp:int
+    __motions_left:int = 2
+    __crit_chance:int
+    __bet_money:int
+
+    __strategy:MemberStrategy = MemberStrategy.CONTR_STRIKE
+    __stand:MemberStand = MemberStand.ATTACK
+
+    __last_turn_result:Optional[AttackStatus]
 
     @property
-    def hp(self):
+    def hp(self) -> int:
         return self.__hp 
+    
+    @property
+    def motions_left(self) -> int:
+        return self.__motions_left 
+    
+    @property
+    def status(self) -> MemberStatus:
+        return self.__status 
+    
+    @property
+    def is_dead(self) -> bool:
+        return self.__status == MemberStatus.DEAD
+    
+    @property
+    def is_alive(self) -> bool:
+        return self.__status == MemberStatus.FULL_OF_ENERGY
+    
+    @property
+    def protected_parts(self) -> List[BodyParts]:
+        return self.__protected_parts
+    
+    @property
+    def attack_target(self) -> List[BodyParts]:
+        return self.__attack_target
+    
+    @property
+    def strategy(self) -> MemberStrategy:
+        return self.__strategy
+    
+    @property
+    def stand(self) -> MemberStatus:
+        return self.__stand
+    
+    @property
+    def bet_money(self) -> MemberStatus:
+        return self.__bet_money
+    
+    @property
+    def last_turn_result(self) -> AttackStatus:
+        return self.__last_turn_result
 
     def __init__(self, entity:Union[Monster, User]):
         self.entity = entity
+        self.__bet_money = 0
+        self.__attack_target = []
+        self.__protected_parts = []
+        self.__last_turn_result = None
+        self.__crit_chance = entity.crit_chance if type(entity) is Monster else 15
         self.__hp = entity.health if type(entity) is Monster else 30
         self.utf8_icon = entity.utf8_icon if entity.utf8_icon else random.choice(["🥷","🧝‍♂️","🧙🏿‍♂️","🧙🏼"])
         pass
-    
-    def attacked(self, part:Optional[BodyParts], damage:int) -> AttackStatus:
-        if (not part == self.protect):
-            self.__hp -= damage
-            if (self.__hp <= 0): 
-                self.status = MemberStatus.DEAD
-                return AttackStatus.KILLED
+
+    def attacked(self, opponent:BattleMember) -> Optional[Tuple[AttackStatus, int, bool]]:
+        hits:List[Tuple[BodyParts, int, bool]] = opponent.get_hits()
+        attack_status:AttackStatus = AttackStatus.DEFENDED
+        total_damage:int = 0
+        is_crit:bool = False
+
+        for hit in hits:
+            if (not hit[0] in self.protected_parts):
+                self.__hp -= hit[1]
+                total_damage += hit[1]
+                if (hit[2]):
+                    is_crit = True
+                if (self.__hp <= 0): 
+                    self.__status = MemberStatus.DEAD
+                    attack_status = AttackStatus.KILLED
+                else:
+                    attack_status = AttackStatus.DAMAGED
             else:
-                return AttackStatus.DAMAGED
+                if (not attack_status):
+                    attack_status = AttackStatus.DEFENDED
+        self.__protected_parts.clear()
+
+        self.__last_turn_result = attack_status
+
+        return (attack_status, total_damage, is_crit)
+
+    def take_aim(self, part:Optional[BodyParts]) -> MemberStatus:
+        if (self.__stand == MemberStand.ATTACK and self.__motions_left > 0):
+            self.__attack_target.append(part)
+            self.__motions_left -= 1
+            if (self.__motions_left == 0):
+                self.__status = MemberStatus.EXHAUSTED
+            else:
+                if (not self.__strategy == MemberStrategy.AGGRESSIVE):
+                    self.__stand = MemberStand.DEFENSE
+        return self.__status
+
+    def protect(self, part:Optional[BodyParts]) -> MemberStatus:
+        if (self.__stand == MemberStand.DEFENSE and self.__motions_left > 0):
+            self.__protected_parts.append(part)
+            self.__motions_left -= 1
+            if (self.__motions_left == 0):
+                self.__status = MemberStatus.EXHAUSTED
+            else:
+                if (not self.__strategy == MemberStrategy.DEFENSE):
+                    self.__stand = MemberStand.ATTACK
+        return self.__status
+
+    def rest(self, motions:int = 2) -> MemberStatus:
+        self.__status = MemberStatus.FULL_OF_ENERGY
+        self.choice_strategy(self.__strategy)
+        self.__motions_left = motions
+        return self.__status
+    
+    def choice_strategy(self, strategy:MemberStrategy):
+        self.__strategy = strategy
+        if (strategy == MemberStrategy.CONTR_STRIKE or
+            strategy == MemberStrategy.AGGRESSIVE):
+            self.__stand = MemberStand.ATTACK
         else:
-            return AttackStatus.DEFENDED
+            self.__stand = MemberStand.DEFENSE
         
-    def get_hit(self) -> int:
-        return random.randint(self.entity.min_damage, self.entity.max_damage) \
-                if (type(self.entity) is Monster) else random.randint(5, 10)
+    def get_hits(self) -> List[Tuple[BodyParts, int, bool]]:
+        list:List[Tuple[BodyParts, int, bool]] = []
+        for part in self.__attack_target:
+            damage:int = random.randint(self.entity.min_damage, self.entity.max_damage) \
+                    if (type(self.entity) is Monster) else random.randint(5, 10)
+            
+            is_crit:bool = False
+            if random.random() < (self.__crit_chance / 100):
+                damage = round(damage * 1.5)
+                is_crit = True
+
+            list.append((part, damage, is_crit))
+        self.__attack_target.clear()
+        return list
     
     def simulate_actions(self):
-        self.attack_target = random.choice(list(BodyParts))
-        self.protect = random.choice(list(BodyParts))
+        self.__attack_target.clear()
+        self.__protected_parts.clear()
+
+        self.__attack_target = [random.choice(list(BodyParts))]
+        self.__protected_parts = [random.choice(list(BodyParts))]
+
+    def bet(self, money:Optional[int]):
+        if (money):
+            self.__bet_money += money
 
     @property
     def full_battle_name(self) -> str:
