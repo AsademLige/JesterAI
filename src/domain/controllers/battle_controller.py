@@ -136,8 +136,7 @@ class BattleController():
 
             members_ui[f"player{i+1}"] = self.members[i].full_battle_name + bet
             members_ui[f"player{i+1}_icon"] = self.members[i].utf8_icon
-            members_ui[f"health{i+1}"] = self.health_bar(self.members[i].hp, self.members[i].entity.health \
-                                        if (type(self.members[i].entity) is Monster) else 30)
+            members_ui[f"health{i+1}"] = self.health_bar(self.members[i].hp, self.members[i].max_hp)
             
             if (self.members[i] == self.__active_member):
                 members_ui["turn"] = f"<b>({self.__active_member.motions_left}/2)</b> {self.members[i].link}"
@@ -165,7 +164,7 @@ class BattleController():
         
         return (self.get_status(), self.__phase, self.__active_member)
         
-    def __end_turn(self) -> Tuple[str, BattlePhases, BattleMember]:
+    def __end_turn(self) -> Tuple[str, BattlePhases, Optional[BattleMember]]:
         self.__battle_timer += self.__add_time_per_turn
         self.__simulate_mobs()
         
@@ -179,18 +178,17 @@ class BattleController():
 
         print(f"cdlog {opponent_status[1]} : {status[1]}")
 
-
-        if (not self.__mode == BattleMode.HUNT and status[0] == AttackStatus.KILLED and opponent_status[0] == AttackStatus.KILLED):
+        if (status[0] == AttackStatus.KILLED and opponent_status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
-            return ("Оба сдохли", self.__phase, self.__active_member)
+            return ("Оба сдохли", self.__phase, None)
         elif (opponent_status and opponent_status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
-            turn_result = self.dict.battle_end(opponent, self.__mode, (status[1], status[2]))
+            turn_result = self.dict.battle_end(opponent, self.__mode, (opponent_status[1], opponent_status[2]))
             return (turn_result, self.__phase, self.__active_member)
         elif (status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
             turn_result = self.dict.battle_end(self.__active_member, self.__mode, (status[1], status[2]))
-        
+            return (turn_result, self.__phase, opponent)
         if (status[0] == AttackStatus.DEFENDED and opponent_status[0] == AttackStatus.DEFENDED):
             turn_result = self.dict.battle_turn_draft_protected(self.__active_member, 
                                                                 opponent)
@@ -232,8 +230,15 @@ class BattleController():
     def get_bet_gladiator(self) -> Optional[BattleMember]:
         return next((gld for gld in self.members if gld.bet_money > 0), None)
 
-    def health_bar(self, current, maximum, length=10):
+    @staticmethod
+    def health_bar(current, maximum, length=10, heal=0):
         """Создает полоску здоровья"""
+        """Создает полоску здоровья с отображением вылеченного здоровья"""
         filled_bars = int((current / maximum) * length)
         filled_bars = min(filled_bars, length)
-        return ("▰" * filled_bars + "□" * (length - filled_bars)) + f" {current}/{maximum}"
+        
+        healed_bars = int((heal / maximum) * length) if heal > 0 else 0
+        healed_bars = min(healed_bars, length - filled_bars)
+        
+        # Создаем полоску: ▰ - текущее здоровье, ░ - вылеченное, □ - потерянное
+        return ("▰" * filled_bars + "+" * healed_bars + "□" * (length - filled_bars - healed_bars)) + f" {current+heal}/{maximum}"

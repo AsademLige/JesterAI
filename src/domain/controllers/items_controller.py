@@ -1,5 +1,8 @@
+from numpy import quantile
+
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
+from src.models.battle_member_model import BattleMember
 from src.services.data_base.db import DataBase
 from src.data.dictionary import Dictionary
 from src.domain.utils.utils import Utils
@@ -24,6 +27,7 @@ class ItemActions(Enum):
     dice_timer_decresc = "dice_timer_decresc"
     subtract_length = "subtract_length"
     add_length = "add_length"
+    heal = "heal"
     effects = "effects"
 
 class ItemsController():
@@ -80,6 +84,22 @@ class ItemsController():
         return usage_result
     
     @staticmethod
+    async def use_heal_item(user: User, item: Tuple[UserInventoryItem, Item], 
+                       target:BattleMember) -> Optional[Tuple[str, int]]:
+        action = json.loads(item[1].action)
+        effects = action[ItemActions.effects.name]
+        usage_result:str = ""
+
+        if (item[0].quantity > 0 and ItemActions.heal.name in effects and
+            await ItemsController.heal_effect(user, target, item, effects[ItemActions.heal.name])):
+            usage_result += f'💊 Предмет <code>"{item[1].title}"</code> восстановил вам <b>{effects[ItemActions.heal.name]}HP</b>'
+
+        if (usage_result):
+            return (usage_result, effects[ItemActions.heal.name])
+        else:
+            return None
+    
+    @staticmethod
     async def length_change_effect(user: User, target:User, item:UserInventoryItem, length_change:int) -> bool:
         if (await db.update_user(target, {
                 User.length.name: User.length + length_change,
@@ -101,4 +121,10 @@ class ItemsController():
                 User.last_length_check.name: datetime.now() - timedelta(hours=24)
             }) and await db.update_item_in_user_inventory(user, item, -1)):
 
+            return True
+        
+    @staticmethod
+    async def heal_effect(user: User, target:BattleMember, item:UserInventoryItem, hp:int = 0) -> bool:
+        if (await db.update_item_in_user_inventory(user, item, -1)):
+            target.heal(hp)
             return True

@@ -47,7 +47,7 @@ async def store(message: Message, state: FSMContext):
     await message.delete()
     await state.set_state(StoreSet.choice_product)
 
-    products = await db.get_store_goods_with_quantity()
+    products = await db.get_store_items_with_quantity()
 
     answer = await bot.send_photo(user.chat_id, photo, caption=dict.store_description(products, user.tg_name, user.tg_id),
                                   reply_markup = store_kb.store_products(products),

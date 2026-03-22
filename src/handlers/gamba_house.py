@@ -313,7 +313,17 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
     if (not 'user' in state_data): return
     user: User = state_data["user"]
 
-    if (user.tg_id != callback_data.user_id):
+    if (user.tg_id != callback_data.user_id or not callback_data.bet):
+        return
+
+    if (user.money < callback_data.bet):
+        answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
+                            parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([callback.message, answer])
+        return
+    
+    if (not await db.update_user(user, {"money" : User.money - callback_data.bet})):
+        await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
     
     global game_controller
@@ -344,7 +354,7 @@ async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF,
     
     global game_controller
     battle:BattleController = game_controller.get_battle(user)
-    status:Optional[Tuple[str, BattlePhases, BattleMember]] = await game_controller.get_battle_status(user)
+    status:Optional[Tuple[str, BattlePhases, Optional[BattleMember]]] = await game_controller.get_battle_status(user)
 
     if (status):
         await callback.message.edit_text(status[0],

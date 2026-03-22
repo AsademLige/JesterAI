@@ -151,6 +151,15 @@ class DataBase():
             print(f"get user inventory error: {error}")
             return []
         
+    async def get_user_heal_items(self, user:User) -> List[Tuple[UserInventoryItem, Item]]:
+        try:
+            query = Item.join(UserInventoryItem).select().where(and_(Item.action.ilike(f"%heal%")))
+            return await query.gino.load((UserInventoryItem, Item)).all()
+        except Exception as error:
+            print(f"get user heal items error: {error}")
+            return []
+        
+        
     async def update_item_in_user_inventory(self, user:User, item:Tuple[Warehouse, Item], quantity:int = 1) -> bool:
         try:
             existed_item:UserInventoryItem = await UserInventoryItem.\
@@ -274,7 +283,7 @@ class DataBase():
     ### Методы работы с магазином
     ###-----------------------------------------
 
-    async def get_store_goods_with_quantity(self) -> List[Tuple[Warehouse, Item]]:
+    async def get_store_items_with_quantity(self) -> List[Tuple[Warehouse, Item]]:
         query = Item.join(Warehouse).select()
         return await query.gino.load((Warehouse, Item)).all()
     

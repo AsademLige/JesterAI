@@ -37,6 +37,7 @@ class InventoryCF(CallbackData, prefix="fab_inventory"):
 class BattleCF(CallbackData, prefix="fab_battle"):
     action: str
     part: Optional[int] = None
+    item_index: Optional[int] = None
     user_id: Optional[int] = None
 
 class StoreCF(CallbackData, prefix="fab_store"):

@@ -9,3 +9,4 @@ class Item(BaseModel):
     title = sa.Column(sa.Text)
     description = sa.Column(sa.Text)
     action = sa.Column(sa.Text)
+    utf8_icon = sa.Column(sa.Text)

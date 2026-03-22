@@ -281,7 +281,7 @@ class Dictionary():
         "выдает синий экран смерти",
         "падает, прижимая руки к {{part_dat}}",
         "медленно оседает на пол",
-        "хватается за {{pencil}}, хотя били в {{part_accu}}",
+        "хватается за {{pencil_accu}}, хотя били в {{part_accu}}",
         "закатывает глаза и падает плашмя",
         "готовиться к флешбекам перед паверапом",
         "смотрит на новую дырень в теле, но делает вид, что так и было",
@@ -337,6 +337,7 @@ class Dictionary():
         "🌧 Какой же ты нищий!",
         "🌧 После боя еще и от меня получишь!",
         "🌧 За что мне этот инвалид!",
+        "🌧 Хватит уже нализывать яйца!",
     ]
 
     ###------------------------------------------------------------
@@ -635,7 +636,7 @@ class Dictionary():
         items_str:str = ""
         index:int = 1
         for inventory_item, store_item in items:
-            items_str += f"<b>({index})</b> {hcode(store_item.title)}<b>({inventory_item.quantity}шт.)</b>\n"
+            items_str += f"<b>({index})</b> {store_item.utf8_icon} {hcode(store_item.title)}<b> ({inventory_item.quantity}шт.)</b>\n"
             index+=1
 
         return items_str
@@ -824,7 +825,7 @@ class Dictionary():
 
     def battle_end(self, dead:BattleMember, mode:BattleMode, damage:Tuple[int, bool]) -> str:
         icon_hunt:str = "☠️" if (mode == BattleMode.HUNT and type(dead.entity) is User) else "🎯"
-        icon_gladiators:str = "💰" if (mode == BattleMode.HUNT and type(dead.entity) is User) else "🚽"
+        icon_gladiators:str = "💰" if (dead.bet_money == 0) else "🚽"
 
         icon:str = icon_hunt if (mode == BattleMode.HUNT) else icon_gladiators
         return tp.text_replacement(icon + " {{player1}} {{dead}}, получив {{opponent_hit}}", {
@@ -886,7 +887,7 @@ class Dictionary():
             })
     
     def battle_turn_both_attacked(self, player1:BattleMember, player2:BattleMember, damage1:Tuple[int, bool], damage2:Tuple[int, bool]) -> str:
-        return tp.text_replacement("🩸🩸 {{player1}} {{attacked1}}, нанеся {{opponent_hit}}, но и {{player2}} {{attacked2}}, получив {{hit}}",{
+        return tp.text_replacement("🩸🩸 {{player1}} {{attacked1}}, получив {{opponent_hit}}, но и {{player2}} {{attacked2}}, получив {{hit}}",{
                 "player1": player1.short_battle_name,
                 "player2": player2.short_battle_name,
                 "attacked1": tp.text_replacement(random.choice(self.battle_attacked_description), {

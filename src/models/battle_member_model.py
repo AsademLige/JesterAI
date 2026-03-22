@@ -25,6 +25,7 @@ class BattleMember():
     __status:MemberStatus = MemberStatus.FULL_OF_ENERGY
 
     __hp:int
+    __max_hp:int
     __motions_left:int = 2
     __crit_chance:int
     __bet_money:int
@@ -37,6 +38,10 @@ class BattleMember():
     @property
     def hp(self) -> int:
         return self.__hp 
+    
+    @property
+    def max_hp(self) -> int:
+        return self.__max_hp
     
     @property
     def motions_left(self) -> int:
@@ -85,7 +90,8 @@ class BattleMember():
         self.__protected_parts = []
         self.__last_turn_result = None
         self.__crit_chance = entity.crit_chance if type(entity) is Monster else 15
-        self.__hp = entity.health if type(entity) is Monster else 30
+        self.__max_hp = entity.health if type(entity) is Monster else 30
+        self.__hp = self.__max_hp
         self.utf8_icon = entity.utf8_icon if entity.utf8_icon else random.choice(["🥷","🧝‍♂️","🧙🏿‍♂️","🧙🏼"])
         pass
 
@@ -143,6 +149,9 @@ class BattleMember():
         self.__motions_left = motions
         return self.__status
     
+    def heal(self, hp:int = 0):
+        self.__hp += hp
+    
     def choice_strategy(self, strategy:MemberStrategy):
         self.__strategy = strategy
         if (strategy == MemberStrategy.CONTR_STRIKE or
@@ -175,7 +184,7 @@ class BattleMember():
 
     def bet(self, money:Optional[int]):
         if (money):
-            self.__bet_money += money
+            self.__bet_money += (money * 2)
 
     @property
     def full_battle_name(self) -> str:

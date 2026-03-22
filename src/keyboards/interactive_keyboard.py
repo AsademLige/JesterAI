@@ -31,7 +31,7 @@ class InteractiveKeyboard():
         builder = InlineKeyboardBuilder()
         for i, item in enumerate(items):
             if (item[0].quantity > 0):
-                builder.button(text=f"{i+1}",
+                builder.button(text=f"{i+1} {item[1].utf8_icon}",
                     callback_data=InventoryCF(action="inventory_choice", 
                                                 item_id=item[1].id,
                                                 user_id=user.tg_id))
