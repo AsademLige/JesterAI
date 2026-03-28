@@ -1,9 +1,11 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineKeyboardMarkup
-from src.models.item_model import Item
+from src.models.discounts_model import ProductDiscounts
 from src.keyboards.callback_fabrics import StoreCF
+from aiogram.types import InlineKeyboardMarkup
 from src.models.warehouse import Warehouse
 from src.data.dictionary import Dictionary
+from src.models.item_model import Item
+from src.models.user_model import User
 from src.data.config import Prefs
 from typing import List, Tuple
 
@@ -14,28 +16,34 @@ class StoreKeyboard():
     def __init__(self):
         pass
 
-    def store_products(self, products: List[Tuple[Warehouse, Item]]) -> InlineKeyboardMarkup:
+    def store_products(self, products: List[Tuple[Warehouse, Item, ProductDiscounts]], user:User) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         for i, product in enumerate(products):
-            builder.button(text=f"{i+1}",
-                callback_data=StoreCF(action="choice", id=product[1].id))
+            builder.button(text=f"({i+1}) {product[1].utf8_icon} " + ("%" if product[2] else "$"),
+                callback_data=StoreCF(action="choice", 
+                                      id=product[1].id,
+                                      user_id=user.tg_id))
             
         builder.button(text=dict.exit,
-            callback_data=StoreCF(action="exit"))
+            callback_data=StoreCF(action="exit",
+                                  user_id=user.tg_id))
         
         builder.adjust(2)
         
         return builder.as_markup()
     
-    def product_buying(self, product:Tuple[Warehouse, Item]) -> InlineKeyboardMarkup:
+    def product_buying(self, product:Tuple[Warehouse, Item, ProductDiscounts], user:User) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
         if (product[0].quantity > 0):
             builder.button(text="💰 Беру!",
-                callback_data=StoreCF(action="buy", id=product[1].id))
+                callback_data=StoreCF(action="buy", 
+                                      id=product[1].id,
+                                      user_id=user.tg_id))
         
         builder.button(text=dict.back,
-            callback_data=StoreCF(action="cancel"))
+            callback_data=StoreCF(action="cancel",
+                                  user_id=user.tg_id))
         
         builder.adjust(2)
         

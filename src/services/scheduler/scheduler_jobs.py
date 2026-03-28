@@ -1,8 +1,10 @@
+from src.models.discounts_model import ProductDiscounts
 from src.domain.utils.app_herald import AppHerald
+from typing import Dict, List, Optional, Tuple
 from src.services.data_base.db import DataBase
-from src.models.user_model import User
 from src.data.dictionary import Dictionary
-from typing import Dict, List, Optional
+from src.models.item_model import Item
+from src.models.user_model import User
 from aiogram.enums import ParseMode
 from src.data.config import Prefs
 from aiogram import Bot
@@ -148,18 +150,25 @@ class SchedulerJobs():
         """
         try:
             if (await db.update_warehouse()):
+                await db.deactivate_discounts()
+                discounts:List[Tuple[ProductDiscounts, Item]] = await db.create_random_discount(2)
+
                 users: List[User] = await db.get_all_users()
                 indexed_users: Dict[int, List[User]] = {}
+
                 for user in users:
                     if (user.chat_id is not None):
                         if (user.chat_id not in indexed_users):
                             indexed_users[user.chat_id] = []
                         indexed_users[user.chat_id].append(user)
 
-                for chat_id in indexed_users: 
-                    await bot.send_message(chat_id, "🏪 Обновление остатков магазина, бегом за покупками!\n" \
-                                                    "<i>Поторопись опередить бабок в гонке за просрочкой</i>", 
+                for chat_id in indexed_users:
+                    # Исключение продовых чатов для теста
+                    if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
+
+                    await bot.send_message(chat_id, dict.warehouse_update(discounts), 
                                     parse_mode=ParseMode.HTML)     
+
         except Exception as e:
             logger.send_log("apscheduler", logging.WARNING, f"warehouse_update - {e}")
 

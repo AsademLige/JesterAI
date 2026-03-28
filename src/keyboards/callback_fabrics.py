@@ -46,3 +46,4 @@ class HelpCF(CallbackData, prefix="fab_help"):
 class StoreCF(CallbackData, prefix="fab_store"):
     action: str
     id: Optional[int] = None
+    user_id: Optional[int] = None

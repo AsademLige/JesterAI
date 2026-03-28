@@ -5,14 +5,17 @@ import asyncio
 
 class Utils():
     @staticmethod
-    async def delete_old_message(messages:List[Message], delay:int = 3):
+    async def delete_old_message(messages:List[Message], delay:int = 3) -> bool:
+        success:bool = True
         await asyncio.sleep(delay) 
         for message in messages:
             try:
                 await message.delete()
             except:
+                success = False
                 print("delete message error")
         messages.clear()
+        return success
 
     @staticmethod
     def get_last_member_check_delta(last_length_check: datetime, hours_delta:int = 24) -> timedelta:

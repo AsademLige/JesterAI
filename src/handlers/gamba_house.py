@@ -2,14 +2,15 @@ from src.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, Gladiators
 from src.domain.controllers.battle_controller import BattleController
 from src.domain.controllers.rights_controller import RightsController
 from src.keyboards.gamba_house_keyboard import GambaHouseKeyboard
+from aiogram.types import FSInputFile, Message, CallbackQuery
 from src.keyboards.battle_keyboard import BattleKeyboard
 from src.models.battle_member_model import BattleMember
 from src.models.user_stats_model import UserStats
 from src.handlers.commands import Commands as cn
-from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from src.domain.utils.enums import BattlePhases
 from src.services.data_base.db import DataBase
+from src.domain.utils.consts import Consts
 from aiogram.fsm.context import FSMContext
 from src.data.dictionary import Dictionary
 from typing import List, Optional, Tuple
@@ -22,6 +23,7 @@ from aiogram.types import Message
 import asyncio
 import random
 import math
+import os
 
 from aiogram import Router, F
 from aiogram import Bot
@@ -48,7 +50,9 @@ async def gamba_house(message: Message, state: FSMContext):
     for stat in users_stat:
         total += stat.trash_loto_spins * 5 - stat.trash_loto_money_wins
 
-    answer = await bot.send_message(user.chat_id, f"Над описанием надо поработать\nСкам-хаус уже выиграл: {total}",
+    photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"gamba_house.webp"))
+
+    answer = await bot.send_photo(user.chat_id, photo, caption=f"Над описанием надо поработать\nСкам-хаус уже выиграл: {total}",
                                     reply_markup=gamba_house_kb.gamba_choice(user),
                                     parse_mode=ParseMode.HTML)
     
@@ -79,13 +83,13 @@ async def dice_game(callback: CallbackQuery, callback_data: DiceGameCF, state: F
     
     delta:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
     if (math.floor(delta.total_seconds() / 3600) < 0):
-        await callback.message.edit_text(
-                                        dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
+        await callback.message.delete()
+        answer = await bot.send_message(user.chat_id, dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
                              parse_mode=ParseMode.HTML)
-        await Utils.delete_old_message([callback.message], 10)
+        await Utils.delete_old_message([answer], 10)
         return
 
-    await callback.message.edit_text( dict.dice_game_start, 
+    await callback.message.edit_caption( dict.dice_game_start, 
                      reply_markup = gamba_house_kb.dice_choice(user),
                      parse_mode=ParseMode.HTML)
     await state.update_data(user = user)

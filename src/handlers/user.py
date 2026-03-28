@@ -3,7 +3,6 @@ from src.models.user_inventory_item_model import UserInventoryItem
 from src.keyboards.interactive_keyboard import InteractiveKeyboard
 from src.keyboards.callback_fabrics import InventoryCF
 from src.models.user_stats_model import UserStats
-from src.models.item_model import Item
 from src.handlers.commands import Commands as cn
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -11,6 +10,7 @@ from src.services.data_base.db import DataBase
 from aiogram.fsm.context import FSMContext
 from src.data.dictionary import Dictionary
 from src.domain.utils.utils import Utils
+from src.models.item_model import Item
 from src.models.user_model import User
 from aiogram.enums import ParseMode
 from src.data.config import Prefs

@@ -36,6 +36,7 @@
         "loto",
         "moviepy",
         "onupdate",
+        "outerjoin",
         "Prefs",
         "psycopg",
         "pydantic",

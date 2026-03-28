@@ -1,8 +1,11 @@
+import random
+
 from src.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from src.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.controllers.item_drop_manager import DropTags
 from src.models.custom_sticker_model import CustomSticker
+from src.models.discounts_model import ProductDiscounts
 from src.models.bot_settings_model import BotSettings
 from src.models.sticker_set_model import StickerSet
 from src.models.winners_log_model import WinnersLog
@@ -301,11 +304,17 @@ class DataBase():
     ### Методы работы с магазином
     ###-----------------------------------------
 
-    async def get_store_items_with_quantity(self) -> List[Tuple[Warehouse, Item]]:
-        query = Item.join(Warehouse).select()
-        return await query.gino.load((Warehouse, Item)).all()
+    async def get_store_items_with_quantity(self) -> List[Tuple[Warehouse, Item, ProductDiscounts]]:
+        query = Item.join(Warehouse).outerjoin(
+            ProductDiscounts, 
+            and_(
+                Item.id == ProductDiscounts.product_id,
+                ProductDiscounts.is_active == True
+            )
+        ).select()
+        return await query.gino.load((Warehouse, Item, ProductDiscounts)).all()
     
-    async def update_item_quantity_at_warehouse(self, item:Tuple[Warehouse, Item], quantity:int = 1) -> bool:
+    async def update_item_quantity_at_warehouse(self, item:Tuple[Warehouse, Item, ProductDiscounts], quantity:int = 1) -> bool:
         try:
             if (item[0].quantity - quantity >= 0):
                 await Warehouse.update.where(Warehouse.id == item[0].id).values(
@@ -322,9 +331,58 @@ class DataBase():
         try:
             await Warehouse.update.where(Warehouse.quantity < Warehouse.max_capacity).values(
                     quantity=Warehouse.max_capacity).gino.status()
+            return True
         except Exception as error:
             print(f"warehouse items get error: {error}")
             return False
+        
+    async def deactivate_discounts(self) -> bool:
+        try:
+            await ProductDiscounts.update.where(ProductDiscounts.is_active == True).\
+                    values(is_active=False).gino.status()
+            return True
+        except Exception as error:
+            print(f"discount update error: {error}")
+            return False
+        
+    async def create_random_discount(self, discounts_count:int = 1) -> List[Tuple[ProductDiscounts, Item]]:
+        try:
+            query = Item.join(Warehouse).\
+                outerjoin(ProductDiscounts,
+                        ProductDiscounts.is_active == False).\
+                select().\
+                distinct(Item.id).\
+                where(and_(Warehouse.quantity > 0))
+        
+            discount_items:List[Item] = await query.gino.load(Item).all()
+            #TODO:Шел час ночи и я так и не смог 
+            #корректно достать рандомное количество из базы без дублей
+            random.shuffle(discount_items)
+            discount_items = discount_items[:discounts_count]
+
+            discounts:List[Tuple[ProductDiscounts, Item]] = []
+
+            for discount_item in discount_items:
+                existed_discount:ProductDiscounts = await ProductDiscounts.\
+                query.where(ProductDiscounts.product_id == discount_item.id).gino.first()
+            
+                if (existed_discount):
+                    await ProductDiscounts.update.where(ProductDiscounts.product_id == discount_item.id).\
+                        values(is_active=True, discount_percent = random.choice([25, 35, 45, 50])).gino.status()
+                    print(f"update_discount {discount_item.title}")
+                    discounts.append((existed_discount, discount_item))
+                else:
+                    print(f"new_discount {discount_item.title}")
+                    new_discount = ProductDiscounts(
+                        product_id = discount_item.id,
+                        discount_percent = random.choice([25, 50])
+                    )
+                    await new_discount.create()
+                    discounts.append((new_discount, discount_item))
+            return discounts
+        except Exception as error:
+            print(f"discount create error: {error}")
+            return []
         
     ###-----------------------------------------
     ### Методы работы с монстрами

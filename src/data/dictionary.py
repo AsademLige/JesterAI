@@ -1,4 +1,5 @@
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
+from src.models.discounts_model import ProductDiscounts
 from src.models.battle_member_model import BattleMember, BodyParts
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
@@ -362,7 +363,7 @@ class Dictionary():
     ###------------------------------------------------------------
 
     __store_description:str = "<blockquote>🛒 Приветствуем в <b>DICKSI</b>, {{user_link}}!</blockquote>\n"\
-                              "<i>Пакетик брать будете или Вы со своим?</i>\n{{products}}"
+                              "<i>Пакетик брать будете или Вы со своим?</i>\n\n{{products}}\n<i>Баланс: {{money}}</i>"
     
     __product_description:str = "<blockquote>{{title}}</blockquote>\n<i>{{description}}</i>\n\n<b>Стоимость</b>: {{price}}"
     
@@ -378,6 +379,11 @@ class Dictionary():
     __product_buying_thanks:List[str] = ["💳 Оплата прошла, спасибо за покупку, {{user_link}}!", 
                                          "💳 Не желаете гречку по акции, корм для голубей, передние стойки стабилизатора на гранту? Спасибо за покупку, {{user_link}}, приходите еще!",
                                          "💳 За покупку вам бонус в виде наклейки! Наклеите 999 штук на свой {{pencil}}, и он увеличится на <b>1cm</b>"]
+    
+    __warehouse_update:str = "<blockquote>🏪 Обновление остатков магазина, бегом за покупками!</blockquote>\n" \
+                                                    "<i>Специальные предложения:\n</i>"\
+                                                    "{{discounts_description}}"\
+                                                    "<i>Поторопись опередить бабок в гонке за просрочкой!\n</i>"
 
     ###------------------------------------------------------------
     ###Описания розыгрышей
@@ -481,27 +487,39 @@ class Dictionary():
             **self.random_member(),
         })
         
-    def store_description(self, products:List[Tuple[Warehouse, Item]], user_name:str, user_tg_id:int) -> str:
+    def store_description(self, products:List[Tuple[Warehouse, Item, ProductDiscounts]], user:User) -> str:
         return tp.text_replacement(self.__store_description, {
-            "user_link" : self.get_user_link(user_name, user_tg_id),
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "products": self.__generate_products_list(products),
+            "money": self.money_wrapper(user.money, False),
             **self.random_member(),
         }, recursive_parse_args = True)
     
-    def __generate_products_list(self, products:List[Tuple[Warehouse, Item]]) -> str:
+    def __generate_products_list(self, products:List[Tuple[Warehouse, Item, ProductDiscounts]]) -> str:
         products_str:str = ""
         index:int = 1
-        for warehouse_item, product in products:
-            products_str += f"<b>({index})</b> {random.choice(self.__buttons_types)} {hcode(product.title)}<b>({warehouse_item.quantity}/{warehouse_item.max_capacity})</b> - {self.price_wrapper(product.price)}\n"
+        for warehouse_item, product, discount in products:
+            price_formatted:str = f"{self.price_wrapper(product.price, False)}"
+            if (discount):
+                discount_price:int = round(product.price - (product.price * (discount.discount_percent / 100)))
+                price_formatted = f"{self.price_wrapper(discount_price)} <s>{price_formatted}</s>💰"
+            icon:str = f"<b>({index})</b> {random.choice(self.__buttons_types)}{product.utf8_icon}"
+            body:str = icon + f"{hcode(product.title)}<b>({warehouse_item.quantity}/{warehouse_item.max_capacity})</b> - {price_formatted}"
+
+            products_str += f"{body}\n"
             index+=1
 
         return products_str
     
-    def product_description(self, product:Tuple[Warehouse, Item]) -> str:
+    def product_description(self, product:Tuple[Warehouse, Item, ProductDiscounts]) -> str:
+        price_formatted:str = f"{self.price_wrapper(product[1].price, False)}"
+        if (product[2]):
+            discount_price:int = round(product[1].price - (product[1].price * (product[2].discount_percent / 100)))
+            price_formatted = f"{self.price_wrapper(discount_price)} <s>{price_formatted}</s>💰"
         return tp.text_replacement(self.__product_description, {
             "title": product[1].title,
             "description": product[1].description,
-            "price": self.price_wrapper(product[1].price) if (product[0].quantity > 0) else "<b>Нет в наличии!</b>",
+            "price": price_formatted if (product[0].quantity > 0) else "<b>Нет в наличии!</b>",
             **self.random_member(),
         }, recursive_parse_args = True)
     
@@ -516,6 +534,17 @@ class Dictionary():
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(),
         })
+    
+    def warehouse_update(self, discounts:List[Tuple[ProductDiscounts, Item]]) -> str:
+        discounts_description:str = ""
+        for i, discount in enumerate(discounts):
+            discounts_description += f"<blockquote>{discount[1].utf8_icon} {discount[1].title} "\
+                f"<b>-{discount[0].discount_percent}%</b>!</blockquote>\n"
+            
+        return tp.text_replacement(self.__warehouse_update, {
+            "discounts_description": discounts_description,
+            **self.random_member(),
+        }, recursive_parse_args = True)
     
     def answer_restricted(self, full_name: str, tg_id:int) -> str:
         return tp.text_replacement(self.__answer_restricted, {
@@ -822,8 +851,8 @@ class Dictionary():
     def money_wrapper(self, money:int, plus_visible:bool = True) -> str:
         return hbold(f'{"+" if (money > 0 and plus_visible) else ""}{money}💰')
     
-    def price_wrapper(self, money:int) -> str:
-        return hbold(f'{money - 1},99💰')
+    def price_wrapper(self, money:int, bold:bool = True) -> str:
+        return hbold(f'{money - 1},99') if (bold) else f"{money - 1},99"
     
     def get_medal_emoji(self, place_in_top:int, only_tops:bool = False):
         if (place_in_top == 1):
