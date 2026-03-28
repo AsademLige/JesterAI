@@ -25,7 +25,7 @@ class GambaHouseKeyboard():
                 callback_data=DiceGameCF(action="dice_game",
                                          user_id=user.tg_id).pack()))
         
-        builder.add(InlineKeyboardButton(text="💸 Гладиаторы",
+        builder.add(InlineKeyboardButton(text="🏟️ Арена",
                 callback_data=GladiatorsCF(action="gladiators",
                                          user_id=user.tg_id).pack()))
         
@@ -33,7 +33,7 @@ class GambaHouseKeyboard():
                 callback_data=GambaChoiceCF(action="exit",
                                          user_id=user.tg_id).pack()))
 
-        builder.adjust(3, 1) 
+        builder.adjust(2, 2) 
         return builder.as_markup()
     
     def dice_choice(self, user:User) -> InlineKeyboardMarkup:

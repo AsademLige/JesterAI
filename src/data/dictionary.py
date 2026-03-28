@@ -2,11 +2,11 @@ from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from src.models.battle_member_model import BattleMember, BodyParts
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
+from src.domain.utils.enums import AttackStatus, BattleMode
 from typing import Optional, List, Dict, Tuple, Union
 from src.models.winners_log_model import WinnersLog
 from src.models.user_stats_model import UserStats
 from src.services.data_base.db import DataBase
-from src.domain.utils.enums import BattleMode
 from src.models.monster_model import Monster
 from src.models.warehouse import Warehouse
 from src.domain.utils.utils import Utils
@@ -77,10 +77,12 @@ class Dictionary():
     rules:str = "❓ Правила"
 
     bot_description:str = "Команда /sticker_pack отправит ссылку на стикеры, которые МАГИЧЕСКИМ образом превращаются в видео!\n\n"\
-                        "У нас тут что-то вроде интерактивной игры, команда /me покажет небольшую сводку с твоими успехами\n\n"\
-                        "Меряйся хозяйством с другими участниками! Команда /pencil поможет тебе получить БОЛЬШОЕ признание <i>(но есть шанс, что уменьшит его)</i>"\
+                        "🎒У нас тут что-то вроде интерактивной игры, команда /me покажет небольшую сводку с твоими успехами\n\n"\
+                        "🍆Меряйся хозяйством с другими участниками! Команда /pencil поможет тебе получить БОЛЬШОЕ признание <i>(но есть шанс, что уменьшит его)</i>"\
                         "Бот все же заскамил тебя? Подожди 24 часа и пробуй еще раз!\n\n"\
-                        "Каждый день проводим розыгрыш среди участников чата, а каждую пятницу подведем итоги и наградим самых крутых участников!\n\n"\
+                        "🎲🎰 Заглядывай в наше домик развлечений /gamba_house! За твои деньги, мы знатно тебя <s>разведем</s>РАЗВЛЕЧЕМ\n\n"\
+                        "⚔️Нечисть и уроды различной степени наводнили наши земли, охоться /hunt на них и получай награду! "\
+                        "Обязательно прочитай про бои, там много полезной информации!\n\n"\
                         "<i>Все вопросы и предложения отправлять на почтовый ящик:</i> <code>2202202000651657</code>"
     
     __answer_restricted:str = "⛔️ Команду вызвал {{user_link}}, так что руки прочь!"
@@ -116,6 +118,9 @@ class Dictionary():
 
     dice_game_timer_decresc_target:str = "⏰ {{user_link1}} использовал {{item_title}} на {{user_link2}} и сбросил его таймер на игру в кости"
     dice_game_timer_decresc:str = "⏰ {{user_link1}} использовал {{item_title}} на себя и сбросил таймер на игру в кости"
+
+    item_steal_usage:str = "🐀 {{user_link1}} использовал {{item_title}} на {{user_link2}} и украл {{steal_item_title}}"
+    item_steal_money:str = "🐀 {{user_link1}} использовал {{item_title}} на {{user_link2}} и украл {{money}}"
 
     length_decresc_target:str = "🔪 {{user_link1}} взял <code>{{item_title}}</code> и отрезал у {{user_link2}} {{length}} {{pencil_gen}}!"
     length_decresc:str = "🔪 {{user_link1}} взял {{item_title}} и отрезал у себя {{length}} {{pencil_gen}}, ненормальный..."
@@ -248,6 +253,10 @@ class Dictionary():
         "❗️ Из кустов выползает <code>{{monster_name}}</code>, а его {{pencil}} смотрит прямо на тебя! Что будешь делать?"
     ]
 
+    __boss_meeting:List[str] = [
+        "<blockquote>🚧 ОПАСНОСТЬ! Сильный противник <code>{{monster_name}}</code> встречается на твоем пути, а его {{pencil}} в другой весовой категории!🚧</blockquote>"
+    ]
+
     __gladiators_introduce:List[str] = [
         "📣 Под общие овации на арену выбрасывают ({{gladiator1_icon}}) <code>{{gladiator1_name}}</code>! Его соперник ({{gladiator2_icon}}) <code>{{gladiator2_name}}</code> уже стоит в боевой стойке и ждет сигнала!",
         "📣 На арене появляются наши бедолаги! ({{gladiator1_icon}}) <code>{{gladiator1_name}}</code> под грибами и не понимает, где находится, а ({{gladiator2_icon}}) <code>{{gladiator2_name}}</code> еле стоит на ногах от страха!",
@@ -276,7 +285,6 @@ class Dictionary():
     ]
 
     battle_attacked_description:List[str] = [
-        "получает урон",
         "драматично берется за окровавленное место",
         "выдает синий экран смерти",
         "падает, прижимая руки к {{part_dat}}",
@@ -302,6 +310,11 @@ class Dictionary():
         "ломает через колено {{pencil_accu}} оппонента",
         "спамит один удар",
         "натягивает {{pencil_accu}} оппонента на глобус"
+    ]
+
+    battle_none_status_description:List[str] = [
+        "удивляется пассивностью противника",
+        "видит, как противник застрял в текстурах и не может атаковать"
     ]
 
     battle_dead_description:List[str] = [
@@ -338,6 +351,10 @@ class Dictionary():
         "🌧 После боя еще и от меня получишь!",
         "🌧 За что мне этот инвалид!",
         "🌧 Хватит уже нализывать яйца!",
+    ]
+
+    __hunt_loot:List[str] = [
+        "Пошарим в воровском кармане... Ага! <code>{{item_icon}} {{item_name}}</code>!"
     ]
 
     ###------------------------------------------------------------
@@ -433,11 +450,13 @@ class Dictionary():
             print(f"load assets error: {error}")
             return False
         
-    def monster_meeting(self, monster:Monster) -> str:
-        return tp.text_replacement(random.choice(self.__monster_meeting) + \
+    def hunt_monster_meeting(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
+        return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + \
+                                   f"\n\n{strategy}" + \
                                    f"\n\n❤️ <b>Здоровье: {monster.health}</b>\n"\
                                    f"🔪 <b>Атака: {monster.min_damage}-{monster.max_damage}</b>\n"\
                                    f"🎯 <b>Крит. шанс: {monster.crit_chance}%</b>\n"\
+                                   f"🥋 <b>Стиль боя</b>: {fighting_style_visual}\n"
                                    f"\n<b>Описание:</b> <i>{monster.description}</i>", {
             "monster_name": monster.name,
             **self.random_member(),
@@ -758,34 +777,34 @@ class Dictionary():
             "pencil_prep":member[5]
         }
     
-    def get_part_cases(self, parts:List[BodyParts]) -> Dict[str, str]:
+    def get_part_cases(self, parts:List[BodyParts], prefix:str = "") -> Dict[str, str]:
         parts_str:dict[BodyParts, dict[str, str]] = {
             BodyParts.HEAD: {
-                f"part": "кабина",
-                "part_gen": "кабины",
-                "part_dat": "кабине",
-                "part_accu": "кабину",
-                "part_inst": "кабиной",
-                "part_prep": "о кабине",
-                "part_prep_ob": "об кабину",
+                f"{prefix}part": "кабина",
+                f"{prefix}part_gen": "кабины",
+                f"{prefix}part_dat": "кабине",
+                f"{prefix}part_accu": "кабину",
+                f"{prefix}part_inst": "кабиной",
+                f"{prefix}part_prep": "о кабине",
+                f"{prefix}part_prep_ob": "об кабину",
             },
             BodyParts.CHEST: {
-                "part": "туз",
-                "part_gen": "туза",
-                "part_dat": "тузу",
-                "part_accu": "туз",
-                "part_inst": "тузом",
-                "part_prep": "о тузе",
-                "part_prep_ob": "о тузе",
+                f"{prefix}part": "туз",
+                f"{prefix}part_gen": "туза",
+                f"{prefix}part_dat": "тузу",
+                f"{prefix}part_accu": "туз",
+                f"{prefix}part_inst": "тузом",
+                f"{prefix}part_prep": "о тузе",
+                f"{prefix}part_prep_ob": "о тузе",
             },
             BodyParts.KNEES: {
-                "part": "костыли",
-                "part_gen": "костылей",
-                "part_dat": "костылям",
-                "part_accu": "костыли",
-                "part_inst": "костылями",
-                "part_prep": "о костылях",
-                "part_prep_ob": "о костылях",
+                f"{prefix}part": "костыли",
+                f"{prefix}part_gen": "костылей",
+                f"{prefix}part_dat": "костылям",
+                f"{prefix}part_accu": "костыли",
+                f"{prefix}part_inst": "костылями",
+                f"{prefix}part_prep": "о костылях",
+                f"{prefix}part_prep_ob": "о костылях",
             },
         }
 
@@ -822,6 +841,62 @@ class Dictionary():
 
     def battle_end_draft(self, deads:List[BattleMember]) -> str:
         return "оба сдохли"
+    
+    def battle_turn_log(self, active:BattleMember, opponent:BattleMember,
+                        active_status:Optional[Tuple[AttackStatus, int, bool]], 
+                        opponent_status:Optional[Tuple[AttackStatus, int, bool]],
+                        mode:BattleMode = BattleMode.HUNT):
+        full_log:str = ""
+        status_icon:str = "⏳" if (active_status[0] == AttackStatus.NONE) else "🩸" if (active_status[0] == AttackStatus.DAMAGED) else "🛡"
+        opponent_damage_str:str = f"Получено: <code>{(f'🎯{active_status[1]}!') if (active_status[2]) else (f'💥{active_status[1]}') }</code>" if active_status[1] else ""
+        active_damage_str:str = f"Нанесено: <code>{(f'🎯{opponent_status[1]}!') if (opponent_status[1]) else (f'💥{opponent_status[1]}') }</code>" if opponent_status[1] else ""
+
+        action_protect:str = tp.text_replacement(random.choice(self.battle_protect_description), 
+                                                {**self.get_part_cases(active.protected_parts),
+                                                 **self.random_member()}) 
+            
+        action_attack:str = tp.text_replacement(random.choice(self.battle_attack_description), {
+                        **self.get_part_cases(active.attack_target),
+                        **self.random_member()
+                    })
+        
+        action_damaged:str = tp.text_replacement(random.choice(self.battle_attacked_description), {
+                        **self.get_part_cases(opponent.attack_target),
+                        **self.random_member()
+                    })
+        
+        action_none_attacked:str = tp.text_replacement(random.choice(self.battle_none_status_description), {
+            **self.random_member()
+        })
+
+        if (active_status[0] in [AttackStatus.NONE, AttackStatus.DEFENDED]):
+            full_log += f"{active.short_battle_name} {action_none_attacked if (active_status[0] == AttackStatus.NONE) else action_protect}"    
+
+        if (active_status[0] == AttackStatus.DAMAGED):
+            full_log += f"{active.short_battle_name} {action_damaged}"    
+        
+        full_log += f'{active.short_battle_name if (not full_log) else ", затем"} {action_attack}'\
+              if (opponent_status[0] == AttackStatus.DAMAGED) else ''
+
+        if (mode == BattleMode.HUNT):
+            full_log += f"\n[{active_damage_str}{' | ' if (active_damage_str and opponent_damage_str) else ''}{opponent_damage_str}]" \
+                if (active_damage_str or opponent_damage_str) else ''
+
+        return tp.text_replacement(status_icon + full_log, {**self.random_member()})
+    
+    def hunt_loot(self, inventory:Optional[Tuple[List[Item], int]]) -> str:
+        if (not inventory): return ""
+        money:str = f" {'А так же монеты' if inventory[0] else 'Собрали с трупа горсть монет'} {self.money_wrapper(inventory[1])}" if (inventory[1]) else ""
+
+        item:str = ""
+        if (inventory[0]):
+            item = tp.text_replacement(random.choice(self.__hunt_loot), {
+            "item_name": inventory[0][0].title,
+            "item_icon": inventory[0][0].utf8_icon,
+        }, recursive_parse_args = True)
+
+        return item + money
+
 
     def battle_end(self, dead:BattleMember, mode:BattleMode, damage:Tuple[int, bool]) -> str:
         icon_hunt:str = "☠️" if (mode == BattleMode.HUNT and type(dead.entity) is User) else "🎯"
@@ -834,7 +909,7 @@ class Dictionary():
                 **self.random_member(),
                 **self.get_part_cases(dead.protected_parts),
             }),
-            "opponent_hit" : f"<code>{(f'🎯{damage[0]}!') if (damage[1]) else (f'💥{damage[0]}') }</code>",
+            "opponent_hit" : f"<code>[{(f'🎯{damage[0]}!') if (damage[1]) else (f'💥{damage[0]}') }]</code>",
         })
     
     def battle_turn_draft_protected(self, player1:BattleMember, player2:BattleMember) -> str:

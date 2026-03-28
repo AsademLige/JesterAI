@@ -62,7 +62,6 @@ async def gamba_house_exit(callback: CallbackQuery, callback_data: DiceGameCF, s
 
     if (user.tg_id != callback_data.user_id):
         return
-    
     try:
         await callback.message.delete()
     except:

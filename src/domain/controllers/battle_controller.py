@@ -49,17 +49,18 @@ class BattleController():
     def mode(self) -> int:
         return self.__mode
 
-    def __init__(self, members:List[Union[Monster, User]], mode:BattleMode):
-        self.members = [BattleMember(entity) for entity in members]
+    def __init__(self, members:List[BattleMember], mode:BattleMode):
+        self.members = members
         self.__mode = mode
         self.__phase = BattlePhases.PREPARE
         pass
 
     @classmethod
-    async def hunt(cls, hunter:User, monster_count:int = 1):
-        members:List[Union[Monster, User]] = [hunter]
-        monsters:List[Monster] = await cls.db.get_random_monsters(monster_count)
-        members.extend(monsters)
+    async def hunt(cls, hunter:User, monster_count:int = 1, boss:bool = False):
+        lst:List[Union[Monster, User]] = [hunter]
+        lst.extend(await cls.db.get_random_monsters_by_tag(monster_count, tag="boss" if boss else "mob"))
+
+        members:List[BattleMember] = [await BattleMember.create(entity) for entity in lst]
         return cls(
             members = members,
             mode = BattleMode.HUNT
@@ -67,9 +68,11 @@ class BattleController():
     
     @classmethod
     async def gladiators(cls, monster_count:int = 2):
-        monsters:List[Monster] = await cls.db.get_random_monsters(monster_count)
+        monsters:List[Monster] = await cls.db.get_random_monsters_by_tag(monster_count)
+        members:List[BattleMember] = [await BattleMember.create(entity) for entity in monsters]
+
         return cls(
-            members = monsters,
+            members = members,
             mode = BattleMode.GLADIATORS
         )
     
@@ -84,9 +87,15 @@ class BattleController():
         if (self.__mode == BattleMode.HUNT):
             #TODO: Можно будет расширить возможности боя на несколько монстров
             self.__active_member = self.members[0]
-            return self.dict.monster_meeting(self.members[1].entity)
+            self.__simulate_mobs()
+            meeting:str = self.dict.hunt_monster_meeting(self.members[1].entity,
+                                                         self.__get_opponent().str_status,
+                                                         self.members[1].fighting_style_visual())
+
+            return meeting
         if (self.__mode == BattleMode.GLADIATORS):
             self.__active_member = self.members[0]
+            self.__simulate_mobs()
             return self.dict.gladiators_introduce(self.members, self.__get_ui_data())
         
     def start_battle(self, timer:timedelta = timedelta(seconds=30), 
@@ -166,15 +175,16 @@ class BattleController():
         
     def __end_turn(self) -> Tuple[str, BattlePhases, Optional[BattleMember]]:
         self.__battle_timer += self.__add_time_per_turn
-        self.__simulate_mobs()
         
         opponent:BattleMember = self.__get_opponent()    
 
-        print(f"cdlog {self.active_member.attack_target} : {opponent.attack_target}")
+        print(f"cdlog attack {self.active_member.attack_target} : {opponent.attack_target}")
+        print(f"cdlog protect {self.active_member.protected_parts} : {opponent.protected_parts}")
 
         turn_result:str = ""
         status:Optional[Tuple[AttackStatus, int, bool]] = self.__active_member.attacked(opponent)
         opponent_status:Optional[Tuple[AttackStatus, int, bool]] = opponent.attacked(self.__active_member)
+        self.__simulate_mobs()
 
         print(f"cdlog {opponent_status[1]} : {status[1]}")
 
@@ -183,32 +193,26 @@ class BattleController():
             return ("Оба сдохли", self.__phase, None)
         elif (opponent_status and opponent_status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
+            if (self.mode == BattleMode.HUNT):
+                opponent.loot_by(self.__active_member)
             turn_result = self.dict.battle_end(opponent, self.__mode, (opponent_status[1], opponent_status[2]))
             return (turn_result, self.__phase, self.__active_member)
         elif (status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
             turn_result = self.dict.battle_end(self.__active_member, self.__mode, (status[1], status[2]))
             return (turn_result, self.__phase, opponent)
-        if (status[0] == AttackStatus.DEFENDED and opponent_status[0] == AttackStatus.DEFENDED):
-            turn_result = self.dict.battle_turn_draft_protected(self.__active_member, 
-                                                                opponent)
-        elif (status[0] == AttackStatus.DAMAGED and opponent_status[0] == AttackStatus.DEFENDED):
-            turn_result = self.dict.battle_turn_first_attacked(self.__active_member, opponent, 
-                                                               (status[1], status[2]))
 
-        elif (status[0] == AttackStatus.DEFENDED and opponent_status[0] == AttackStatus.DAMAGED):
-            turn_result = self.dict.battle_turn_sec_attacked(self.__active_member, 
-                                                             opponent, 
-                                                             (opponent_status[1], opponent_status[2]))
-            
-        elif (status[0] == AttackStatus.DAMAGED and opponent_status[0] == AttackStatus.DAMAGED):
-            turn_result = self.dict.battle_turn_both_attacked(self.__active_member, 
-                                                              opponent, 
-                                                              (opponent_status[1], opponent_status[2]), 
-                                                              (status[1], status[2]))
+        turn_result += self.dict.battle_turn_log(self.__active_member, opponent, 
+                                                 status, opponent_status, self.mode)
+        
+        if (not self.__mode == BattleMode.HUNT):
+            turn_result += "\n\n"
+            turn_result += self.dict.battle_turn_log(opponent, self.__active_member, 
+                                                    opponent_status, status, self.mode)
 
         if (self.__mode == BattleMode.HUNT and not status[0] == AttackStatus.KILLED):
-            turn_result += f"\n\n⏳ Таймер: {round((self.battle_started + self.__battle_timer - datetime.now()).total_seconds())} сек"
+            turn_result += f"\n\n{self.__get_opponent().str_status}"
+            turn_result = f"<blockquote><b>Сводка раунда {self.round-1}</b>, таймер: {round((self.battle_started + self.__battle_timer - datetime.now()).total_seconds())} сек</blockquote>\n" + turn_result
             if (not self.active_member.strategy == MemberStrategy.DEFENSE):
                 turn_result += "\n<i>❗️ Побег и лечение невозможны, сначала нужно уйти в защиту!</i>"
 
@@ -219,7 +223,7 @@ class BattleController():
     
     def __simulate_mobs(self):
         for member in self.members:
-            if (type(member.entity) is Monster):
+            if (member.is_monster):
                 member.simulate_actions()
     
     def __get_opponent(self) -> BattleMember:

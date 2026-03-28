@@ -93,7 +93,7 @@ async def on_inventory_item_select(callback: CallbackQuery, callback_data: Inven
     item:Tuple[UserInventoryItem, Item] = next((p for p in inventory if p[1].id == callback_data.item_id), None)
     await state.update_data(item=item)
     await callback.message.edit_text(dict.inventory_item_info(item),
-                                        reply_markup=interactive_kb.item_keyboard(user),
+                                        reply_markup=interactive_kb.item_keyboard(user, item[1]),
                                         parse_mode=ParseMode.HTML)  
     
 ###Применение предмета на себя

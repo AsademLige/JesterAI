@@ -36,13 +36,13 @@ class BattleKeyboard():
     def __hunt_strategy_select(self, user:User, ctrl:BattleController, 
                         usable:Optional[List[Tuple[UserInventoryItem, Item]]] = None) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
-        builder.add(InlineKeyboardButton(text="⚔️ Атака!",
+        builder.add(InlineKeyboardButton(text="⚔️",
                 callback_data=BattleCF(action=MemberStrategy.AGGRESSIVE.value,
                                         user_id=user.tg_id).pack()))
-        builder.add(InlineKeyboardButton(text="🗡🛡 Контратака!",
+        builder.add(InlineKeyboardButton(text="🗡🛡",
                 callback_data=BattleCF(action=MemberStrategy.CONTR_STRIKE.value,
                                         user_id=user.tg_id).pack()))
-        builder.add(InlineKeyboardButton(text="🛡🛡 Защита!",
+        builder.add(InlineKeyboardButton(text="🛡🛡",
                 callback_data=BattleCF(action=MemberStrategy.DEFENSE.value,
                                         user_id=user.tg_id).pack()))
         

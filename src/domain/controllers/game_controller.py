@@ -1,6 +1,8 @@
+from src.models.item_model import Item
 from src.domain.controllers.battle_controller import BattleController, BattlePhases
 from src.models.battle_member_model import BattleMember
 from src.models.user_stats_model import UserStats
+from src.models.monster_stats import MonsterStats
 from typing import Dict, List, Optional, Tuple
 from src.services.data_base.db import DataBase
 from src.domain.utils.enums import BattleMode
@@ -28,7 +30,13 @@ class GameController():
             self.initialized = True
 
     async def prepare_hunt(self, hunter:User):
-        self.__started_battles[hunter.tg_id] = await BattleController.hunt(hunter)
+        # get_boss:bool = await self.db.get_place_in_top_by_member(hunter.tg_id, hunter.chat_id) <= 3
+
+        heal_item:Optional[Item] = await self.db.get_item_by_id(10)
+        if (not await self.db.get_user_heal_items(hunter) and heal_item):
+            await self.db.user_item_transaction(hunter, heal_item)
+
+        self.__started_battles[hunter.tg_id] = await BattleController.hunt(hunter, boss=False)
         return self.__started_battles[hunter.tg_id].prepare_battle()
     
     async def prepare_gladiators(self, started_by:User):
@@ -59,11 +67,11 @@ class GameController():
             status:Optional[Tuple[str, BattlePhases, Optional[BattleMember]]] = battle.get_status()
             battle_log:str = ""
             if (status):
-                if (status[2] and status[1] == BattlePhases.BATTLE_END): 
-                    if (battle.mode == BattleMode.GLADIATORS):
+                if (status[1] == BattlePhases.BATTLE_END): 
+                    if (battle.mode == BattleMode.GLADIATORS and status[2]):
                         battle_log = await self.__gladiators_log(started_by, battle, status)
 
-                    if (battle.mode == BattleMode.HUNT):
+                    if (battle.mode == BattleMode.HUNT and status[2]):
                         battle_log = await self.__hunt_end_log(started_by, battle, status)
 
                     await self.__delete_battle(started_by.tg_id, False)
@@ -73,7 +81,15 @@ class GameController():
     
     async def __gladiators_log(self, started_by:User, battle:BattleController, 
                                   status:Optional[Tuple[str, BattlePhases, BattleMember]]) -> str:
-        if (battle.mode == BattleMode.GLADIATORS and status[2].bet_money):
+        if (not battle.mode == BattleMode.GLADIATORS): return
+
+        for gladiator in battle.members:
+            await self.db.update_monster_status(gladiator.entity.id, 
+                {MonsterStats.arena_fights.name : MonsterStats.arena_fights + 1, 
+                 MonsterStats.arena_wins.name : MonsterStats.arena_wins + (1 if (status[2] == gladiator) else 0)
+                })
+
+        if (status[2].bet_money):
             if (await self.db.update_user(started_by, {"money" : User.money + status[2].bet_money})):
                 return "<i>\n\nСтавка сыграла! "\
                     f"{battle.dict.get_user_link(started_by.tg_name, started_by.tg_id)} "\
@@ -82,11 +98,16 @@ class GameController():
         
     async def __hunt_end_log(self, started_by:User, battle:BattleController, 
                                   status:Optional[Tuple[str, BattlePhases, BattleMember]]) -> str:
-        if (type(status[2].entity) is User):
+        if (status[2].is_player):
             await self.db.update_user_status(status[2].entity.id, 
                 {UserStats.good_hunting_count.name : UserStats.good_hunting_count + 1, })
-            ##Подсчитываем награды
-            return "<i>\nМародерим!</i>\n"
+            if ((await self.db.user_item_transaction(started_by, status[2].inventory[0][0]) if (status[2].inventory[0]) else True) and
+                await self.db.update_user(started_by, {
+                    User.money.name: User.money + status[2].inventory[1],
+                })):
+                from src.data.dictionary import Dictionary
+                return f"\n\n📦 {Dictionary().hunt_loot(status[2].inventory)}\n" if (status[2].inventory) else ""
+            else: return f"Ой, ошибочка вышла..."
         return ""
         
         

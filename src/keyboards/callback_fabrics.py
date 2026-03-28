@@ -40,6 +40,9 @@ class BattleCF(CallbackData, prefix="fab_battle"):
     item_index: Optional[int] = None
     user_id: Optional[int] = None
 
+class HelpCF(CallbackData, prefix="fab_help"):
+    action: str
+
 class StoreCF(CallbackData, prefix="fab_store"):
     action: str
     id: Optional[int] = None

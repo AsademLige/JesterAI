@@ -1,18 +1,20 @@
 from src.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from src.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from src.models.user_inventory_item_model import UserInventoryItem
+from src.domain.controllers.item_drop_manager import DropTags
 from src.models.custom_sticker_model import CustomSticker
 from src.models.bot_settings_model import BotSettings
 from src.models.sticker_set_model import StickerSet
 from src.models.winners_log_model import WinnersLog
 from src.models.user_stats_model import UserStats
+from src.models.monster_stats import MonsterStats
 from src.models.monster_model import Monster
 from src.models.warehouse import Warehouse
 from typing import List, Dict, Any, Tuple
 from src.models.user_model import User
+from src.models.item_model import Item
 from src.models.role_model import Role
 from sqlalchemy import func, select
-from src.models.item_model import Item
 from src.models.db_model import db
 from src.data.config import Prefs
 from aiogram.types import Chat
@@ -153,34 +155,50 @@ class DataBase():
         
     async def get_user_heal_items(self, user:User) -> List[Tuple[UserInventoryItem, Item]]:
         try:
-            query = Item.join(UserInventoryItem).select().where(and_(Item.action.ilike(f"%heal%")))
+            query = Item.join(UserInventoryItem).select().where(and_(Item.action.ilike(f"%heal%"), 
+                                                                     UserInventoryItem.quantity > 0,
+                                                                     UserInventoryItem.user_id == user.id))
             return await query.gino.load((UserInventoryItem, Item)).all()
         except Exception as error:
             print(f"get user heal items error: {error}")
             return []
         
+    async def get_item_by_id(self, item_id:int) -> Optional[Item]:
+        try:
+            return await Item.query.where(Item.id == item_id).gino.first()
+        except Exception as error:
+            print(f"add to inventory error: {error}")
+            return None
         
-    async def update_item_in_user_inventory(self, user:User, item:Tuple[Warehouse, Item], quantity:int = 1) -> bool:
+    async def user_item_transaction(self, user:User, item:Item, quantity:int = 1) -> bool:
         try:
             existed_item:UserInventoryItem = await UserInventoryItem.\
-                query.where(and_(UserInventoryItem.product_id == item[1].id,
+                query.where(and_(UserInventoryItem.product_id == item.id,
                                  UserInventoryItem.user_id == user.id)).gino.first()
             
             if (existed_item):
-                await UserInventoryItem.update.where(and_(UserInventoryItem.product_id == item[1].id,
+                await UserInventoryItem.update.where(and_(UserInventoryItem.product_id == item.id,
                                                           UserInventoryItem.user_id == user.id)).values(
                 quantity=UserInventoryItem.quantity + quantity).gino.status()
             else:
                 new_item = UserInventoryItem(
                     user_id = user.id,
-                    product_id = item[1].id,
+                    product_id = item.id,
                     quantity = quantity
                 )
                 await new_item.create()
             return True
         except Exception as error:
-            print(f"add to inventory error: {error}")
+            print(f"item transaction error: {error}")
             return False
+        
+    async def get_random_item_by_tag(self, tag:DropTags) -> Optional[Item]:
+        try:
+            return await Item.query.order_by(func.random()).\
+                    where(Item.tag.ilike(f"%{tag.name}%")).gino.first()
+        except Exception as error:
+            print(f"get item by tag error: {error}")
+            return None
         
     ###-----------------------------------------
     ### Методы работы с данными наборов стикеров 
@@ -287,7 +305,7 @@ class DataBase():
         query = Item.join(Warehouse).select()
         return await query.gino.load((Warehouse, Item)).all()
     
-    async def update_item_quantity(self, item:Tuple[Warehouse, Item], quantity:int = 1) -> bool:
+    async def update_item_quantity_at_warehouse(self, item:Tuple[Warehouse, Item], quantity:int = 1) -> bool:
         try:
             if (item[0].quantity - quantity >= 0):
                 await Warehouse.update.where(Warehouse.id == item[0].id).values(
@@ -312,10 +330,10 @@ class DataBase():
     ### Методы работы с монстрами
     ###-----------------------------------------
 
-    async def get_random_monsters(self, monster_count:int = 1) -> List[Monster]:
-        random_monster:List[Monster] = await Monster.query.order_by(func.random()).limit(monster_count).gino.all()
+    async def get_random_monsters_by_tag(self, monster_count:int = 1, tag:str = "mob") -> List[Monster]:
+        random_monster:List[Monster] = await Monster.query.order_by(func.random()).\
+                            where(Monster.tag.ilike(f"%{tag}%")).limit(monster_count).gino.all()
         return random_monster
-
 
     ###-----------------------------------------
     ### Методы работы с статистикой выигрышей 
@@ -375,6 +393,23 @@ class DataBase():
             return True
         except Exception as error: 
             print(f"user stats update error: {error}")
+            return False
+        
+    ###-----------------------------------------
+    ### Методы работы с статистикой монстра
+    ###-----------------------------------------
+    
+    async def update_monster_status(self, monster_id:int, args:Dict[str, Any] = {}) -> bool:
+        try:
+            monster_stats:Optional[MonsterStats] = await MonsterStats.query.\
+                            where(MonsterStats.monster_id == monster_id).gino.first()
+            if (not monster_stats):
+                monster_stats = MonsterStats(monster_id = monster_id)
+                await monster_stats.create()
+            await monster_stats.update(**args).apply()
+            return True
+        except Exception as error: 
+            print(f"monster stats update error: {error}")
             return False
 
     ###-----------------------------------------

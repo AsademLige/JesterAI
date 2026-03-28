@@ -119,7 +119,14 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
 
     status:Optional[Tuple[str, BattlePhases, BattleMember]] = await game_controller.get_battle_status(user)
     if (status):
-        await callback.message.edit_text(status[0],
+        status_extended:str = status[0]
+
+        if (items):
+            status_extended += "\n\n<blockquote>🎒 В сумке охотника:</blockquote>\n"
+            for item in items:
+                status_extended += ItemsController.effects_description(item[1]) + "\n"
+
+        await callback.message.edit_text(status_extended,
                                         reply_markup=combat_kb.battle_keyboard(user, battle, items) \
                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
                                         parse_mode=ParseMode.HTML)

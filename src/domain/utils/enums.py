@@ -24,7 +24,7 @@ class BodyParts(Enum):
 class AttackStatus(Enum):
     DAMAGED = 0
     DEFENDED = 1
-    EVADED = 2
+    NONE = 2
     KILLED = 3
 
 class MemberStatus(Enum):

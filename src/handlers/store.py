@@ -79,8 +79,8 @@ async def choice_product(callback: CallbackQuery, callback_data: StoreCF, state:
             await Utils.delete_old_message([answer], 5)
             return
 
-        if (await db.update_item_quantity(product) and 
-            await db.update_item_in_user_inventory(user, product) and
+        if (await db.update_item_quantity_at_warehouse(product) and 
+            await db.user_item_transaction(user, product[1]) and
             await db.update_user(user, {
                 User.money.name: User.money - product[1].price,
             })):
