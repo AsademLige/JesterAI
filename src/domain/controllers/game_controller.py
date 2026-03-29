@@ -80,10 +80,9 @@ class GameController():
 
                     if (battle.mode == BattleMode.HUNT and status[2]):
                         battle_log = await self.__hunt_end_log(started_by, battle, status)
-                    else:
+                    elif (battle.mode == BattleMode.HUNT):
                         monster:BattleMember = battle.get_opponent()
                         await self.db.update_user(started_by, {
-                            User.money.name: User.money + status[2].inventory[1],
                             User.last_hunt.name: datetime.now(),
                         })
 
@@ -101,9 +100,13 @@ class GameController():
                 {MonsterStats.arena_fights.name : MonsterStats.arena_fights + 1, 
                  MonsterStats.arena_wins.name : MonsterStats.arena_wins + (1 if (status[2] == gladiator) else 0)
                 })
+            
+        await self.db.update_user(started_by, {
+                User.last_gladiators_bet.name: datetime.now(),
+            })
 
-        if (status[2].bet_money):
-            if (await self.db.update_user(started_by, {"money" : User.money + status[2].bet_money})):
+        if (status[2].bet_money > 0):
+            if (await self.db.update_user(started_by, {User.money.name : User.money + status[2].bet_money})):
                 await self.db.update_user_status(started_by.id, 
                     {UserStats.gladiators_bet_win.name :  UserStats.gladiators_bet_win + status[2].bet_money})
                 return "<i>\n\nСтавка сыграла! "\

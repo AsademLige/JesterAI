@@ -16,5 +16,6 @@ class User(TimedBaseModel):
     last_length_check = sa.Column(sa.Date)
     last_dice_play = sa.Column(sa.Date)
     last_hunt = sa.Column(sa.Date)
+    last_gladiators_bet = sa.Column(sa.Date)
     last_boss_hunt = sa.Column(sa.Date)
     role_id = sa.Column(sa.Integer, sa.ForeignKey('roles.id'))
