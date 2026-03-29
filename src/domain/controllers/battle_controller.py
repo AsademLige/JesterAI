@@ -190,7 +190,7 @@ class BattleController():
 
         if (status[0] == AttackStatus.KILLED and opponent_status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
-            return ("Оба сдохли", self.__phase, None)
+            return ("⚰️⚰️ Бой кровавый, и победителя в нем нет, лежат все без дыхания...", self.__phase, None)
         elif (opponent_status and opponent_status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
             if (self.mode == BattleMode.HUNT):

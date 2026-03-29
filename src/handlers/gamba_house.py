@@ -296,6 +296,14 @@ async def gladiators(callback: CallbackQuery, callback_data: GladiatorsCF, state
     if (user.tg_id != callback_data.user_id):
         return
     await callback.message.delete()
+
+    delta:timedelta = Utils.get_time_delta(user.last_gladiators_bet, 1)
+    if (math.floor(delta.total_seconds() / 3600) < 0):
+        answer = await bot.send_message(user.chat_id, 
+                                        dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
+                             parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([answer], 10)
+        return
     
     global game_controller
     from bot import game_controller
@@ -321,12 +329,13 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
         return
 
     if (user.money < callback_data.bet):
+        await callback.message.delete()
         answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
                             parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([callback.message, answer])
         return
     
-    if (not await db.update_user(user, {"money" : User.money - callback_data.bet})):
+    if (not await db.update_user(user, {User.money.name : User.money - callback_data.bet})):
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
     
