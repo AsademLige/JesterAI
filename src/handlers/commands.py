@@ -35,11 +35,8 @@ class Commands():
     ###Команда отображения таблицы лидеров
     leaderboard = "leaderboard"
 
-    ###Гамба!
-    trash_loto = "trash_loto"
-
-    ###Почти беспроигрышная гамба!
-    dice_game = "dice_game"
+    ###Оставь надежду, всяк сюда входящий!
+    gamba_house = "gamba_house"
 
     ###Магазин
     store = "store"
@@ -50,16 +47,19 @@ class Commands():
     ###Данные о выигрышах пользователей
     winners_log = "winners_log"
 
+    ###Охота на монстров
+    hunt = "hunt"
+
     @staticmethod
     async def setup_bot_commands():
         await bot.set_my_commands([
             BotCommand(command=Commands.me, description=dict.me),
             BotCommand(command=Commands.pencil, description=dict.pencil),
-            BotCommand(command=Commands.trash_loto, description=dict.trash_loto),
-            BotCommand(command=Commands.dice_game, description=dict.dice_game),
+            BotCommand(command=Commands.gamba_house, description=dict.gamba_house),
+            BotCommand(command=Commands.hunt, description=dict.hunt),
+            BotCommand(command=Commands.store, description=dict.store),
             BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
             BotCommand(command=Commands.winners_log, description=dict.winners_log_description),
-            BotCommand(command=Commands.store, description=dict.store),
             BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
             BotCommand(command=Commands.help, description=dict.help),
         ])

@@ -55,8 +55,8 @@ async def get_media_by_sticker(message: Message):
     
     try:
         await message.delete()
-    except:
-        print("delete message error")
+    except Exception as e:
+        print(f"delete message error: {e}")
 
     loading_message = await bot.send_message(message.chat.id, "Ждем, пока телега распердится...")
     
@@ -65,7 +65,7 @@ async def get_media_by_sticker(message: Message):
     if (media is None): return None
     
     await bot.send_video(message.chat.id, media,
-                         caption=dict.media_caption(user) if (user) else "",
+                         caption=f"Отправил: {dict.user_wrapper(user)}" if (user) else "",
                          parse_mode=ParseMode.HTML)
 
     await loading_message.delete()

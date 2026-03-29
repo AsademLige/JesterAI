@@ -1,14 +1,14 @@
-from typing import List, Tuple
-
-from src.models.user_model import User
-from src.models.store_item_model import StoreItem
+from src.domain.controllers.items_controller import ItemsController
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.keyboards.callback_fabrics import DiceGameCF, InventoryCF
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
 from src.data.dictionary import Dictionary
+from src.models.user_model import User
+from src.models.item_model import Item
 from src.data.config import Prefs
+from typing import List, Tuple
 
 prefs = Prefs()
 dict = Dictionary()
@@ -28,11 +28,11 @@ class InteractiveKeyboard():
         builder.adjust(2) 
         return builder.as_markup()
     
-    def inventory_items(self, items: List[Tuple[UserInventoryItem, StoreItem]], user:User) -> InlineKeyboardMarkup:
+    def inventory_items(self, items: List[Tuple[UserInventoryItem, Item]], user:User) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         for i, item in enumerate(items):
             if (item[0].quantity > 0):
-                builder.button(text=f"{i+1}",
+                builder.button(text=f"{i+1} {item[1].utf8_icon}",
                     callback_data=InventoryCF(action="inventory_choice", 
                                                 item_id=item[1].id,
                                                 user_id=user.tg_id))
@@ -44,16 +44,19 @@ class InteractiveKeyboard():
         builder.adjust(2)
         return builder.as_markup()
     
-    def item_keyboard(self, user:User) -> InlineKeyboardMarkup:
+    def item_keyboard(self, user:User, item:Item) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
-        builder.button(text=dict.use_myself,
-        callback_data=InventoryCF(action="use_myself",
-                                  user_id=user.tg_id))
-
-        builder.button(text=dict.select_target,
-        callback_data=InventoryCF(action="select_target",
-                                  user_id=user.tg_id))
+        if (not ItemsController.is_steal_item(item) and 
+            not ItemsController.is_heal_item(item)):
+            builder.button(text=dict.use_myself,
+            callback_data=InventoryCF(action="use_myself",
+                                    user_id=user.tg_id))
+        
+        if (not ItemsController.is_heal_item(item)):
+            builder.button(text=dict.select_target,
+            callback_data=InventoryCF(action="select_target",
+                                    user_id=user.tg_id))
 
         builder.button(text=dict.back,
         callback_data=InventoryCF(action="inventory",
