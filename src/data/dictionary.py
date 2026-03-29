@@ -175,6 +175,8 @@ class Dictionary():
     ###Текстовые переменные треш лото
     ###------------------------------------------------------------
 
+    __gamba_house_description:str = "<blockquote>🎰🎲 Шут и Госпожа Удача приветствуют тебя, {{user}}! Как пожелаешь заскамить тебя сегодня?</blockquote>\n\n<i>Скам-хаус заработал: {{total}}</i>"
+    
     __trash_loto_consolation_money_award: str = "🌱 чут-чут повезло, держи копейку, {{user_link}}: {{money}}"
     
     __trash_loto_minor_length_award: str = "🍆 {{user_link}} выиграл мазь для увеличения {{pencil_gen}} на целых {{length}}!"
@@ -442,6 +444,9 @@ class Dictionary():
 
     __timer_message:str = "{{user_link}}, с тебя уже хватит, приходи позже...\n"\
     "<blockquote>⏰ Осталось потерпеть: {{time_left}}</blockquote>"
+
+    __hunt_timer_message:str = "{{user_link}}, отдохни, вылечи раны с последней охоты!\n"\
+    "<blockquote>⏰ Осталось потерпеть: {{time_left}}</blockquote>"
     
     ###------------------------------------------------------------
     ###Методы
@@ -456,6 +461,12 @@ class Dictionary():
             print(f"load assets error: {error}")
             return False
         
+    def gamba_house_description(self, total_gamba_house_win, user:User) -> str:
+        return tp.text_replacement(self.__gamba_house_description, {
+            "total":self.money_wrapper(total_gamba_house_win, False),
+            "user":self.get_user_link(user.tg_name, user.tg_id),
+        })
+    
     def hunt_monster_meeting(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
         return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + \
                                    f"\n\n{strategy}" + \
@@ -669,6 +680,7 @@ class Dictionary():
         stats_str += f"🎰 Всего спинов\джекпотов: <b>{user_stats.trash_loto_spins} \ {user_stats.trash_loto_jackpots}</b>\n"
         stats_str += f"🍀 Выигрыш в треш-лото: <b>{self.money_wrapper(user_stats.trash_loto_money_wins)} \ {self.length_wrapper(user_stats.trash_loto_length_wins)}</b>\n"
         stats_str += f"🎲 Статистика игры в кости: <b>{user_stats.dice_games} \ 🎯{user_stats.dice_minor_wins + user_stats.dice_major_wins}</b>\n"
+        stats_str += f"🏟 Всадил/выиграл на арене: <b>{user_stats.gladiators_bet} \ {user_stats.gladiators_bet_win}</b>\n"
         stats_str += f"🏹 Уничтожил чудовищ: <b>{user_stats.good_hunting_count}</b>"
 
         return stats_str
@@ -845,6 +857,12 @@ class Dictionary():
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             })
     
+    def hunt_timer_message(self, user:User, time_left:str) -> str:
+        return tp.text_replacement(self.__hunt_timer_message, {
+            "time_left" : time_left,
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            })
+    
     def length_wrapper(self, length:int, plus_visible:bool = True) -> str:
         return hcode(f'{"+" if (length > 0 and plus_visible) else ""}{length}см')
     
@@ -869,7 +887,7 @@ class Dictionary():
     ###------------------------------------------------------------
 
     def battle_end_draft(self, deads:List[BattleMember]) -> str:
-        return "оба сдохли"
+        return "⚰️⚰️ Бой кровавый, и победителя в нем нет, лежат все без дыхания..."
     
     def battle_turn_log(self, active:BattleMember, opponent:BattleMember,
                         active_status:Optional[Tuple[AttackStatus, int, bool]], 
@@ -922,6 +940,7 @@ class Dictionary():
             item = tp.text_replacement(random.choice(self.__hunt_loot), {
             "item_name": inventory[0][0].title,
             "item_icon": inventory[0][0].utf8_icon,
+            **self.random_member()
         }, recursive_parse_args = True)
 
         return item + money
@@ -941,67 +960,3 @@ class Dictionary():
             "opponent_hit" : f"<code>[{(f'🎯{damage[0]}!') if (damage[1]) else (f'💥{damage[0]}') }]</code>",
         })
     
-    def battle_turn_draft_protected(self, player1:BattleMember, player2:BattleMember) -> str:
-        return tp.text_replacement("🛡🛡 {{player1}} {{protect1}}, также как и {{player2}} {{protect2}}",{
-                "player1": player1.short_battle_name,
-                "player2": player2.short_battle_name,
-                "protect1": tp.text_replacement(random.choice(self.battle_protect_description), 
-                                                {**self.get_part_cases(player1.protected_parts),
-                                                 **self.random_member()}),
-                "protect2": tp.text_replacement(random.choice(self.battle_protect_description), 
-                                                {**self.get_part_cases(player2.protected_parts),
-                                                 **self.random_member()}),
-            })
-    
-    def battle_turn_first_attacked(self, player1:BattleMember, player2:BattleMember, damage:Tuple[int, bool]) -> str:
-        return tp.text_replacement("🩸🛡 {{player2}} {{attack}}! {{player1}} {{attacked}}, получив {{opponent_hit}}, пока {{player2}} {{protect}}",{
-                "player1": player1.short_battle_name,
-                "player2": player2.short_battle_name,
-                "protect": tp.text_replacement(random.choice(self.battle_protect_description),
-                                               {**self.get_part_cases(player2.protected_parts),
-                                                 **self.random_member()}),
-                "attacked": tp.text_replacement(random.choice(self.battle_attacked_description), {
-                    **self.get_part_cases(player2.attack_target),
-                    **self.random_member()
-                }),
-                "attack": tp.text_replacement(random.choice(self.battle_attack_description), {
-                    **self.get_part_cases(player2.attack_target),
-                                            **self.random_member()
-                }),
-                "opponent_hit" : f"<code>{(f'🎯{damage[0]}!') if (damage[1]) else (f'💥{damage[0]}') }</code>",
-            })
-    
-    def battle_turn_sec_attacked(self, player1:BattleMember, player2:BattleMember, damage:Tuple[int, bool]) -> str:
-        return tp.text_replacement("🛡🩸 {{player1}} {{protect}}, затем {{attack}}! {{player2}} {{attacked}}, получив {{hit}}",{
-                "player1": player1.short_battle_name,
-                "player2": player2.short_battle_name,
-                "protect": tp.text_replacement(random.choice(self.battle_protect_description), {
-                    **self.get_part_cases(player1.protected_parts),
-                                            **self.random_member()
-                }),
-                "attacked": tp.text_replacement(random.choice(self.battle_attacked_description), {
-                    **self.get_part_cases(player1.attack_target),
-                                    **self.random_member()
-                }),
-                "attack": tp.text_replacement(random.choice(self.battle_attack_description), {
-                    **self.get_part_cases(player1.attack_target),
-                                        **self.random_member()
-                }),
-                "hit" : f"<code>{(f'🎯{damage[0]}!') if (damage[1]) else (f'💥{damage[0]}') }</code>",
-            })
-    
-    def battle_turn_both_attacked(self, player1:BattleMember, player2:BattleMember, damage1:Tuple[int, bool], damage2:Tuple[int, bool]) -> str:
-        return tp.text_replacement("🩸🩸 {{player1}} {{attacked1}}, получив {{opponent_hit}}, но и {{player2}} {{attacked2}}, получив {{hit}}",{
-                "player1": player1.short_battle_name,
-                "player2": player2.short_battle_name,
-                "attacked1": tp.text_replacement(random.choice(self.battle_attacked_description), {
-                    **self.get_part_cases(player2.attack_target),
-                        **self.random_member()
-                }),
-                "attacked2": tp.text_replacement(random.choice(self.battle_attacked_description), {
-                     **self.get_part_cases(player1.attack_target),
-                        **self.random_member()
-                }),
-                "hit" : f"<code>{(f'🎯{damage1[0]}!') if (damage1[1]) else (f'💥{damage1[0]}') }</code>",
-                "opponent_hit" : f"<code>{(f'🎯{damage2[0]}!') if (damage2[1]) else (f'💥{damage2[0]}') }</code>",
-            })

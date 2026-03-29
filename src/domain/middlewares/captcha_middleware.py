@@ -27,7 +27,7 @@ class CaptchaMiddleware(BaseMiddleware):
         
         settings = await SettingsController.get_settings(event.chat)
 
-        delta:timedelta = Utils.get_last_member_check_delta(settings.last_captcha_time, 0)
+        delta:timedelta = Utils.get_time_delta(settings.last_captcha_time, 0)
 
         if (math.floor(delta.total_seconds() / 3600) > 0):
             await self.send_button_captcha(event, data)

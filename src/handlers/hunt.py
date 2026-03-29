@@ -1,3 +1,6 @@
+from datetime import timedelta
+import math
+
 from src.domain.controllers.battle_controller import BattleController, BattlePhases
 from src.models.battle_member_model import BattleMember, BodyParts, MemberStrategy
 from src.domain.controllers.items_controller import ItemsController
@@ -37,6 +40,15 @@ async def hunt_init(message: Message, state: FSMContext):
     answer:Message
 
     await message.delete()
+
+    delta:timedelta = Utils.get_time_delta(user.last_hunt, 1)
+
+    if (math.floor(delta.total_seconds() / 3600) < 0):
+        answer = await bot.send_message(user.chat_id, 
+                                        dict.hunt_timer_message(user, Utils.timedelta_to_hhmm(delta)), 
+                             parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([answer], 10)
+        return
 
     global game_controller
     if (game_controller.get_battle(user)):

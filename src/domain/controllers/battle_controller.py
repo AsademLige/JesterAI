@@ -89,7 +89,7 @@ class BattleController():
             self.__active_member = self.members[0]
             self.__simulate_mobs()
             meeting:str = self.dict.hunt_monster_meeting(self.members[1].entity,
-                                                         self.__get_opponent().str_status,
+                                                         self.get_opponent().str_status,
                                                          self.members[1].fighting_style_visual())
 
             return meeting
@@ -176,7 +176,7 @@ class BattleController():
     def __end_turn(self) -> Tuple[str, BattlePhases, Optional[BattleMember]]:
         self.__battle_timer += self.__add_time_per_turn
         
-        opponent:BattleMember = self.__get_opponent()    
+        opponent:BattleMember = self.get_opponent()    
 
         print(f"cdlog attack {self.active_member.attack_target} : {opponent.attack_target}")
         print(f"cdlog protect {self.active_member.protected_parts} : {opponent.protected_parts}")
@@ -211,7 +211,7 @@ class BattleController():
                                                     opponent_status, status, self.mode)
 
         if (self.__mode == BattleMode.HUNT and not status[0] == AttackStatus.KILLED):
-            turn_result += f"\n\n{self.__get_opponent().str_status}"
+            turn_result += f"\n\n{self.get_opponent().str_status}"
             turn_result = f"<blockquote><b>Сводка раунда {self.round-1}</b>, таймер: {round((self.battle_started + self.__battle_timer - datetime.now()).total_seconds())} сек</blockquote>\n" + turn_result
             if (not self.active_member.strategy == MemberStrategy.DEFENSE):
                 turn_result += "\n<i>❗️ Побег и лечение невозможны, сначала нужно уйти в защиту!</i>"
@@ -226,7 +226,7 @@ class BattleController():
             if (member.is_monster):
                 member.simulate_actions()
     
-    def __get_opponent(self) -> BattleMember:
+    def get_opponent(self) -> BattleMember:
         other_members:List = list(self.members)
         other_members.pop(self.members.index(self.__active_member))
         return random.choice(other_members)

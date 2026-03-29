@@ -39,7 +39,7 @@ async def user_information(message: Message, state: FSMContext):
     await state.update_data(user=user)
     
     # Получаем оставшееся время до возможности использовать pencil
-    delta_pencil:timedelta = Utils.get_last_member_check_delta(user.last_length_check)
+    delta_pencil:timedelta = Utils.get_time_delta(user.last_length_check)
     # Если оставшееся время отрицательное, значит можно использовать команду
     if math.floor(delta_pencil.total_seconds() / 3600) < 0:
         time_to_pencil = Utils.timedelta_to_hhmm(delta_pencil)
@@ -47,7 +47,7 @@ async def user_information(message: Message, state: FSMContext):
         time_to_pencil = "Готов"
     
     # Получаем оставшееся время до возможности использовать dice_game
-    delta_dice:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
+    delta_dice:timedelta = Utils.get_time_delta(user.last_dice_play, 1)
     # Если оставшееся время отрицательное, значит можно использовать команду
     if math.floor(delta_dice.total_seconds() / 3600) < 0:
         time_to_dice = Utils.timedelta_to_hhmm(delta_dice)

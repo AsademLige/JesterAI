@@ -49,10 +49,11 @@ async def gamba_house(message: Message, state: FSMContext):
 
     for stat in users_stat:
         total += stat.trash_loto_spins * 5 - stat.trash_loto_money_wins
+        total += stat.gladiators_bet - stat.gladiators_bet_win
 
     photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"gamba_house.webp"))
 
-    answer = await bot.send_photo(user.chat_id, photo, caption=f"Над описанием надо поработать\nСкам-хаус уже выиграл: {total}",
+    answer = await bot.send_photo(user.chat_id, photo, caption=dict.gamba_house_description(total, user),
                                     reply_markup=gamba_house_kb.gamba_choice(user),
                                     parse_mode=ParseMode.HTML)
     
@@ -81,7 +82,7 @@ async def dice_game(callback: CallbackQuery, callback_data: DiceGameCF, state: F
     if (user.tg_id != callback_data.user_id):
         return
     
-    delta:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
+    delta:timedelta = Utils.get_time_delta(user.last_dice_play, 1)
     if (math.floor(delta.total_seconds() / 3600) < 0):
         await callback.message.delete()
         answer = await bot.send_message(user.chat_id, dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
@@ -328,6 +329,9 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
     if (not await db.update_user(user, {"money" : User.money - callback_data.bet})):
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
+    
+    await db.update_user_status(user.id, 
+        {UserStats.gladiators_bet.name :  UserStats.gladiators_bet + callback_data.bet})
     
     global game_controller
     battle:BattleController = game_controller.get_battle(user)

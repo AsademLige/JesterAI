@@ -1,4 +1,3 @@
-from src.models.item_model import Item
 from src.domain.controllers.battle_controller import BattleController, BattlePhases
 from src.models.battle_member_model import BattleMember
 from src.models.user_stats_model import UserStats
@@ -6,10 +5,13 @@ from src.models.monster_stats import MonsterStats
 from typing import Dict, List, Optional, Tuple
 from src.services.data_base.db import DataBase
 from src.domain.utils.enums import BattleMode
+from datetime import datetime, timedelta
+from src.domain.utils.utils import Utils
 from src.models.user_model import User
-from datetime import time, timedelta
+from src.models.item_model import Item
 from aiogram.types import Message
 import asyncio
+import math
 
 class GameController():
     _instance = None
@@ -30,13 +32,18 @@ class GameController():
             self.initialized = True
 
     async def prepare_hunt(self, hunter:User):
-        # get_boss:bool = await self.db.get_place_in_top_by_member(hunter.tg_id, hunter.chat_id) <= 3
+        get_boss:bool = False
+        
+        delta:timedelta = Utils.get_time_delta(hunter.last_boss_hunt, 12)
+        if (await self.db.get_place_in_top_by_member(hunter.tg_id, hunter.chat_id) <= 3 and
+             math.floor(delta.total_seconds() / 3600) > 0):
+            get_boss = True
 
         heal_item:Optional[Item] = await self.db.get_item_by_id(10)
         if (not await self.db.get_user_heal_items(hunter) and heal_item):
             await self.db.user_item_transaction(hunter, heal_item)
 
-        self.__started_battles[hunter.tg_id] = await BattleController.hunt(hunter, boss=False)
+        self.__started_battles[hunter.tg_id] = await BattleController.hunt(hunter, boss=get_boss)
         return self.__started_battles[hunter.tg_id].prepare_battle()
     
     async def prepare_gladiators(self, started_by:User):
@@ -73,6 +80,12 @@ class GameController():
 
                     if (battle.mode == BattleMode.HUNT and status[2]):
                         battle_log = await self.__hunt_end_log(started_by, battle, status)
+                    else:
+                        monster:BattleMember = battle.get_opponent()
+                        await self.db.update_user(started_by, {
+                            User.money.name: User.money + status[2].inventory[1],
+                            User.last_hunt.name: datetime.now(),
+                        })
 
                     await self.__delete_battle(started_by.tg_id, False)
                 return (status[0] + battle_log, status[1], status[2])
@@ -91,6 +104,8 @@ class GameController():
 
         if (status[2].bet_money):
             if (await self.db.update_user(started_by, {"money" : User.money + status[2].bet_money})):
+                await self.db.update_user_status(started_by.id, 
+                    {UserStats.gladiators_bet_win.name :  UserStats.gladiators_bet_win + status[2].bet_money})
                 return "<i>\n\nСтавка сыграла! "\
                     f"{battle.dict.get_user_link(started_by.tg_name, started_by.tg_id)} "\
                     f"получает {battle.dict.money_wrapper(status[2].bet_money)}</i>\n"
@@ -99,14 +114,19 @@ class GameController():
     async def __hunt_end_log(self, started_by:User, battle:BattleController, 
                                   status:Optional[Tuple[str, BattlePhases, BattleMember]]) -> str:
         if (status[2].is_player):
+            monster:BattleMember = battle.get_opponent()
             await self.db.update_user_status(status[2].entity.id, 
-                {UserStats.good_hunting_count.name : UserStats.good_hunting_count + 1, })
+                {UserStats.good_hunting_count.name : UserStats.good_hunting_count + 1})
             if ((await self.db.user_item_transaction(started_by, status[2].inventory[0][0]) if (status[2].inventory[0]) else True) and
                 await self.db.update_user(started_by, {
                     User.money.name: User.money + status[2].inventory[1],
+                    User.last_hunt.name: datetime.now(),
+                    User.last_boss_hunt.name: datetime.now() - timedelta(hours=12) if monster.is_boss else User.last_boss_hunt,
                 })):
                 from src.data.dictionary import Dictionary
-                return f"\n\n📦 {Dictionary().hunt_loot(status[2].inventory)}\n" if (status[2].inventory) else ""
+                log:str = f"\n\n📦 {Dictionary().hunt_loot(status[2].inventory)}\n" if (status[2].inventory) else ""
+                return log + ("\n<i>Вы победили бедствие, и оно отступило на время... Но очень скоро вернется, длинночлен! "\
+                              "(Босс не нападет на вас в течение 12 часов)</i>" if monster.is_boss else "")
             else: return f"Ой, ошибочка вышла..."
         return ""
         
@@ -114,6 +134,10 @@ class GameController():
     async def escape_battle(self, member:User) -> Optional[str]:
         if (member.tg_id in self.__started_battles):
             status:str = self.__started_battles[member.tg_id].escape()
+            monster:BattleMember = self.__started_battles[member.tg_id].get_opponent()
+            await self.db.update_user(member, {
+                User.last_hunt.name: datetime.now(),
+            })
             await self.__delete_battle(member.tg_id, False)
             return status
         else: return None

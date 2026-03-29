@@ -164,7 +164,7 @@ class SchedulerJobs():
 
                 for chat_id in indexed_users:
                     # Исключение продовых чатов для теста
-                    if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
+                    # if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
 
                     await bot.send_message(chat_id, dict.warehouse_update(discounts), 
                                     parse_mode=ParseMode.HTML)     

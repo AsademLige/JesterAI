@@ -20,8 +20,8 @@ class MemberStand(Enum):
     DEFENSE = 1
 
 class MonsterTags(Enum):
-    MOB = 0
-    BOSS = 1
+    MOB = "mob"
+    BOSS = "boss"
 
 
 class BattleMember():
@@ -107,14 +107,14 @@ class BattleMember():
     def inventory(self) -> Optional[Tuple[List[Item], int]]: return self.__inventory
 
     @property
-    def is_mob(self) -> bool: 
+    def is_mob(self) -> bool:
         return self.is_monster \
-               and self.entity.tag == MonsterTags.MOB.name
+               and self.entity.tag == MonsterTags.MOB.value
     
     @property
     def is_boss(self) -> bool: 
         return self.is_monster \
-               and self.entity.tag == MonsterTags.BOSS.name
+               and self.entity.tag == MonsterTags.BOSS.value
 
     def __init__(self, entity:Union[Monster, User], 
                  drop:Optional[Tuple[List[Item], int]], 
@@ -124,8 +124,8 @@ class BattleMember():
         self.__attack_target = []
         self.__protected_parts = []
         self.__last_turn_result = None
-        self.__crit_chance = entity.crit_chance if type(self.entity) is Monster else 10
-        self.__max_hp = entity.health if type(self.entity) is Monster else 30
+        self.__crit_chance = entity.crit_chance if type(self.entity) is Monster else 15
+        self.__max_hp = entity.health if type(self.entity) is Monster else 35
         self.__hp = self.__max_hp
         self.utf8_icon = entity.utf8_icon if entity.utf8_icon else random.choice(["🥷","🧝‍♂️","🧙🏿‍♂️","🧙🏼"])
         self.__inventory = drop if (self.is_monster) else None

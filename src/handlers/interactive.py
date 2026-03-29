@@ -36,7 +36,7 @@ member_change_reset_time:int = 24
 async def pencil_change(message: Message, state: FSMContext):
     user: User = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
     await message.delete()
-    delta:timedelta = Utils.get_last_member_check_delta(user.last_length_check)
+    delta:timedelta = Utils.get_time_delta(user.last_length_check)
 
     if (math.floor(delta.total_seconds() / 3600) < 0):
         answer = await bot.send_message(user.chat_id, 
@@ -46,10 +46,14 @@ async def pencil_change(message: Message, state: FSMContext):
         return
 
     length_change:int = random.choice([-4, -3, -2, - 1, 1, 2, 3, 4, 5, 6])
+    length_from_behind:int = 0
+
+    if (await db.get_place_in_top_by_member(user.tg_id, user.chat_id) > 3):
+        length_from_behind = random.choice([0, 1])
 
     if (await db.update_user(user, {
-        "length": user.length + length_change,
-        "last_length_check" : datetime.now()
+        User.length.name: user.length + length_change + length_from_behind,
+        User.last_length_check.name : datetime.now()
     })):
         answer = await bot.send_message(user.chat_id, dict.length_change(user.tg_name, length_change),
                             parse_mode=ParseMode.HTML)

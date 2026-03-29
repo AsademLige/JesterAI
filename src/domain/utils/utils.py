@@ -18,7 +18,7 @@ class Utils():
         return success
 
     @staticmethod
-    def get_last_member_check_delta(last_length_check: datetime, hours_delta:int = 24) -> timedelta:
+    def get_time_delta(last_length_check: datetime, hours_delta:int = 24) -> timedelta:
         return datetime.now() - (last_length_check + timedelta(hours=hours_delta))
 
     @staticmethod
