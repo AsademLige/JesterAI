@@ -1,21 +1,27 @@
-from src.models.user_inventory_item_model import UserInventoryItem
+import random
+
 from src.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from src.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
+from src.models.user_inventory_item_model import UserInventoryItem
+from src.domain.controllers.item_drop_manager import DropTags
 from src.models.custom_sticker_model import CustomSticker
+from src.models.discounts_model import ProductDiscounts
 from src.models.bot_settings_model import BotSettings
 from src.models.sticker_set_model import StickerSet
 from src.models.winners_log_model import WinnersLog
-from src.models.store_item_model import StoreItem
 from src.models.user_stats_model import UserStats
+from src.models.monster_stats import MonsterStats
+from src.models.monster_model import Monster
 from src.models.warehouse import Warehouse
 from typing import List, Dict, Any, Tuple
 from src.models.user_model import User
+from src.models.item_model import Item
 from src.models.role_model import Role
+from sqlalchemy import func, select
 from src.models.db_model import db
 from src.data.config import Prefs
 from aiogram.types import Chat
 from datetime import  datetime
-from sqlalchemy import select
 from typing import Optional
 from sqlalchemy import and_
 from math import ceil
@@ -89,6 +95,11 @@ class DataBase():
     async def get_user_stats(self, user:User) -> UserStats:
         return await UserStats.query.where(UserStats.user_id == user.id).gino.first()
     
+    async def get_users_stat_by_chat(self, chat_id:int) -> List[UserStats]:
+        subquery = select([User.id]).where(User.chat_id == chat_id).alias()
+        stats:List[UserStats] = await UserStats.query.where(UserStats.user_id.in_(subquery)).gino.all()
+        return stats
+    
     async def update_user_by_id(self, tg_id: int, args:Dict[str, Any] = {}) -> bool:
         try:
             await User.update.values(**args).where(User.tg_id == tg_id).gino.status()
@@ -136,36 +147,61 @@ class DataBase():
         except:
             return []
         
-    async def get_user_inventory(self, user:User) -> List[Tuple[UserInventoryItem, StoreItem]]:
+    async def get_user_inventory(self, user:User) -> List[Tuple[UserInventoryItem, Item]]:
         try:
-            query = StoreItem.join(UserInventoryItem).select().where(and_(UserInventoryItem.user_id == user.id,
+            query = Item.join(UserInventoryItem).select().where(and_(UserInventoryItem.user_id == user.id,
                                                                           UserInventoryItem.quantity > 0))
-            return await query.gino.load((UserInventoryItem, StoreItem)).all()
+            return await query.gino.load((UserInventoryItem, Item)).all()
         except Exception as error:
             print(f"get user inventory error: {error}")
             return []
         
-    async def update_item_in_user_inventory(self, user:User, item:Tuple[Warehouse, StoreItem], quantity:int = 1) -> bool:
+    async def get_user_heal_items(self, user:User) -> List[Tuple[UserInventoryItem, Item]]:
+        try:
+            query = Item.join(UserInventoryItem).select().where(and_(Item.action.ilike(f"%heal%"), 
+                                                                     UserInventoryItem.quantity > 0,
+                                                                     UserInventoryItem.user_id == user.id))
+            return await query.gino.load((UserInventoryItem, Item)).all()
+        except Exception as error:
+            print(f"get user heal items error: {error}")
+            return []
+        
+    async def get_item_by_id(self, item_id:int) -> Optional[Item]:
+        try:
+            return await Item.query.where(Item.id == item_id).gino.first()
+        except Exception as error:
+            print(f"add to inventory error: {error}")
+            return None
+        
+    async def user_item_transaction(self, user:User, item:Item, quantity:int = 1) -> bool:
         try:
             existed_item:UserInventoryItem = await UserInventoryItem.\
-                query.where(and_(UserInventoryItem.product_id == item[1].id,
+                query.where(and_(UserInventoryItem.product_id == item.id,
                                  UserInventoryItem.user_id == user.id)).gino.first()
             
             if (existed_item):
-                await UserInventoryItem.update.where(and_(UserInventoryItem.product_id == item[1].id,
+                await UserInventoryItem.update.where(and_(UserInventoryItem.product_id == item.id,
                                                           UserInventoryItem.user_id == user.id)).values(
                 quantity=UserInventoryItem.quantity + quantity).gino.status()
             else:
                 new_item = UserInventoryItem(
                     user_id = user.id,
-                    product_id = item[1].id,
+                    product_id = item.id,
                     quantity = quantity
                 )
                 await new_item.create()
             return True
         except Exception as error:
-            print(f"add to inventory error: {error}")
+            print(f"item transaction error: {error}")
             return False
+        
+    async def get_random_item_by_tag(self, tag:DropTags) -> Optional[Item]:
+        try:
+            return await Item.query.order_by(func.random()).\
+                    where(Item.tag.ilike(f"%{tag.name}%")).gino.first()
+        except Exception as error:
+            print(f"get item by tag error: {error}")
+            return None
         
     ###-----------------------------------------
     ### Методы работы с данными наборов стикеров 
@@ -268,11 +304,17 @@ class DataBase():
     ### Методы работы с магазином
     ###-----------------------------------------
 
-    async def get_store_goods_with_quantity(self) -> List[Tuple[Warehouse, StoreItem]]:
-        query = StoreItem.join(Warehouse).select()
-        return await query.gino.load((Warehouse, StoreItem)).all()
+    async def get_store_items_with_quantity(self) -> List[Tuple[Warehouse, Item, ProductDiscounts]]:
+        query = Item.join(Warehouse).outerjoin(
+            ProductDiscounts, 
+            and_(
+                Item.id == ProductDiscounts.product_id,
+                ProductDiscounts.is_active == True
+            )
+        ).select()
+        return await query.gino.load((Warehouse, Item, ProductDiscounts)).all()
     
-    async def update_item_quantity(self, item:Tuple[Warehouse, StoreItem], quantity:int = 1) -> bool:
+    async def update_item_quantity_at_warehouse(self, item:Tuple[Warehouse, Item, ProductDiscounts], quantity:int = 1) -> bool:
         try:
             if (item[0].quantity - quantity >= 0):
                 await Warehouse.update.where(Warehouse.id == item[0].id).values(
@@ -289,9 +331,67 @@ class DataBase():
         try:
             await Warehouse.update.where(Warehouse.quantity < Warehouse.max_capacity).values(
                     quantity=Warehouse.max_capacity).gino.status()
+            return True
         except Exception as error:
             print(f"warehouse items get error: {error}")
             return False
+        
+    async def deactivate_discounts(self) -> bool:
+        try:
+            await ProductDiscounts.update.where(ProductDiscounts.is_active == True).\
+                    values(is_active=False).gino.status()
+            return True
+        except Exception as error:
+            print(f"discount update error: {error}")
+            return False
+        
+    async def create_random_discount(self, discounts_count:int = 1) -> List[Tuple[ProductDiscounts, Item]]:
+        try:
+            query = Item.join(Warehouse).\
+                outerjoin(ProductDiscounts,
+                        ProductDiscounts.is_active == False).\
+                select().\
+                distinct(Item.id).\
+                where(and_(Warehouse.quantity > 0))
+        
+            discount_items:List[Item] = await query.gino.load(Item).all()
+            #TODO:Шел час ночи и я так и не смог 
+            #корректно достать рандомное количество из базы без дублей
+            random.shuffle(discount_items)
+            discount_items = discount_items[:discounts_count]
+
+            discounts:List[Tuple[ProductDiscounts, Item]] = []
+
+            for discount_item in discount_items:
+                existed_discount:ProductDiscounts = await ProductDiscounts.\
+                query.where(ProductDiscounts.product_id == discount_item.id).gino.first()
+            
+                if (existed_discount):
+                    await ProductDiscounts.update.where(ProductDiscounts.product_id == discount_item.id).\
+                        values(is_active=True, discount_percent = random.choice([25, 35, 45, 50])).gino.status()
+                    print(f"update_discount {discount_item.title}")
+                    discounts.append((existed_discount, discount_item))
+                else:
+                    print(f"new_discount {discount_item.title}")
+                    new_discount = ProductDiscounts(
+                        product_id = discount_item.id,
+                        discount_percent = random.choice([25, 50])
+                    )
+                    await new_discount.create()
+                    discounts.append((new_discount, discount_item))
+            return discounts
+        except Exception as error:
+            print(f"discount create error: {error}")
+            return []
+        
+    ###-----------------------------------------
+    ### Методы работы с монстрами
+    ###-----------------------------------------
+
+    async def get_random_monsters_by_tag(self, monster_count:int = 1, tag:str = "mob") -> List[Monster]:
+        random_monster:List[Monster] = await Monster.query.order_by(func.random()).\
+                            where(Monster.tag.ilike(f"%{tag}%")).limit(monster_count).gino.all()
+        return random_monster
 
     ###-----------------------------------------
     ### Методы работы с статистикой выигрышей 
@@ -341,7 +441,7 @@ class DataBase():
     ### Методы работы с статистикой пользователей
     ###-----------------------------------------
     
-    async def update_user_stats(self, user_id:int, args:Dict[str, Any] = {}) -> bool:
+    async def update_user_status(self, user_id:int, args:Dict[str, Any] = {}) -> bool:
         try:
             user_stats:Optional[UserStats] = await UserStats.query.where(UserStats.user_id == user_id).gino.first()
             if (not user_stats):
@@ -351,6 +451,23 @@ class DataBase():
             return True
         except Exception as error: 
             print(f"user stats update error: {error}")
+            return False
+        
+    ###-----------------------------------------
+    ### Методы работы с статистикой монстра
+    ###-----------------------------------------
+    
+    async def update_monster_status(self, monster_id:int, args:Dict[str, Any] = {}) -> bool:
+        try:
+            monster_stats:Optional[MonsterStats] = await MonsterStats.query.\
+                            where(MonsterStats.monster_id == monster_id).gino.first()
+            if (not monster_stats):
+                monster_stats = MonsterStats(monster_id = monster_id)
+                await monster_stats.create()
+            await monster_stats.update(**args).apply()
+            return True
+        except Exception as error: 
+            print(f"monster stats update error: {error}")
             return False
 
     ###-----------------------------------------

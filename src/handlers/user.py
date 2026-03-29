@@ -3,7 +3,6 @@ from src.models.user_inventory_item_model import UserInventoryItem
 from src.keyboards.interactive_keyboard import InteractiveKeyboard
 from src.keyboards.callback_fabrics import InventoryCF
 from src.models.user_stats_model import UserStats
-from src.models.store_item_model import StoreItem
 from src.handlers.commands import Commands as cn
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -11,6 +10,7 @@ from src.services.data_base.db import DataBase
 from aiogram.fsm.context import FSMContext
 from src.data.dictionary import Dictionary
 from src.domain.utils.utils import Utils
+from src.models.item_model import Item
 from src.models.user_model import User
 from aiogram.enums import ParseMode
 from src.data.config import Prefs
@@ -39,7 +39,7 @@ async def user_information(message: Message, state: FSMContext):
     await state.update_data(user=user)
     
     # Получаем оставшееся время до возможности использовать pencil
-    delta_pencil:timedelta = Utils.get_last_member_check_delta(user.last_length_check)
+    delta_pencil:timedelta = Utils.get_time_delta(user.last_length_check)
     # Если оставшееся время отрицательное, значит можно использовать команду
     if math.floor(delta_pencil.total_seconds() / 3600) < 0:
         time_to_pencil = Utils.timedelta_to_hhmm(delta_pencil)
@@ -47,7 +47,7 @@ async def user_information(message: Message, state: FSMContext):
         time_to_pencil = "Готов"
     
     # Получаем оставшееся время до возможности использовать dice_game
-    delta_dice:timedelta = Utils.get_last_member_check_delta(user.last_dice_play, 1)
+    delta_dice:timedelta = Utils.get_time_delta(user.last_dice_play, 1)
     # Если оставшееся время отрицательное, значит можно использовать команду
     if math.floor(delta_dice.total_seconds() / 3600) < 0:
         time_to_dice = Utils.timedelta_to_hhmm(delta_dice)
@@ -73,7 +73,7 @@ async def on_inventory_open(callback: CallbackQuery, callback_data: InventoryCF,
     if (user.tg_id != callback_data.user_id):
         return
     
-    inventory:List[Tuple[UserInventoryItem, StoreItem]] = await db.get_user_inventory(user)
+    inventory:List[Tuple[UserInventoryItem, Item]] = await db.get_user_inventory(user)
     await state.update_data(inventory=inventory)
     await callback.message.edit_text(dict.user_inventory(user, inventory),
                                         reply_markup=interactive_kb.inventory_items(inventory, user),
@@ -89,11 +89,11 @@ async def on_inventory_item_select(callback: CallbackQuery, callback_data: Inven
     if (user.tg_id != callback_data.user_id):
         return
 
-    inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
-    item:Tuple[UserInventoryItem, StoreItem] = next((p for p in inventory if p[1].id == callback_data.item_id), None)
+    inventory: List[Tuple[UserInventoryItem, Item]] = state_data["inventory"]
+    item:Tuple[UserInventoryItem, Item] = next((p for p in inventory if p[1].id == callback_data.item_id), None)
     await state.update_data(item=item)
     await callback.message.edit_text(dict.inventory_item_info(item),
-                                        reply_markup=interactive_kb.item_keyboard(user),
+                                        reply_markup=interactive_kb.item_keyboard(user, item[1]),
                                         parse_mode=ParseMode.HTML)  
     
 ###Применение предмета на себя
@@ -106,7 +106,7 @@ async def on_item_use_myself(callback: CallbackQuery, callback_data: InventoryCF
     if (user.tg_id != callback_data.user_id):
         return
 
-    item:Tuple[UserInventoryItem, StoreItem] = state_data["item"]
+    item:Tuple[UserInventoryItem, Item] = state_data["item"]
 
     use_status:str = await ItemsController.use_item(user, item)
     if (use_status):
@@ -140,7 +140,7 @@ async def on_item_target_selected(callback: CallbackQuery, callback_data: Invent
         return
     
     target: User = await db.get_user_by_id(callback_data.item_id)
-    item:Tuple[UserInventoryItem, StoreItem] = state_data["item"]
+    item:Tuple[UserInventoryItem, Item] = state_data["item"]
     use_status:str = await ItemsController.use_item(user, item, target)
     if (use_status):
         await callback.message.delete()
@@ -157,7 +157,7 @@ async def on_target_select_cancel(callback: CallbackQuery, callback_data: Invent
     if (user.tg_id != callback_data.user_id):
         return
     
-    inventory: List[Tuple[UserInventoryItem, StoreItem]] = state_data["inventory"]
+    inventory: List[Tuple[UserInventoryItem, Item]] = state_data["inventory"]
     user: User = state_data["user"]
     await callback.message.edit_text(dict.user_inventory(user, inventory),
                                         reply_markup=interactive_kb.inventory_items(inventory, user),

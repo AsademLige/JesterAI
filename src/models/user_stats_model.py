@@ -15,3 +15,11 @@ class UserStats(BaseModel):
     dice_minor_wins = sa.Column(sa.Integer)
     dice_major_wins = sa.Column(sa.Integer)
     dice_games = sa.Column(sa.Integer)
+    gladiators_bet = sa.Column(sa.Integer)
+    gladiators_bet_win = sa.Column(sa.Integer)
+
+    good_hunting_count = sa.Column(sa.Integer)
+    duels_win_count = sa.Column(sa.Integer)
+    duels_count = sa.Column(sa.Integer)
+
+

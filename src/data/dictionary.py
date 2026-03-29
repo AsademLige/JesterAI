@@ -1,14 +1,18 @@
 from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
+from src.models.discounts_model import ProductDiscounts
+from src.models.battle_member_model import BattleMember, BodyParts
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
+from src.domain.utils.enums import AttackStatus, BattleMode
+from typing import Optional, List, Dict, Tuple, Union
 from src.models.winners_log_model import WinnersLog
-from src.models.store_item_model import StoreItem
 from src.models.user_stats_model import UserStats
-from typing import Optional, List, Dict, Tuple
 from src.services.data_base.db import DataBase
+from src.models.monster_model import Monster
 from src.models.warehouse import Warehouse
 from src.domain.utils.utils import Utils
 from src.models.user_model import User
+from src.models.item_model import Item
 import random
 
 class Dictionary():
@@ -51,7 +55,11 @@ class Dictionary():
 
     dice_game:str = "🎲 Кидаешь кубик и выигрываешь!"
 
+    gamba_house:str = "🎲 🎰 Оставь надежду, всяк сюда входящий!"
+
     store:str = "🛒 Торгомат DICKSI"
+
+    hunt:str = "⚔️ Бери наперевес свой pencil и вперед, геройствовать!"
 
     ###------------------------------------------------------------
     ###Общее
@@ -70,10 +78,12 @@ class Dictionary():
     rules:str = "❓ Правила"
 
     bot_description:str = "Команда /sticker_pack отправит ссылку на стикеры, которые МАГИЧЕСКИМ образом превращаются в видео!\n\n"\
-                        "У нас тут что-то вроде интерактивной игры, команда /me покажет небольшую сводку с твоими успехами\n\n"\
-                        "Меряйся хозяйством с другими участниками! Команда /pencil поможет тебе получить БОЛЬШОЕ признание <i>(но есть шанс, что уменьшит его)</i>"\
+                        "🎒У нас тут что-то вроде интерактивной игры, команда /me покажет небольшую сводку с твоими успехами\n\n"\
+                        "🍆Меряйся хозяйством с другими участниками! Команда /pencil поможет тебе получить БОЛЬШОЕ признание <i>(но есть шанс, что уменьшит его)</i>"\
                         "Бот все же заскамил тебя? Подожди 24 часа и пробуй еще раз!\n\n"\
-                        "Каждый день проводим розыгрыш среди участников чата, а каждую пятницу подведем итоги и наградим самых крутых участников!\n\n"\
+                        "🎲🎰 Заглядывай в наше домик развлечений /gamba_house! За твои деньги, мы знатно тебя <s>разведем</s>РАЗВЛЕЧЕМ\n\n"\
+                        "⚔️Нечисть и уроды различной степени наводнили наши земли, охоться /hunt на них и получай награду! "\
+                        "Обязательно прочитай про бои, там много полезной информации!\n\n"\
                         "<i>Все вопросы и предложения отправлять на почтовый ящик:</i> <code>2202202000651657</code>"
     
     __answer_restricted:str = "⛔️ Команду вызвал {{user_link}}, так что руки прочь!"
@@ -110,6 +120,9 @@ class Dictionary():
     dice_game_timer_decresc_target:str = "⏰ {{user_link1}} использовал {{item_title}} на {{user_link2}} и сбросил его таймер на игру в кости"
     dice_game_timer_decresc:str = "⏰ {{user_link1}} использовал {{item_title}} на себя и сбросил таймер на игру в кости"
 
+    item_steal_usage:str = "🐀 {{user_link1}} использовал {{item_title}} на {{user_link2}} и украл {{steal_item_title}}"
+    item_steal_money:str = "🐀 {{user_link1}} использовал {{item_title}} на {{user_link2}} и украл {{money}}"
+
     length_decresc_target:str = "🔪 {{user_link1}} взял <code>{{item_title}}</code> и отрезал у {{user_link2}} {{length}} {{pencil_gen}}!"
     length_decresc:str = "🔪 {{user_link1}} взял {{item_title}} и отрезал у себя {{length}} {{pencil_gen}}, ненормальный..."
 
@@ -137,7 +150,7 @@ class Dictionary():
     __sticker_set_create_success: str = "🟢 Набор стикеров создан: https://t.me/addstickers/{{sticker_set_name}}"
 
     ###------------------------------------------------------------
-    ###изменение набора стикеров
+    ###Изменение набора стикеров
     ###------------------------------------------------------------
 
     __sticker_add_to_set_success: str = "🟢 Стикер добавлен: https://t.me/addstickers/{{sticker_set_name}}"
@@ -159,9 +172,11 @@ class Dictionary():
     delete_sticker_from_set:str = "🗑️ Удалить стикер"
 
     ###------------------------------------------------------------
-    ###Описания треш лото
+    ###Текстовые переменные треш лото
     ###------------------------------------------------------------
 
+    __gamba_house_description:str = "<blockquote>🎰🎲 Шут и Госпожа Удача приветствуют тебя, {{user}}! Как пожелаешь заскамить тебя сегодня?</blockquote>\n\n<i>Скам-хаус заработал: {{total}}</i>"
+    
     __trash_loto_consolation_money_award: str = "🌱 чут-чут повезло, держи копейку, {{user_link}}: {{money}}"
     
     __trash_loto_minor_length_award: str = "🍆 {{user_link}} выиграл мазь для увеличения {{pencil_gen}} на целых {{length}}!"
@@ -182,7 +197,7 @@ class Dictionary():
     trash_loto_error:str = "Ошибочка вышла... Зато деньги твои целы!"
 
     ###------------------------------------------------------------
-    ###Переменные игры с дайсами
+    ###Текстовые переменные игры с дайсами
     ###------------------------------------------------------------
     
     dice_game_start:str = "<blockquote>🎲 Кубики!</blockquote>\n Сделай свой прогноз:"
@@ -221,11 +236,136 @@ class Dictionary():
     dice_error:str = "Ошибочка вышла..."
 
     ###------------------------------------------------------------
+    ###Текстовые переменные битвы
+    ###------------------------------------------------------------
+    
+    combat_interface:str = "{{fight_name}}\n\n"\
+                             "{{player1_icon}} : {{player1}}\n"\
+                             "HP: {{health1}}\n\n"\
+                             "{{player2_icon}} : {{player2}}\n"\
+                             "HP: {{health2}}\n"\
+                             "━━━━━━━━━━━━━\n"\
+                             "⏳ Таймер: {{timer}}\n"\
+                             
+    gladiators_interface:str = "{{player1_icon}} : {{player1}}\n"\
+                               "HP: {{health1}}\n\n"\
+                               "{{player2_icon}} : {{player2}}\n"\
+                               "HP: {{health2}}\n"\
+    
+    __monster_meeting:List[str] = [
+        "❗️ Из кустов выползает <code>{{monster_name}}</code>, а его {{pencil}} смотрит прямо на тебя! Что будешь делать?"
+    ]
+
+    __boss_meeting:List[str] = [
+        "<blockquote>🚧 ОПАСНОСТЬ! Сильный противник <code>{{monster_name}}</code> встречается на твоем пути, а его {{pencil}} в другой весовой категории!🚧</blockquote>"
+    ]
+
+    __gladiators_introduce:List[str] = [
+        "📣 Под общие овации на арену выбрасывают ({{gladiator1_icon}}) <code>{{gladiator1_name}}</code>! Его соперник ({{gladiator2_icon}}) <code>{{gladiator2_name}}</code> уже стоит в боевой стойке и ждет сигнала!",
+        "📣 На арене появляются наши бедолаги! ({{gladiator1_icon}}) <code>{{gladiator1_name}}</code> под грибами и не понимает, где находится, а ({{gladiator2_icon}}) <code>{{gladiator2_name}}</code> еле стоит на ногах от страха!",
+    ]
+
+    __battle_escape:List[str] = [
+        "💨 {{member}} бежит, роняя кал и спотыкаясь о {{pencil_accu}}...",
+        "💨 Ну что, {{member}}, помог тебе {{pencil}} {{length}}?",
+        "💨 Пора дать на пятку, пока при памяти!"
+    ]
+
+    battle_protect_description:List[str] = [
+        "прячется за {{pencil_inst}}",
+        "спасается бегством за ближайший камень",
+        "игнорирует любые попытки атаки",
+        "не чувствует урона",
+        "взывает к здравому смыслу и не получает урон",
+        "демонстративно закатывает глаза, игнорируя урон",
+        "использует режим бога и игнорирует любой урон",
+        "отпрыгивает в последний момент",
+        "делает вид, что это не больно",
+        "жалуется на качество удара",
+        "выставляет вперед стажера из тестеров, заблокировав им урон",
+        "отрицает существование оппонента",
+        "откатывается к прошлому состоянию без урона"
+    ]
+
+    battle_attacked_description:List[str] = [
+        "драматично берется за окровавленное место",
+        "выдает синий экран смерти",
+        "падает, прижимая руки к {{part_dat}}",
+        "медленно оседает на пол",
+        "хватается за {{pencil_accu}}, хотя били в {{part_accu}}",
+        "закатывает глаза и падает плашмя",
+        "готовиться к флешбекам перед паверапом",
+        "смотрит на новую дырень в теле, но делает вид, что так и было",
+        "выдает ошибку <b>404 (ebalo not found)</b>",
+        "вытирает пот со лба и кровь с {{pencil_gen}}",
+    ]
+
+    battle_attack_description:List[str] = [
+        "выходит на удушающий {{pencil_inst}}",
+        "прописывает двоечку в {{part_accu}}",
+        "проводит психологическую атаку",
+        "распахивает плащ",
+        "стреляет сомнительной жидкостью",
+        "давит интеплектом",
+        "пытается насадить на {{pencil_accu}}",
+        "втыкает {{pencil_accu}} в {{part}} оппонента",
+        "начинает газлайтинг",
+        "ломает через колено {{pencil_accu}} оппонента",
+        "спамит один удар",
+        "натягивает {{pencil_accu}} оппонента на глобус"
+    ]
+
+    battle_none_status_description:List[str] = [
+        "удивляется пассивностью противника",
+        "видит, как противник застрял в текстурах и не может атаковать"
+    ]
+
+    battle_dead_description:List[str] = [
+        "сдох, обоссавшись и обосравшись!",
+        "прикрывает рукой  {{part_accu}}, затем падает без дыхания",
+        "становиться отрицательно живым"
+    ]
+
+    gladiators_cheer_up:List[str] = [
+        "⚔️ Снеси ему кабину!",
+        "⚔️ Переломи его об хуй!",
+        "⚔️ Харкни ему в очко!",
+        "⚔️ Двоечку этой пенсии!",
+        "⚔️ Трахай, родной!",
+        "⚔️ В помоечку!",
+        "⚔️ Туда эту шмару!",
+        "⚔️ Дай ему на клык!",
+        "⚔️ Я щас трусы сниму!",
+        "⚔️ Добить выживших!",
+        "⚔️ Глубже, глубже давай!",
+        "⚔️ Кончай в него! То есть его!!",
+        "⚔️ ЭТОТ ПРИЦЕЛ ПРОСТО ИМБА!",
+    ]
+
+    gladiators_sucks:List[str] = [
+        "🌧 Ну ты и кляча!",
+        "🌧 Вставай, помойка!",
+        "🌧 Вытри сопли и дерись!",
+        "🌧 Вытри сопли и дерись!",
+        "🌧 ГГ, проебали...",
+        "🌧 Ну и на кого я поставил!?",
+        "🌧 Я сейчас выйду тебя добить!",
+        "🌧 Какой же ты нищий!",
+        "🌧 После боя еще и от меня получишь!",
+        "🌧 За что мне этот инвалид!",
+        "🌧 Хватит уже нализывать яйца!",
+    ]
+
+    __hunt_loot:List[str] = [
+        "Пошарим в воровском кармане... Ага! <code>{{item_icon}} {{item_name}}</code>!"
+    ]
+
+    ###------------------------------------------------------------
     ###Текстовые переменные магазина
     ###------------------------------------------------------------
 
     __store_description:str = "<blockquote>🛒 Приветствуем в <b>DICKSI</b>, {{user_link}}!</blockquote>\n"\
-                              "<i>Пакетик брать будете или Вы со своим?</i>\n{{products}}"
+                              "<i>Пакетик брать будете или Вы со своим?</i>\n\n{{products}}\n<i>Баланс: {{money}}</i>"
     
     __product_description:str = "<blockquote>{{title}}</blockquote>\n<i>{{description}}</i>\n\n<b>Стоимость</b>: {{price}}"
     
@@ -241,6 +381,11 @@ class Dictionary():
     __product_buying_thanks:List[str] = ["💳 Оплата прошла, спасибо за покупку, {{user_link}}!", 
                                          "💳 Не желаете гречку по акции, корм для голубей, передние стойки стабилизатора на гранту? Спасибо за покупку, {{user_link}}, приходите еще!",
                                          "💳 За покупку вам бонус в виде наклейки! Наклеите 999 штук на свой {{pencil}}, и он увеличится на <b>1cm</b>"]
+    
+    __warehouse_update:str = "<blockquote>🏪 Обновление остатков магазина, бегом за покупками!</blockquote>\n" \
+                                                    "<i>Специальные предложения:\n</i>"\
+                                                    "{{discounts_description}}"\
+                                                    "<i>Поторопись опередить бабок в гонке за просрочкой!\n</i>"
 
     ###------------------------------------------------------------
     ###Описания розыгрышей
@@ -290,6 +435,7 @@ class Dictionary():
         ["смычок", "смычка", "смычку","смычок","смычком",""],
         ["дрын", "дрына", "дрыну","дрын","дрыном",""],
         ["хер", "хера", "херу","хер","хером",""],
+        ["елда", "елды", "елде","елду","елдой",""],
         ["болт", "болта", "болту","болт","болтом",""],
         ["прибор", "прибора", "прибору","прибор","прибором",""],
         ["чучундрик", "чучундрика", "чучундрику","чучундрик","чучундриком",""],
@@ -297,6 +443,9 @@ class Dictionary():
     ]
 
     __timer_message:str = "{{user_link}}, с тебя уже хватит, приходи позже...\n"\
+    "<blockquote>⏰ Осталось потерпеть: {{time_left}}</blockquote>"
+
+    __hunt_timer_message:str = "{{user_link}}, отдохни, вылечи раны с последней охоты!\n"\
     "<blockquote>⏰ Осталось потерпеть: {{time_left}}</blockquote>"
     
     ###------------------------------------------------------------
@@ -312,27 +461,76 @@ class Dictionary():
             print(f"load assets error: {error}")
             return False
         
-    def store_description(self, products:List[Tuple[Warehouse, StoreItem]], user_name:str, user_tg_id:int) -> str:
+    def gamba_house_description(self, total_gamba_house_win, user:User) -> str:
+        return tp.text_replacement(self.__gamba_house_description, {
+            "total":self.money_wrapper(total_gamba_house_win, False),
+            "user":self.get_user_link(user.tg_name, user.tg_id),
+        })
+    
+    def hunt_monster_meeting(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
+        return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + \
+                                   f"\n\n{strategy}" + \
+                                   f"\n\n❤️ <b>Здоровье: {monster.health}</b>\n"\
+                                   f"🔪 <b>Атака: {monster.min_damage}-{monster.max_damage}</b>\n"\
+                                   f"🎯 <b>Крит. шанс: {monster.crit_chance}%</b>\n"\
+                                   f"🥋 <b>Стиль боя</b>: {fighting_style_visual}\n"
+                                   f"\n<b>Описание:</b> <i>{monster.description}</i>", {
+            "monster_name": monster.name,
+            **self.random_member(),
+        })
+    
+    def gladiators_introduce(self, members:List[BattleMember], ui_data:Dict[str, str]) -> str:
+        return tp.text_replacement(random.choice(self.__gladiators_introduce) + 
+                                   "\n\n{{gladiators_ui}}" + 
+                                   "━━━━━━━━━━━━━\n"+ \
+                                   "<i>Делайте ваши ставки, господа!</i>", {
+            "gladiator1_name" :members[0].entity.name,
+            "gladiator1_icon" :members[0].utf8_icon,
+            "gladiator2_name" :members[1].entity.name,
+            "gladiator2_icon" :members[1].utf8_icon,
+            "gladiators_ui":tp.text_replacement(self.gladiators_interface, {**ui_data})
+        })
+    
+    def battle_escape(self, member:Union[User, Monster]) -> str:
+        return tp.text_replacement(random.choice(self.__battle_escape), {
+            "member" : self.get_user_link(member.tg_name, member.tg_id) if type(member) is User else f"<code>{member.name}</code>",
+            "length": self.length_wrapper(member.length if type(member) is User else random.randint(1, 30)), 
+            **self.random_member(),
+        })
+        
+    def store_description(self, products:List[Tuple[Warehouse, Item, ProductDiscounts]], user:User) -> str:
         return tp.text_replacement(self.__store_description, {
-            "user_link" : self.get_user_link(user_name, user_tg_id),
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "products": self.__generate_products_list(products),
+            "money": self.money_wrapper(user.money, False),
             **self.random_member(),
         }, recursive_parse_args = True)
     
-    def __generate_products_list(self, products:List[Tuple[Warehouse, StoreItem]]) -> str:
+    def __generate_products_list(self, products:List[Tuple[Warehouse, Item, ProductDiscounts]]) -> str:
         products_str:str = ""
         index:int = 1
-        for warehouse_item, product in products:
-            products_str += f"<b>({index})</b> {random.choice(self.__buttons_types)} {hcode(product.title)}<b>({warehouse_item.quantity}/{warehouse_item.max_capacity})</b> - {self.price_wrapper(product.price)}\n"
+        for warehouse_item, product, discount in products:
+            price_formatted:str = f"{self.price_wrapper(product.price, False)}"
+            if (discount):
+                discount_price:int = round(product.price - (product.price * (discount.discount_percent / 100)))
+                price_formatted = f"{self.price_wrapper(discount_price)} <s>{price_formatted}</s>💰"
+            icon:str = f"<b>({index})</b> {random.choice(self.__buttons_types)}{product.utf8_icon}"
+            body:str = icon + f"{hcode(product.title)}<b>({warehouse_item.quantity}/{warehouse_item.max_capacity})</b> - {price_formatted}"
+
+            products_str += f"{body}\n"
             index+=1
 
         return products_str
     
-    def product_description(self, product:Tuple[Warehouse, StoreItem]) -> str:
+    def product_description(self, product:Tuple[Warehouse, Item, ProductDiscounts]) -> str:
+        price_formatted:str = f"{self.price_wrapper(product[1].price, False)}"
+        if (product[2]):
+            discount_price:int = round(product[1].price - (product[1].price * (product[2].discount_percent / 100)))
+            price_formatted = f"{self.price_wrapper(discount_price)} <s>{price_formatted}</s>💰"
         return tp.text_replacement(self.__product_description, {
             "title": product[1].title,
             "description": product[1].description,
-            "price": self.price_wrapper(product[1].price) if (product[0].quantity > 0) else "<b>Нет в наличии!</b>",
+            "price": price_formatted if (product[0].quantity > 0) else "<b>Нет в наличии!</b>",
             **self.random_member(),
         }, recursive_parse_args = True)
     
@@ -347,6 +545,17 @@ class Dictionary():
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(),
         })
+    
+    def warehouse_update(self, discounts:List[Tuple[ProductDiscounts, Item]]) -> str:
+        discounts_description:str = ""
+        for i, discount in enumerate(discounts):
+            discounts_description += f"<blockquote>{discount[1].utf8_icon} {discount[1].title} "\
+                f"<b>-{discount[0].discount_percent}%</b>!</blockquote>\n"
+            
+        return tp.text_replacement(self.__warehouse_update, {
+            "discounts_description": discounts_description,
+            **self.random_member(),
+        }, recursive_parse_args = True)
     
     def answer_restricted(self, full_name: str, tg_id:int) -> str:
         return tp.text_replacement(self.__answer_restricted, {
@@ -470,27 +679,29 @@ class Dictionary():
 
         stats_str += f"🎰 Всего спинов\джекпотов: <b>{user_stats.trash_loto_spins} \ {user_stats.trash_loto_jackpots}</b>\n"
         stats_str += f"🍀 Выигрыш в треш-лото: <b>{self.money_wrapper(user_stats.trash_loto_money_wins)} \ {self.length_wrapper(user_stats.trash_loto_length_wins)}</b>\n"
-        stats_str += f"🎲 Статистика игры в кости: <b>{user_stats.dice_games} \ 🎯{user_stats.dice_minor_wins + user_stats.dice_major_wins}</b>"
+        stats_str += f"🎲 Статистика игры в кости: <b>{user_stats.dice_games} \ 🎯{user_stats.dice_minor_wins + user_stats.dice_major_wins}</b>\n"
+        stats_str += f"🏟 Всадил/выиграл на арене: <b>{user_stats.gladiators_bet} \ {user_stats.gladiators_bet_win}</b>\n"
+        stats_str += f"🏹 Уничтожил чудовищ: <b>{user_stats.good_hunting_count}</b>"
 
         return stats_str
     
-    def user_inventory(self, user:User, items:List[Tuple[UserInventoryItem, StoreItem]]) -> str:
+    def user_inventory(self, user:User, items:List[Tuple[UserInventoryItem, Item]]) -> str:
         return tp.text_replacement(self.__inventory_info, {
             "items" : self.__generate_inventory_items_list(items) if items else "<b>В рюкзаке пусто!</b>",
             "user_link": self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(), 
         }, recursive_parse_args = True)
     
-    def __generate_inventory_items_list(self, items:List[Tuple[UserInventoryItem, StoreItem]]) -> str:
+    def __generate_inventory_items_list(self, items:List[Tuple[UserInventoryItem, Item]]) -> str:
         items_str:str = ""
         index:int = 1
         for inventory_item, store_item in items:
-            items_str += f"<b>({index})</b> {hcode(store_item.title)}<b>({inventory_item.quantity}шт.)</b>\n"
+            items_str += f"<b>({index})</b> {store_item.utf8_icon} {hcode(store_item.title)}<b> ({inventory_item.quantity}шт.)</b>\n"
             index+=1
 
         return items_str
     
-    def inventory_item_info(self, item:Tuple[UserInventoryItem, StoreItem]) -> str:
+    def inventory_item_info(self, item:Tuple[UserInventoryItem, Item]) -> str:
         return tp.text_replacement(self.__inventory_item_info, {
             "title": item[1].title,
             "description": item[1].description,
@@ -589,8 +800,8 @@ class Dictionary():
                 f"⚠️ {self.__negative_length_change[random.randint(0, len(self.__negative_length_change) - 1)]}",
                                        params)
         
-    def media_caption(self, user:User) -> str:
-        return tp.text_replacement("Отправил: {{user_link}} {{custom_title}} - {{length}}", {
+    def user_wrapper(self, user:User, show_length:bool = True) -> str:
+        return tp.text_replacement("{{user_link}} {{custom_title}}" + " - {{length}}" if (show_length) else "", {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
             "length":self.length_wrapper(user.length, False)
@@ -607,8 +818,47 @@ class Dictionary():
             "pencil_prep":member[5]
         }
     
+    def get_part_cases(self, parts:List[BodyParts], prefix:str = "") -> Dict[str, str]:
+        parts_str:dict[BodyParts, dict[str, str]] = {
+            BodyParts.HEAD: {
+                f"{prefix}part": "кабина",
+                f"{prefix}part_gen": "кабины",
+                f"{prefix}part_dat": "кабине",
+                f"{prefix}part_accu": "кабину",
+                f"{prefix}part_inst": "кабиной",
+                f"{prefix}part_prep": "о кабине",
+                f"{prefix}part_prep_ob": "об кабину",
+            },
+            BodyParts.CHEST: {
+                f"{prefix}part": "туз",
+                f"{prefix}part_gen": "туза",
+                f"{prefix}part_dat": "тузу",
+                f"{prefix}part_accu": "туз",
+                f"{prefix}part_inst": "тузом",
+                f"{prefix}part_prep": "о тузе",
+                f"{prefix}part_prep_ob": "о тузе",
+            },
+            BodyParts.KNEES: {
+                f"{prefix}part": "костыли",
+                f"{prefix}part_gen": "костылей",
+                f"{prefix}part_dat": "костылям",
+                f"{prefix}part_accu": "костыли",
+                f"{prefix}part_inst": "костылями",
+                f"{prefix}part_prep": "о костылях",
+                f"{prefix}part_prep_ob": "о костылях",
+            },
+        }
+
+        return parts_str[parts[0]] if (parts) else random.choice(list(parts_str.values()))
+    
     def timer_message(self, user:User, time_left:str) -> str:
         return tp.text_replacement(self.__timer_message, {
+            "time_left" : time_left,
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            })
+    
+    def hunt_timer_message(self, user:User, time_left:str) -> str:
+        return tp.text_replacement(self.__hunt_timer_message, {
             "time_left" : time_left,
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             })
@@ -619,8 +869,8 @@ class Dictionary():
     def money_wrapper(self, money:int, plus_visible:bool = True) -> str:
         return hbold(f'{"+" if (money > 0 and plus_visible) else ""}{money}💰')
     
-    def price_wrapper(self, money:int) -> str:
-        return hbold(f'{money - 1},99💰')
+    def price_wrapper(self, money:int, bold:bool = True) -> str:
+        return hbold(f'{money - 1},99') if (bold) else f"{money - 1},99"
     
     def get_medal_emoji(self, place_in_top:int, only_tops:bool = False):
         if (place_in_top == 1):
@@ -631,3 +881,82 @@ class Dictionary():
             return "🥉"
         else:
             return "" if only_tops else "🏅"
+        
+    ###------------------------------------------------------------
+    ###Методы битвы
+    ###------------------------------------------------------------
+
+    def battle_end_draft(self, deads:List[BattleMember]) -> str:
+        return "⚰️⚰️ Бой кровавый, и победителя в нем нет, лежат все без дыхания..."
+    
+    def battle_turn_log(self, active:BattleMember, opponent:BattleMember,
+                        active_status:Optional[Tuple[AttackStatus, int, bool]], 
+                        opponent_status:Optional[Tuple[AttackStatus, int, bool]],
+                        mode:BattleMode = BattleMode.HUNT):
+        full_log:str = ""
+        status_icon:str = "⏳" if (active_status[0] == AttackStatus.NONE) else "🩸" if (active_status[0] == AttackStatus.DAMAGED) else "🛡"
+        opponent_damage_str:str = f"Получено: <code>{(f'🎯{active_status[1]}!') if (active_status[2]) else (f'💥{active_status[1]}') }</code>" if active_status[1] else ""
+        active_damage_str:str = f"Нанесено: <code>{(f'🎯{opponent_status[1]}!') if (opponent_status[1]) else (f'💥{opponent_status[1]}') }</code>" if opponent_status[1] else ""
+
+        action_protect:str = tp.text_replacement(random.choice(self.battle_protect_description), 
+                                                {**self.get_part_cases(active.protected_parts),
+                                                 **self.random_member()}) 
+            
+        action_attack:str = tp.text_replacement(random.choice(self.battle_attack_description), {
+                        **self.get_part_cases(active.attack_target),
+                        **self.random_member()
+                    })
+        
+        action_damaged:str = tp.text_replacement(random.choice(self.battle_attacked_description), {
+                        **self.get_part_cases(opponent.attack_target),
+                        **self.random_member()
+                    })
+        
+        action_none_attacked:str = tp.text_replacement(random.choice(self.battle_none_status_description), {
+            **self.random_member()
+        })
+
+        if (active_status[0] in [AttackStatus.NONE, AttackStatus.DEFENDED]):
+            full_log += f"{active.short_battle_name} {action_none_attacked if (active_status[0] == AttackStatus.NONE) else action_protect}"    
+
+        if (active_status[0] == AttackStatus.DAMAGED):
+            full_log += f"{active.short_battle_name} {action_damaged}"    
+        
+        full_log += f'{active.short_battle_name if (not full_log) else ", затем"} {action_attack}'\
+              if (opponent_status[0] == AttackStatus.DAMAGED) else ''
+
+        if (mode == BattleMode.HUNT):
+            full_log += f"\n[{active_damage_str}{' | ' if (active_damage_str and opponent_damage_str) else ''}{opponent_damage_str}]" \
+                if (active_damage_str or opponent_damage_str) else ''
+
+        return tp.text_replacement(status_icon + full_log, {**self.random_member()})
+    
+    def hunt_loot(self, inventory:Optional[Tuple[List[Item], int]]) -> str:
+        if (not inventory): return ""
+        money:str = f" {'А так же монеты' if inventory[0] else 'Собрали с трупа горсть монет'} {self.money_wrapper(inventory[1])}" if (inventory[1]) else ""
+
+        item:str = ""
+        if (inventory[0]):
+            item = tp.text_replacement(random.choice(self.__hunt_loot), {
+            "item_name": inventory[0][0].title,
+            "item_icon": inventory[0][0].utf8_icon,
+            **self.random_member()
+        }, recursive_parse_args = True)
+
+        return item + money
+
+
+    def battle_end(self, dead:BattleMember, mode:BattleMode, damage:Tuple[int, bool]) -> str:
+        icon_hunt:str = "☠️" if (mode == BattleMode.HUNT and type(dead.entity) is User) else "🎯"
+        icon_gladiators:str = "💰" if (dead.bet_money == 0) else "🚽"
+
+        icon:str = icon_hunt if (mode == BattleMode.HUNT) else icon_gladiators
+        return tp.text_replacement(icon + " {{player1}} {{dead}}, получив {{opponent_hit}}", {
+            "player1": dead.short_battle_name,
+            "dead": tp.text_replacement(random.choice(self.battle_dead_description), {
+                **self.random_member(),
+                **self.get_part_cases(dead.protected_parts),
+            }),
+            "opponent_hit" : f"<code>[{(f'🎯{damage[0]}!') if (damage[1]) else (f'💥{damage[0]}') }]</code>",
+        })
+    
