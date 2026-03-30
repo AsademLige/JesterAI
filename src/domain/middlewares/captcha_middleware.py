@@ -15,10 +15,10 @@ class CaptchaStates(StatesGroup):
 
 class CaptchaMiddleware(BaseMiddleware):
     async def __call__(
-            self,
-            handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-            event: TelegramObject,
-            data: Dict[str, Any]
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: Dict[str, Any]
     ) -> Any:
         if (not event.text or (isinstance(event, Message) and event.text and not event.text.startswith(f"/{Commands.pencil}"))):
             if (event): 

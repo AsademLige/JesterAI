@@ -1,6 +1,4 @@
-from datetime import timedelta
-import math
-
+from src.domain.utils.safe_edit import SafeEditMessage
 from src.domain.controllers.battle_controller import BattleController, BattlePhases
 from src.models.battle_member_model import BattleMember, BodyParts, MemberStrategy
 from src.domain.controllers.items_controller import ItemsController
@@ -22,6 +20,8 @@ from aiogram.enums import ParseMode
 from src.data.config import Prefs
 from aiogram.types import Message
 from bot import game_controller
+from datetime import timedelta
+import math
 
 from aiogram import Router, F
 from aiogram import Bot
@@ -65,6 +65,7 @@ async def hunt_init(message: Message, state: FSMContext):
 ###Начало боя
 @rt.callback_query(BattleCF.filter(F.action.in_([a.value for a in MemberStrategy])))
 async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+    if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
@@ -81,13 +82,14 @@ async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF, state
 
     status:Optional[Tuple[str, BattlePhases, BattleMember]] = await game_controller.get_battle_status(user)
     if (status):
-        await callback.message.edit_text(status[0],
+        await SafeEditMessage.safe_edit(callback, status[0],
                                         reply_markup=combat_kb.battle_keyboard(user, battle),
                                         parse_mode=ParseMode.HTML)
 
 ###Действие атаки
 @rt.callback_query(BattleCF.filter(F.action == "attack"))
 async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+    if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
@@ -103,7 +105,7 @@ async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF, state
     status:Optional[Tuple[str, BattlePhases, BattleMember]] = await game_controller.get_battle_status(user)
 
     if (status):
-        await callback.message.edit_text(status[0],
+        await SafeEditMessage.safe_edit(callback, status[0],
                                         reply_markup=combat_kb.battle_keyboard(user, battle) \
                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
                                         parse_mode=ParseMode.HTML)
@@ -111,6 +113,7 @@ async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF, state
 ###Действие защиты
 @rt.callback_query(BattleCF.filter(F.action == "defense"))
 async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+    if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
@@ -138,7 +141,7 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
             for item in items:
                 status_extended += ItemsController.effects_description(item[1]) + "\n"
 
-        await callback.message.edit_text(status_extended,
+        await SafeEditMessage.safe_edit(callback, status_extended,
                                         reply_markup=combat_kb.battle_keyboard(user, battle, items) \
                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
                                         parse_mode=ParseMode.HTML)
@@ -146,6 +149,7 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
 ###Применение предмета лечения
 @rt.callback_query(BattleCF.filter(F.action == "heal"))
 async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+    if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
@@ -167,7 +171,7 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
         message += heal_status[0] + f"\nHP: {BattleController.health_bar(old_hp, battle.active_member.max_hp, heal=heal_status[1])}"
     
     if (heal_status):
-        await callback.message.edit_text(message,
+        await SafeEditMessage.safe_edit(callback, message,
                                         reply_markup=combat_kb.battle_keyboard(user, battle, items),
                                         parse_mode=ParseMode.HTML)
 

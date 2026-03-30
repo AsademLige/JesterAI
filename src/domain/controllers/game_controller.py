@@ -1,3 +1,5 @@
+from aiogram import Bot
+from src.data.config import Prefs
 from src.domain.controllers.battle_controller import BattleController, BattlePhases
 from src.models.battle_member_model import BattleMember
 from src.models.user_stats_model import UserStats
@@ -16,7 +18,9 @@ import math
 class GameController():
     _instance = None
     db = DataBase()
-    __battle_timer:timedelta = timedelta(seconds=30)
+    prefs = Prefs()
+    bot = Bot(token=prefs.bot_token)
+    __battle_timer:timedelta = timedelta(seconds=60)
     __add_time_per_turn:timedelta = timedelta(seconds=15)
     __started_battles:Dict[int, BattleController] = {}
     __battles_history:Dict[int, List[Message]] = {}
@@ -34,7 +38,7 @@ class GameController():
     async def prepare_hunt(self, hunter:User):
         get_boss:bool = False
         
-        delta:timedelta = Utils.get_time_delta(hunter.last_boss_hunt, 12)
+        delta:timedelta = Utils.get_time_delta(hunter.last_boss_hunt)
         if (await self.db.get_place_in_top_by_member(hunter.tg_id, hunter.chat_id) <= 3 and
              math.floor(delta.total_seconds() / 3600) > 0):
             get_boss = True
@@ -80,16 +84,11 @@ class GameController():
 
                     if (battle.mode == BattleMode.HUNT and status[2]):
                         battle_log = await self.__hunt_end_log(started_by, battle, status)
-                    elif (battle.mode == BattleMode.HUNT):
-                        monster:BattleMember = battle.get_opponent()
-                        await self.db.update_user(started_by, {
-                            User.last_hunt.name: datetime.now(),
-                        })
 
-                    await self.__delete_battle(started_by.tg_id, False)
+                    await self.delete_battle(started_by.tg_id, False)
                 return (status[0] + battle_log, status[1], status[2])
                 
-        return ("Произошла ошибка", status[1], status[2])
+            return ("Произошла ошибка", status[1], status[2])
     
     async def __gladiators_log(self, started_by:User, battle:BattleController, 
                                   status:Optional[Tuple[str, BattlePhases, BattleMember]]) -> str:
@@ -124,13 +123,17 @@ class GameController():
                 await self.db.update_user(started_by, {
                     User.money.name: User.money + status[2].inventory[1],
                     User.last_hunt.name: datetime.now(),
-                    User.last_boss_hunt.name: datetime.now() - timedelta(hours=12) if monster.is_boss else User.last_boss_hunt,
+                    User.last_boss_hunt.name: datetime.now() + timedelta(hours=12) if monster.is_boss else User.last_boss_hunt,
                 })):
                 from src.data.dictionary import Dictionary
                 log:str = f"\n\n📦 {Dictionary().hunt_loot(status[2].inventory)}\n" if (status[2].inventory) else ""
                 return log + ("\n<i>Вы победили бедствие, и оно отступило на время... Но очень скоро вернется, длинночлен! "\
                               "(Босс не нападет на вас в течение 12 часов)</i>" if monster.is_boss else "")
             else: return f"Ой, ошибочка вышла..."
+        elif status[2].is_mob or status[2].is_boss:
+            await self.db.update_user(started_by, {
+                User.last_hunt.name: datetime.now(),
+            })
         return ""
         
         
@@ -141,25 +144,30 @@ class GameController():
             await self.db.update_user(member, {
                 User.last_hunt.name: datetime.now(),
             })
-            await self.__delete_battle(member.tg_id, False)
+            await self.delete_battle(member.tg_id, False)
             return status
         else: return None
 
     def __create_battle_timer(self, battle_key, delay:timedelta):
         """Создает таймер на удаление битвы"""
-        task = asyncio.create_task(
+        if battle_key in self.__battles_tasks:
+            old_tasks = self.__battles_tasks[battle_key]
+            for old_task in old_tasks:
+                if not old_task.done():
+                    old_task.cancel()
+
+        new_task = asyncio.create_task(
             self.__create_task_delete_battle(battle_key, delay)
         )
-        if (battle_key in self.__battles_tasks):
-            self.__battles_tasks[battle_key].append(task)
-        else:
-            self.__battles_tasks[battle_key] = [task]
-
-        return task
+        
+        self.__battles_tasks[battle_key] = [new_task]
     
     async def __create_task_delete_battle(self, battle_key, delay:timedelta, additional:timedelta = None):
         """Управляет состоянием задачи на удаление битвы, продлевая таймер при необходимости"""
         await asyncio.sleep(additional.total_seconds() if (additional) else delay.total_seconds())
+
+        if battle_key not in self.__started_battles:
+            return
 
         if (battle_key in self.__started_battles):
             if (self.__started_battles[battle_key].battle_timer > delay):
@@ -167,9 +175,9 @@ class GameController():
                                         self.__started_battles[battle_key].battle_timer - delay)
                 return
 
-        await self.__delete_battle(battle_key)
+        await self.delete_battle(battle_key)
 
-    async def __delete_battle(self, battle_key, clear_history:bool = True):
+    async def delete_battle(self, battle_key:int, clear_history:bool = True):
         """Удаляет экземпляр битвы через указанный интервал"""
         if battle_key in self.__started_battles:
             if (battle_key in self.__battles_tasks):
@@ -180,7 +188,18 @@ class GameController():
                     except:
                         pass
 
-            if (clear_history):
+            if (battle_key in self.__battles_history):
+                if (self.__battles_history[battle_key] and self.__started_battles[battle_key].mode == BattleMode.HUNT 
+                    and not self.__started_battles[battle_key].phase == BattlePhases.BATTLE_END):
+                    user:User = await self.db.get_user_by_chat_id(battle_key, 
+                                                            self.__battles_history[battle_key][0].chat.id)
+                    await self.db.update_user(user, {
+                        User.last_hunt.name: datetime.now(),
+                    })
+                    await self.bot.send_message(self.__battles_history[battle_key][0].chat.id, 
+                                                "💀 Время вышло, охотник пропал без вести!")
+
+            if (clear_history and battle_key in self.__battles_history):
                 for message in self.__battles_history[battle_key]:
                     try:
                         await message.delete()
