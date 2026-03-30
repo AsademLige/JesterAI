@@ -5,6 +5,7 @@ from src.keyboards.gamba_house_keyboard import GambaHouseKeyboard
 from aiogram.types import FSInputFile, Message, CallbackQuery
 from src.keyboards.battle_keyboard import BattleKeyboard
 from src.models.battle_member_model import BattleMember
+from src.domain.utils.safe_edit import SafeEditMessage
 from src.models.user_stats_model import UserStats
 from src.handlers.commands import Commands as cn
 from aiogram.filters import Command, StateFilter
@@ -324,11 +325,13 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
+    global game_controller
 
     if (user.tg_id != callback_data.user_id or not callback_data.bet):
         return
 
     if (user.money < callback_data.bet):
+        await game_controller.delete_battle(user.tg_id)
         await callback.message.delete()
         answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
                             parse_mode=ParseMode.HTML)
@@ -342,7 +345,6 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
     await db.update_user_status(user.id, 
         {UserStats.gladiators_bet.name :  UserStats.gladiators_bet + callback_data.bet})
     
-    global game_controller
     battle:BattleController = game_controller.get_battle(user)
 
     if (battle.phase == BattlePhases.PREPARE):
@@ -361,6 +363,8 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
 ###Бой гладиаторов
 @rt.callback_query(GladiatorsCF.filter(F.action == "gladiators_fight"))
 async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF, state: FSMContext):
+    if (await SafeEditMessage.is_locked(callback)): return
+
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
@@ -373,7 +377,7 @@ async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF,
     status:Optional[Tuple[str, BattlePhases, Optional[BattleMember]]] = await game_controller.get_battle_status(user)
 
     if (status):
-        await callback.message.edit_text(status[0],
+        await SafeEditMessage.safe_edit(callback,status[0],
                                         reply_markup=combat_kb.battle_keyboard(user, battle) \
                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
                                         parse_mode=ParseMode.HTML)
