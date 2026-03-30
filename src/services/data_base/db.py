@@ -369,13 +369,11 @@ class DataBase():
                 if (existed_discount):
                     await ProductDiscounts.update.where(ProductDiscounts.product_id == discount_item.id).\
                         values(is_active=True, discount_percent = random.choice([25, 35, 45, 50])).gino.status()
-                    print(f"update_discount {discount_item.title}")
                     discounts.append((existed_discount, discount_item))
                 else:
-                    print(f"new_discount {discount_item.title}")
                     new_discount = ProductDiscounts(
                         product_id = discount_item.id,
-                        discount_percent = random.choice([25, 50])
+                        discount_percent = random.choice([25, 35, 45, 50])
                     )
                     await new_discount.create()
                     discounts.append((new_discount, discount_item))
