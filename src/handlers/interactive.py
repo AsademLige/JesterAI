@@ -1,7 +1,4 @@
-from src.domain.controllers.rights_controller import RightsController
 from src.keyboards.interactive_keyboard import InteractiveKeyboard
-from src.keyboards.callback_fabrics import DiceGameCF
-from src.models.user_stats_model import UserStats
 from src.handlers.commands import Commands as cn
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -12,10 +9,9 @@ from datetime import timedelta, datetime
 from src.domain.utils.utils import Utils
 from src.models.user_model import User
 from aiogram.enums import ParseMode
+from typing import Dict, List, Tuple
 from src.data.config import Prefs
 from aiogram.types import Message
-from typing import List
-import asyncio
 import random
 import math
 
@@ -26,6 +22,7 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
+marked_users:Dict[int, Tuple[datetime, datetime]] = {}
 db = DataBase()
 rt = Router()
 
@@ -100,6 +97,19 @@ async def process_pagination(callback: CallbackQuery):
 @rt.callback_query(lambda c: c.data.startswith('close_pagination'))
 async def delete_winners_log_table(callback: CallbackQuery):
     await callback.message.delete()
-    
+
+@rt.message(~F.text.contains("/"))
+async def mark_user(message: Message):
+    if (message.from_user.id in marked_users):
+        if ((datetime.now() - marked_users[message.from_user.id][0]).total_seconds() > 600):
+            del marked_users[message.from_user.id]
+        else:
+            if ((datetime.now() - marked_users[message.from_user.id][1]).total_seconds() > 30):
+                marked_users[message.from_user.id] = (marked_users[message.from_user.id][0], datetime.now())
+                await message.answer(random.choice(["👆Этот в харче👆", "👆Этот натурал👆", 
+                                                    "👆Этот натурал👆", "👆Этот из IBS👆", 
+                                                    "👆Этот техник стажер👆", "👆Этого Снежа поцелует👆",
+                                                    "👆Этому под хвост накончают👆",
+                                                    "👆Этот микрочлен👆"]))
 
 

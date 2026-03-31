@@ -1,5 +1,3 @@
-import random
-
 from src.models.user_inventory_item_model import UserInventoryItem
 from src.domain.utils.text_processing import TextProcessing as tp
 from src.models.battle_member_model import BattleMember
@@ -8,13 +6,14 @@ from src.data.dictionary import Dictionary
 from src.domain.utils.utils import Utils
 from datetime import datetime, timedelta
 from aiogram.utils.markdown import hcode
+from typing import List, Optional, Tuple
 from src.models.user_model import User
 from src.models.item_model import Item
-from typing import List, Optional, Tuple
 from src.data.config import Prefs
 from random import Random
 from aiogram import Bot
 from enum import Enum
+import random
 import json
 
 db = DataBase()
@@ -27,10 +26,11 @@ class ItemActions(Enum):
     dice_timer_decresc = "dice_timer_decresc"
     subtract_length = "subtract_length"
     add_length = "add_length"
-    heal = "heal"
+    mark_user = "mark_user"
     steal_item = "steal_item"
     steal_money = "steal_money"
     effects = "effects"
+    heal = "heal"
 
 class ItemsController():
     @staticmethod
@@ -103,9 +103,16 @@ class ItemsController():
                     "money": dict.money_wrapper(steal_count)}
                 usage_result += f"{tp.text_replacement(dict.item_steal_money, args, recursive_parse_args=True)}\n"
             else:
-                usage_result += f"🐀 Попытка кражи не удалась, {user_link} оказался нищуком!\n"
+                usage_result += f"🐀 Попытка кражи не удалась, {target_link} оказался нищуком!\n"
+
+        if (ItemActions.mark_user.name in effects):
+            from src.handlers.interactive import marked_users
+            marked_users[target.tg_id if target else user.tg_id] = (datetime.now(), datetime.now())
+            await db.user_item_transaction(user, item[1], -1)
+            usage_result += f"🦠 {user_link} вешает метку на {target_link if target_link else user_link}"
         
         return usage_result
+        
     
     @staticmethod
     def is_heal_item(item:Item) -> bool:
