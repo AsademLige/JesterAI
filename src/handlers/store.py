@@ -53,6 +53,7 @@ async def store(message: Message, state: FSMContext):
                                   parse_mode=ParseMode.HTML)
     
     if (await Utils.delete_old_message([answer], 60)):
+        products.clear
         answer = await bot.send_message(user.chat_id, dict.store_exit(user),
                                         parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([answer], 5)
