@@ -1,77 +1,81 @@
-from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
-from typing import Dict, Optional, Union
 import asyncio
+
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
+from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
+from typing import Union, Optional, Dict
 import time
 
-class SafeEditMessage():
+class SafeEditMessage:
     _last_updates: Dict[str, float] = {}
-    _min_interval: float = 0.8
+    _pending_tasks: Dict[str, asyncio.Task] = {}
+    _min_interval: float = 1.2
 
     @classmethod
-    async def safe_edit(
-        cls, 
-        event: Union[Message, CallbackQuery], 
-        text: str, 
-        reply_markup: Optional[InlineKeyboardMarkup] = None,
-        parse_mode: str = "HTML"
-    ) -> bool:
-        """
-        Безопасно редактирует сообщение. 
-        Если это CallbackQuery, всегда подтверждает его (убирает загрузку).
-        """
-        now = time.time()
-        
+    async def safe_edit(cls, event: Union[Message, CallbackQuery], text: str, **kwargs) -> bool:
         message = event.message if isinstance(event, CallbackQuery) else event
-        chat_id = message.chat.id
-        msg_id = message.message_id
-        key = f"{chat_id}:{msg_id}"
+        key = f"{message.chat.id}:{message.message_id}"
+        
+        if isinstance(event, CallbackQuery):
+            try: await event.answer()
+            except: pass
 
-        last_update = cls._last_updates.get(key, 0)
-        if now - last_update < cls._min_interval:
-            return False 
+        if key in cls._pending_tasks:
+            cls._pending_tasks[key].cancel()
 
+        task = asyncio.create_task(cls._bg_worker(key, message, text, **kwargs))
+        cls._pending_tasks[key] = task
+        
+        return True
+        
+    @classmethod
+    async def _bg_worker(cls, key: str, message: Message, text: str, **kwargs):
+        """Фоновый исполнитель с обработкой лимитов и ошибок API"""
         try:
-            cls._last_updates[key] = now
-            await message.edit_text(
-                text=text, 
-                reply_markup=reply_markup, 
-                parse_mode=parse_mode
-            )
-            return True
+            now = time.time()
+            wait = cls._min_interval - (now - cls._last_updates.get(key, 0))
+            
+            if wait > 0:
+                await asyncio.sleep(wait)
+
+            await message.edit_text(text=text, **kwargs)
+            cls._last_updates[key] = time.time()
+
+        except asyncio.CancelledError:
+            pass
 
         except TelegramRetryAfter as e:
+            print("receive TelegramRetryAfter")
             await asyncio.sleep(e.retry_after)
             try:
-                await message.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
-                return True
+                await message.edit_text(text=text, **kwargs)
+                cls._last_updates[key] = time.time()
             except:
-                return False
+                pass
 
         except TelegramBadRequest as e:
             if "message is not modified" in e.message:
-                return True
-            return False
-        
-    @classmethod
-    def _get_key(cls, event: Union[Message, CallbackQuery]) -> str:
-        """Вспомогательный метод для генерации уникального ключа сообщения"""
-        message = event.message if isinstance(event, CallbackQuery) else event
-        return f"{message.chat.id}:{message.message_id}"
+                cls._last_updates[key] = time.time()
+            pass
 
+        except Exception as e:
+            print(f"Критическая ошибка SafeEdit: {e}")
+
+        finally:
+            if cls._pending_tasks.get(key) == asyncio.current_task():
+                cls._pending_tasks.pop(key, None)
+        
     @classmethod
     async def is_locked(cls, event: Union[Message, CallbackQuery]) -> bool:
-        """
-        Проверяет, заблокировано ли редактирование для этого сообщения.
-        """
-        key = cls._get_key(event)
+        message = event.message if isinstance(event, CallbackQuery) else event
+        key = f"{message.chat.id}:{message.message_id}"
         now = time.time()
+        
         last_update = cls._last_updates.get(key, 0)
         
-        if isinstance(event, CallbackQuery):
-            try:
-                await event.answer() 
-            except Exception:
-                pass
-
-        return (now - last_update) < cls._min_interval
+        if (now - last_update) < cls._min_interval:
+            if isinstance(event, CallbackQuery):
+                try: await event.answer() 
+                except: pass
+            return True 
+            
+        return False
