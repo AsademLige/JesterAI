@@ -125,7 +125,7 @@ class BattleMember():
         self.__protected_parts = []
         self.__last_turn_result = None
         self.__crit_chance = entity.crit_chance if type(self.entity) is Monster else 15
-        self.__max_hp = entity.health if type(self.entity) is Monster else 9999
+        self.__max_hp = entity.health if type(self.entity) is Monster else 35
         self.__hp = self.__max_hp
         self.utf8_icon = entity.utf8_icon if entity.utf8_icon else random.choice(["🥷","🧝‍♂️","🧙🏿‍♂️","🧙🏼"])
         self.__inventory = drop if (self.is_monster) else None
