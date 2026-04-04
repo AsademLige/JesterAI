@@ -35,7 +35,7 @@ class GameController():
         if not hasattr(self, 'initialized'):
             self.initialized = True
 
-    async def prepare_hunt(self, hunter:User):
+    async def prepare_hunt(self, hunter:User) -> Tuple[str, BattleController]:
         get_boss:bool = False
         
         delta:timedelta = Utils.get_time_delta(hunter.last_boss_hunt)
@@ -48,7 +48,7 @@ class GameController():
             await self.db.user_item_transaction(hunter, heal_item)
 
         self.__started_battles[hunter.tg_id] = await BattleController.hunt(hunter, boss=get_boss)
-        return self.__started_battles[hunter.tg_id].prepare_battle()
+        return (self.__started_battles[hunter.tg_id].prepare_battle(), self.__started_battles[hunter.tg_id])
     
     async def prepare_gladiators(self, started_by:User):
         self.__started_battles[started_by.tg_id] = await BattleController.gladiators()

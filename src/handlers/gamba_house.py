@@ -364,7 +364,6 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
 @rt.callback_query(GladiatorsCF.filter(F.action == "gladiators_fight"))
 async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF, state: FSMContext):
     if (await SafeEditMessage.is_locked(callback)): return
-
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
