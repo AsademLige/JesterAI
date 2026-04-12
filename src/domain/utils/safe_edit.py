@@ -31,11 +31,11 @@ class SafeEditMessage:
     async def _bg_worker(cls, key: str, message: Message, text: str, **kwargs):
         """Фоновый исполнитель с обработкой лимитов и ошибок API"""
         try:
-            now = time.time()
-            wait = cls._min_interval - (now - cls._last_updates.get(key, 0))
+            # now = time.time()
+            # wait = cls._min_interval - (now - cls._last_updates.get(key, 0))
             
-            if wait > 0:
-                await asyncio.sleep(wait)
+            # if wait > 0:
+            #     await asyncio.sleep(wait)
 
             await message.edit_text(text=text, **kwargs)
             cls._last_updates[key] = time.time()
@@ -45,6 +45,7 @@ class SafeEditMessage:
 
         except TelegramRetryAfter as e:
             print("receive TelegramRetryAfter")
+            await message.answer(f"⛔️ Слишком часто, попробуй через {e.retry_after}")
             await asyncio.sleep(e.retry_after)
             try:
                 await message.edit_text(text=text, **kwargs)
@@ -67,7 +68,7 @@ class SafeEditMessage:
     @classmethod
     async def is_locked(cls, event: Union[Message, CallbackQuery]) -> bool:
         message = event.message if isinstance(event, CallbackQuery) else event
-        key = f"{message.chat.id}:{message.message_id}"
+        key = f"{message.from_user.id}:{message.message_id}"
         now = time.time()
         
         last_update = cls._last_updates.get(key, 0)

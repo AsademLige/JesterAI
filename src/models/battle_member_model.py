@@ -149,7 +149,7 @@ class BattleMember():
         total_damage:int = 0
         is_crit:bool = False
 
-        modifier:float = 0.75 if (self.strategy == MemberStrategy.DEFENSE) else \
+        modifier:float = 0.75 if (self.strategy == MemberStrategy.DEFENSE and self.is_player) else \
                     1.25 if (self.strategy == MemberStrategy.AGGRESSIVE) else 1
         
         print(f"{self.short_battle_name} modifier: {modifier}")

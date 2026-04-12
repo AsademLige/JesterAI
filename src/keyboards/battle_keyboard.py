@@ -4,7 +4,7 @@ from src.models.user_inventory_item_model import UserInventoryItem
 from src.keyboards.callback_fabrics import BattleCF, GladiatorsCF
 from src.domain.utils.enums import AttackStatus, BattleMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, Message
 from aiogram.types import InlineKeyboardButton
 from src.data.dictionary import Dictionary
 from typing import List, Optional, Tuple
@@ -19,6 +19,14 @@ dict = Dictionary()
 class BattleKeyboard():
     def __init__(self):
         pass
+    
+    def link_keyboard(self, link:str) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+
+        builder.add(InlineKeyboardButton(text="⚔️", url=link))
+
+        builder.adjust(1) 
+        return builder.as_markup()
     
     def battle_keyboard(self, user:User, ctrl:BattleController, 
                         usable:Optional[List[Tuple[UserInventoryItem, Item]]] = None) -> InlineKeyboardMarkup:
@@ -47,9 +55,9 @@ class BattleKeyboard():
                                         user_id=user.tg_id).pack()))
         
         if (ctrl.phase == BattlePhases.PREPARE or ctrl.active_member.strategy == MemberStrategy.DEFENSE):
-                builder.add(InlineKeyboardButton(text="💨 Побег",
-                        callback_data=BattleCF(action="escape", 
-                                                user_id=user.tg_id).pack()))
+                # builder.add(InlineKeyboardButton(text="💨 Побег",
+                #         callback_data=BattleCF(action="escape", 
+                #                                 user_id=user.tg_id).pack()))
                 
                 if (ctrl.phase == BattlePhases.REST):
                         for i in range(len(usable)):

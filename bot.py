@@ -34,8 +34,7 @@ scheduler = Scheduler()
 game_controller = GameController()
 
 async def main():
-    dp.include_routers(start.rt, 
-                      create_sticker_set.rt,
+    dp.include_routers(create_sticker_set.rt,
                       edit_sticker_set.rt,
                       send_media.rt,
                       interactive.rt,
@@ -45,6 +44,9 @@ async def main():
                       store.rt,
                       hunt.rt,
                       user.rt,
+                      ### /hunt имеет свой /start с параметрами, 
+                      ### поэтому находиться выше
+                      start.rt, 
                       )
     dp.message.outer_middleware(RegistrationMiddleware())
     dp.message.outer_middleware(CaptchaMiddleware())
