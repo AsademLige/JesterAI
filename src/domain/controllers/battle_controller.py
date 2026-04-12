@@ -195,11 +195,11 @@ class BattleController():
             self.__phase = BattlePhases.BATTLE_END
             if (self.mode == BattleMode.HUNT):
                 opponent.loot_by(self.__active_member)
-            turn_result = self.dict.battle_end(opponent, self.__mode, (opponent_status[1], opponent_status[2]))
+            turn_result = self.dict.battle_end(opponent, self.__active_member, self.__mode, (opponent_status[1], opponent_status[2]))
             return (turn_result, self.__phase, self.__active_member)
         elif (status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
-            turn_result = self.dict.battle_end(self.__active_member, self.__mode, (status[1], status[2]))
+            turn_result = self.dict.battle_end(self.__active_member, opponent, self.__mode, (status[1], status[2]))
             return (turn_result, self.__phase, opponent)
 
         turn_result += self.dict.battle_turn_log(self.__active_member, opponent, 

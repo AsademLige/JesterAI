@@ -1,4 +1,6 @@
+import base64
 from datetime import timedelta, datetime
+import json
 from typing import List, Any, Optional
 from aiogram.types import Message
 import asyncio

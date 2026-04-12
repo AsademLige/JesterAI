@@ -129,7 +129,7 @@ class Dictionary():
     length_add_target:str = "💊 {{user_link1}} взял {{item_title}} и увеличил у {{user_link2}} {{pencil_accu}} на {{length}}!"
     length_add:str = "💊 {{user_link1}} взял {{item_title}} и увеличил {{pencil_accu}} на {{length}}!"
 
-    private_messages_restriction:str = "🚧 Здесь тебе(🤡) делать нечего 🚧"
+    private_messages_restriction:str = "🚧 такое тебе(🤡) тут делать ПОКА ЧТО запрещено 🚧"
 
     __user_link_m2 : str = '[{{full_name}}](tg://user?id={{tg_id}})'
 
@@ -946,13 +946,14 @@ class Dictionary():
         return item + money
 
 
-    def battle_end(self, dead:BattleMember, mode:BattleMode, damage:Tuple[int, bool]) -> str:
+    def battle_end(self, dead:BattleMember, winner:BattleMember, mode:BattleMode, damage:Tuple[int, bool]) -> str:
         icon_hunt:str = "☠️" if (mode == BattleMode.HUNT and type(dead.entity) is User) else "🎯"
         icon_gladiators:str = "💰" if (dead.bet_money == 0) else "🚽"
 
         icon:str = icon_hunt if (mode == BattleMode.HUNT) else icon_gladiators
-        return tp.text_replacement(icon + " {{player1}} {{dead}}, получив {{opponent_hit}}", {
+        return tp.text_replacement(icon + " {{player1}} {{dead}}, получив {{opponent_hit}}, {{winner}} празднует победу!", {
             "player1": dead.short_battle_name,
+            "winner" : winner.short_battle_name,
             "dead": tp.text_replacement(random.choice(self.battle_dead_description), {
                 **self.random_member(),
                 **self.get_part_cases(dead.protected_parts),
