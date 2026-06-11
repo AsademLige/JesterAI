@@ -36,7 +36,7 @@ jobs:
           context: .
           push: true
           # Называем образ именем вашего репозитория и ставим тег "latest"
-          tags: ghcr.io/${{ github.repository }}:latest
+          tags: ghcr.io/asademlige/jesterai:latest
 
       # 4. Подключаемся к вашему Debian-серверу и обновляем контейнер
       - name: Deploy to Server via SSH
