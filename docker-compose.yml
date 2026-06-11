@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: ${pg_user}
+      POSTGRES_PASSWORD: ${pg_password}
+      POSTGRES_DB: ${database}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  bot:
+    build: .
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - .env
+    volumes:
+      - /usr/local/jester/JesterAI/media:/usr/local/jester/JesterAI/media
+    environment:
+      DB_HOST: db
+      PYTHONUNBUFFERED: 1
+
+volumes:
+  postgres_data:
