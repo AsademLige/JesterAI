@@ -66,6 +66,8 @@ async def get_media_by_sticker(message: Message):
         print(f"error media none")
         return None
     
+    print(f"prepare to send... ")
+    
     await bot.send_video(message.chat.id, media,
                          caption=f"Отправил: {dict.user_wrapper(user)}" if (user) else "",
                          parse_mode=ParseMode.HTML)

@@ -13,18 +13,18 @@ class RegistrationMiddleware(BaseMiddleware):
             data: Dict[str, Any]
     ) -> Any:
         if isinstance(event, Message) or isinstance(event, CallbackQuery):
-            if (event.chat.type == "private" and await UserController.is_admin(event.from_user)):
-                return await handler(event, data)
-            elif (event.chat.type == "private" and not await UserController.is_admin(event.from_user)):
-                return event.answer(Dictionary.private_messages_restriction)
-
-            # if (event.chat.type == "private" and isinstance(event, Message) and not "start" in event.text):
-            #     return event.answer(Dictionary.private_messages_restriction)
-            
-            # if (await UserController.is_registered_in_chat(event.from_user, event.chat.id)):
+            # if (event.chat.type == "private" and await UserController.is_admin(event.from_user)):
             #     return await handler(event, data)
-            # else:
-            #     await event.answer(await UserController.register_user(event.from_user, event.chat), 
-            #                        parse_mode=ParseMode.HTML)
+            # elif (event.chat.type == "private" and not await UserController.is_admin(event.from_user)):
+            #     return event.answer(Dictionary.private_messages_restriction)
+
+            if (event.chat.type == "private" and isinstance(event, Message) and not "start" in event.text):
+                return event.answer(Dictionary.private_messages_restriction)
+            
+            if (await UserController.is_registered_in_chat(event.from_user, event.chat.id)):
+                return await handler(event, data)
+            else:
+                await event.answer(await UserController.register_user(event.from_user, event.chat), 
+                                   parse_mode=ParseMode.HTML)
         else:
             return await handler(event, data)
