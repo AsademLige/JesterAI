@@ -77,7 +77,7 @@ def get_media_by_custom_sticker(custom_sticker: CustomSticker) -> Optional[Input
         with open(custom_sticker.media_path, "rb") as output_file_handler:
             return BufferedInputFile(output_file_handler.read(), custom_sticker.sticker_id)
     except Exception as e:
-        print(f"can't open file by path: {e}")
+        print(f"can't open file by path: {custom_sticker.media_path}")
 
 def save_file(source:bytes, file_name: str) -> Optional[str]:
     try:
