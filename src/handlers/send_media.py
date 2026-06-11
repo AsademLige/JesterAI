@@ -59,6 +59,8 @@ async def get_media_by_sticker(message: Message):
         print(f"delete message error: {e}")
 
     loading_message = await bot.send_message(message.chat.id, "Ждем, пока телега распердится...")
+
+    print(f"prepare to parse... ")
     
     media : Optional[InputFile] = get_media_by_custom_sticker(custom_sticker)
 
