@@ -1,8 +1,8 @@
 from aiogram.types import User, Chat, ChatMemberAdministrator, ChatMemberOwner
-from src.domain.utils.text_processing import TextProcessing as tp
-from src.services.data_base.db import DataBase
-from src.data.dictionary import Dictionary
-from src.data.config import Prefs
+from core.utils.text_processing import TextProcessing as tp
+from core.data.datasource import DataBase
+from core.consts.dictionary import Dictionary
+from core.consts.config import Prefs
 from typing import Optional
 from random import Random
 from aiogram import Bot

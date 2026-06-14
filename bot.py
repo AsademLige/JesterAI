@@ -1,23 +1,24 @@
-from src.domain.middlewares.registration_middleware import RegistrationMiddleware
-from src.domain.middlewares.captcha_middleware import CaptchaMiddleware
-from src.domain.controllers.game_controller import GameController
-import src.handlers.create_sticker_set as create_sticker_set
-import src.handlers.edit_sticker_set as edit_sticker_set
-from src.services.scheduler.scheduler import Scheduler
-import src.handlers.interactive as interactive
-import src.handlers.gamba_house as gamba_house
-import src.handlers.send_media as send_media
-from src.data.dictionary import Dictionary
-from src.models.db_model import on_startup
-from src.handlers.commands import Commands
-import src.handlers.captcha as captcha
-import src.handlers.system as system
+from apps.tg_bot.middlewares.registration_middleware import RegistrationMiddleware
+from apps.tg_bot.middlewares.captcha_middleware import CaptchaMiddleware
+import apps.tg_bot.handlers.create_sticker_set as create_sticker_set
+import apps.tg_bot.handlers.edit_sticker_set as edit_sticker_set
+from features.battles.game_controller import GameController
+from core.services.data_base.db_model import on_startup
+import apps.tg_bot.handlers.interactive as interactive
+import apps.tg_bot.handlers.gamba_house as gamba_house
+import apps.tg_bot.handlers.send_media as send_media
+from features.scheduler.scheduler import Scheduler
+from core.consts.dictionary import Dictionary
+import apps.tg_bot.handlers.captcha as captcha
+import apps.tg_bot.handlers.system as system
+import apps.tg_bot.handlers.store as store
+import apps.tg_bot.handlers.start as start
+from apps.tg_bot.commands import Commands
+import apps.tg_bot.handlers.hunt as hunt
+import apps.tg_bot.handlers.user as user
+from apps.tg_bot.handlers import hub
+from core.consts.config import Prefs
 from aiogram import Bot, Dispatcher
-import src.handlers.store as store
-import src.handlers.start as start
-from src.data.config import Prefs
-import src.handlers.hunt as hunt
-import src.handlers.user as user
 import logging
 import asyncio
 
@@ -44,6 +45,7 @@ async def main():
                       store.rt,
                       hunt.rt,
                       user.rt,
+                      hub.rt,
                       ### /hunt имеет свой /start с параметрами, 
                       ### поэтому находиться выше
                       start.rt, 

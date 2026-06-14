@@ -43,10 +43,14 @@
         "pytz",
         "quantumrandom"
     ],
+    "material-icon-theme.opacity": 0.5,
     "explorer.decorations.colors": true,
     "explorer.decorations.badges": true,
     "workbench.colorCustomizations": {
         "gitDecoration.addedResourceForeground": "#3EB58F",
         "gitDecoration.modifiedResourceForeground": "#3EB58F",
+    },
+    "material-icon-theme.files.associations": {
+        "*.py": "python",
     },
 }
