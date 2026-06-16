@@ -1,12 +1,18 @@
-from domain.controllers.user_controller import UserController
-from aiogram.types import Message, CallbackQuery, TelegramObject
-from typing import Any, Callable, Dict, Awaitable
+from aiogram.types import Chat, ChatMemberAdministrator, ChatMemberOwner, Message, CallbackQuery, TelegramObject, User
+from features.user.data.user_repository import UserRepository
+from typing import Any, Callable, Dict, Awaitable, Optional
+from features.user.domain.user_manager import UserManager
 from core.consts.dictionary import Dictionary
 from aiogram.enums import ParseMode
 from aiogram import BaseMiddleware
+from random import Random
 
 class RegistrationMiddleware(BaseMiddleware):
-     async def __call__(
+    user_mr:UserManager = UserManager()
+    user_repo:UserRepository = UserRepository()
+    dict:Dictionary = Dictionary()
+
+    async def __call__(
             self,
             handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
             event: TelegramObject,
@@ -16,10 +22,25 @@ class RegistrationMiddleware(BaseMiddleware):
             if (event.chat.type == "private" and isinstance(event, Message) and not "start" in event.text):
                 return event.answer(Dictionary.private_messages_restriction)
             
-            if (await UserController.is_registered_in_chat(event.from_user, event.chat.id)):
+            if (await self.user_mr.is_registered_in_chat(event.from_user.id, event.chat.id)):
                 return await handler(event, data)
             else:
-                await event.answer(await UserController.register_user(event.from_user, event.chat), 
+                await event.answer(await self.register_user(event.from_user.id, event.chat), 
                                    parse_mode=ParseMode.HTML)
         else:
             return await handler(event, data)
+        
+
+    async def register_user(self, user: User, chat: Chat) -> str:
+        length : int = Random().randint(10, 30)
+        from bot import bot
+        member  = await bot.get_chat_member(chat.id, user.id)
+        custom_title : Optional[str] = None
+
+        if (type(member) is ChatMemberAdministrator or type(member) is ChatMemberOwner):
+            custom_title = member.custom_title
+
+        if (await self.user_repo.add_user(user.id, user.full_name, length, custom_title, chat.id)):
+            return self.dict.first_meet(user.full_name, user.id, length, custom_title)
+        else:
+            return self.dict.error

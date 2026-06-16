@@ -1,17 +1,19 @@
-from features.items.data.models.user_inventory_item_model import UserInventoryItem
+from features.user.data.dtos.inventory_item_dto import InventoryItem
+from features.user.data.dtos.user_dto import User
+from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from core.utils.text_processing import TextProcessing as tp
 from features.battles.battle_unit_entity import BattleUnit
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from core.consts.dictionary import Dictionary
 from core.utils.utils import Utils
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
-from core.data.models.user_model import User
-from features.items.data.models.item_model import Item
 from core.consts.config import Prefs
 from enum import Enum
 import random
 import json
+
+from features.user.data.models.user_model_orm import UserORM
 
 db = DataBase()
 dict = Dictionary()
@@ -30,9 +32,9 @@ class ItemActions(Enum):
 
 class ItemsController():
     @staticmethod
-    async def use_item(user: User, item: Tuple[UserInventoryItem, Item], 
+    async def use_item(user: User, item: InventoryItem, 
                        target:Optional[User] = None) -> Optional[str]:
-        action = json.loads(item[1].action)
+        action = json.loads(item.action)
         effects = action[ItemActions.effects.name]
         user_link:str = dict.get_user_link(user.tg_name, user.tg_id)
         target_link:str = dict.get_user_link(target.tg_name, target.tg_id) if target else ""
@@ -40,11 +42,11 @@ class ItemsController():
 
         if (ItemActions.subtract_length.name in effects and
             await ItemsController.length_change_effect(user, 
-                                                       target if target else user, item[1], 
+                                                       target if target else user, item, 
                                                        Utils.try_parse_int(effects[ItemActions.subtract_length.name]))):
                 args = {"user_link1":user_link,
                         "user_link2":target_link,
-                        "item_title":f"<code>{item[1].title}</code>",
+                        "item_title":f"<code>{item.title}</code>",
                         "length": dict.length_wrapper(Utils.try_parse_int(effects[ItemActions.subtract_length.name])),
                         **dict.random_member()}
                 message = dict.length_decresc_target if target else dict.length_decresc
@@ -52,50 +54,50 @@ class ItemsController():
             
         if (ItemActions.add_length.name in effects and
             await ItemsController.length_change_effect(user, 
-                                                       target if target else user, item[1], 
+                                                       target if target else user, item, 
                                                        Utils.try_parse_int(effects[ItemActions.add_length.name]))):
             args = {"user_link1":user_link,
                     "user_link2":target_link,
-                    "item_title":f"<code>{item[1].title}</code>",
+                    "item_title":f"<code>{item.title}</code>",
                     "length": dict.length_wrapper(Utils.try_parse_int(effects[ItemActions.add_length.name])),
                     **dict.random_member()}
             message = dict.length_add_target if target else dict.length_add
             usage_result += f"{tp.text_replacement(message,args, recursive_parse_args=True)}\n"
 
         if (ItemActions.pencil_timer_decresc.name in effects and
-            await ItemsController.reset_pencil_timer(user, target if target else user, item[1])):
+            await ItemsController.reset_pencil_timer(user, target if target else user, item)):
             args = {"user_link1":user_link,
                         "user_link2":target_link,
-                    "item_title":f"<code>{item[1].title}</code>",
+                    "item_title":f"<code>{item.title}</code>",
                     **dict.random_member()}
             message = dict.pencil_timer_decresc_target if target else dict.pencil_timer_decresc
             usage_result += f"{tp.text_replacement(message,args, recursive_parse_args=True)}\n"
 
         if (ItemActions.dice_timer_decresc.name in effects and
-            await ItemsController.reset_dice_game_timer(user, target if target else user, item[1])):
+            await ItemsController.reset_dice_game_timer(user, target if target else user, item)):
             args = {"user_link1":user_link,
                     "user_link2":target_link,
-                    "item_title":f"<code>{item[1].title}</code>"}
+                    "item_title":f"<code>{item.title}</code>"}
             message = dict.dice_game_timer_decresc_target if target else dict.dice_game_timer_decresc
             usage_result += f"{tp.text_replacement(message,args, recursive_parse_args=True)}\n"
 
         if (ItemActions.steal_item.name in effects):
-            steal_item = await ItemsController.steal_item(user, target, item[1])
+            steal_item = await ItemsController.steal_item(user, target, item)
             if (steal_item):
                 args = {"user_link1":user_link,
                     "user_link2":target_link,
-                    "item_title":f"<code>{item[1].title}</code>",
-                    "steal_item_title": f"<code>{item[1].title}</code>"}
+                    "item_title":f"<code>{item.title}</code>",
+                    "steal_item_title": f"<code>{item.title}</code>"}
                 usage_result += f"{tp.text_replacement(dict.item_steal_usage, args, recursive_parse_args=True)}\n"
             else:
                 usage_result += f"🐀 Попытка кражи не удалась, {user_link} оказался нищуком!\n"
 
         if (ItemActions.steal_money.name in effects):
             steal_count = Utils.try_parse_int(effects[ItemActions.steal_money.name])
-            if (await ItemsController.steal_money(user, target, item[1],steal_count)):
+            if (await ItemsController.steal_money(user, target, item,steal_count)):
                 args = {"user_link1":user_link,
                     "user_link2":target_link,
-                    "item_title":f"<code>{item[1].title}</code>",
+                    "item_title":f"<code>{item.title}</code>",
                     "money": dict.money_wrapper(steal_count)}
                 usage_result += f"{tp.text_replacement(dict.item_steal_money, args, recursive_parse_args=True)}\n"
             else:
@@ -104,21 +106,21 @@ class ItemsController():
         if (ItemActions.mark_user.name in effects):
             from apps.tg_bot.handlers.interactive import marked_users
             marked_users[target.tg_id if target else user.tg_id] = (datetime.now(), datetime.now())
-            await db.user_item_transaction(user, item[1], -1)
+            await db.user_item_transaction(user, item, -1)
             usage_result += f"🦠 {user_link} вешает метку на {target_link if target_link else user_link}"
         
         return usage_result
         
     
     @staticmethod
-    def is_heal_item(item:Item) -> bool:
+    def is_heal_item(item:InventoryItem) -> bool:
         #TODO:Перенести в модель
         action = json.loads(item.action)
         effects = action[ItemActions.effects.name]
         return ItemActions.heal.name in effects
     
     @staticmethod
-    def is_steal_item(item:Item) -> bool:
+    def is_steal_item(item:InventoryItem) -> bool:
         #TODO:Перенести в модель
         action = json.loads(item.action)
         effects = action[ItemActions.effects.name]
@@ -126,15 +128,15 @@ class ItemsController():
                 ItemActions.steal_money.name in effects
 
     @staticmethod
-    async def use_heal_item(user: User, item: Tuple[UserInventoryItem, Item], 
+    async def use_heal_item(user: User, item: InventoryItem, 
                        target:BattleUnit) -> Optional[Tuple[str, int]]:
-        action = json.loads(item[1].action)
+        action = json.loads(item.action)
         effects = action[ItemActions.effects.name]
         usage_result:str = ""
 
-        if (item[0].quantity > 0 and ItemActions.heal.name in effects and
-            await ItemsController.heal_effect(user, target, item[1], effects[ItemActions.heal.name])):
-            usage_result += f'💊 Предмет <code>"{item[1].title}"</code> восстановил вам <b>{effects[ItemActions.heal.name]}HP</b>'
+        if (item.quantity > 0 and ItemActions.heal.name in effects and
+            await ItemsController.heal_effect(user, target, item, effects[ItemActions.heal.name])):
+            usage_result += f'💊 Предмет <code>"{item.title}"</code> восстановил вам <b>{effects[ItemActions.heal.name]}HP</b>'
 
         if (usage_result):
             return (usage_result, effects[ItemActions.heal.name])
@@ -142,7 +144,7 @@ class ItemsController():
             return None
         
     @staticmethod
-    def effects_description(item:Item) -> str: 
+    def effects_description(item:InventoryItem) -> str: 
         #TODO:Перенести в модель
         action = json.loads(item.action)
         effects = action[ItemActions.effects.name]
@@ -154,55 +156,55 @@ class ItemsController():
 
     
     @staticmethod
-    async def length_change_effect(user: User, target:User, item:Item, length_change:int) -> bool:
+    async def length_change_effect(user: User, target:User, item:InventoryItem, length_change:int) -> bool:
         if (await db.update_user(target, {
-                User.length.name: User.length + length_change,
+                UserORM.length.name: UserORM.length + length_change,
             }) and await db.user_item_transaction(user, item, -1)):
 
             return True
     
     @staticmethod
-    async def reset_dice_game_timer(user: User, target:User, item:Item) -> bool:
+    async def reset_dice_game_timer(user: User, target:User, item:InventoryItem) -> bool:
         if (await db.update_user(target, {
-                User.last_dice_play.name: datetime.now() - timedelta(hours=1)
+                UserORM.last_dice_play.name: datetime.now() - timedelta(hours=1)
             }) and await db.user_item_transaction(user, item, -1)):
 
             return True
         
     @staticmethod
-    async def reset_pencil_timer(user: User, target:User, item:Item) -> bool:
+    async def reset_pencil_timer(user: User, target:User, item:InventoryItem) -> bool:
         if (await db.update_user(target, {
-                User.last_length_check.name: datetime.now() - timedelta(hours=24)
+                UserORM.last_length_check.name: datetime.now() - timedelta(hours=24)
             }) and await db.user_item_transaction(user, item, -1)):
 
             return True
         
     @staticmethod
-    async def heal_effect(user: User, target:BattleUnit, item:Item, hp:int = 0) -> bool:
+    async def heal_effect(user: User, target:BattleUnit, item:InventoryItem, hp:int = 0) -> bool:
         if (await db.user_item_transaction(user, item, -1)):
             target.heal(hp)
             return True
 
     @staticmethod
-    async def steal_item(user: User, target:User, item:Item) -> Optional[Item]:
-        target_inventory:List[Tuple[UserInventoryItem, Item]] = await db.get_user_inventory(target)
-        if (target_inventory):
-            steal_item:Tuple[UserInventoryItem, Item] = random.choice(target_inventory)
-            if (await db.user_item_transaction(user, steal_item[1]) and 
-                await db.user_item_transaction(target, steal_item[1], -1) and
+    async def steal_item(user: User, target:User, item:InventoryItem) -> Optional[InventoryItem]:
+
+        if (target.inventory):
+            steal_item:InventoryItem = random.choice(target.inventory)
+            if (await db.user_item_transaction(user, steal_item) and 
+                await db.user_item_transaction(target, steal_item, -1) and
                 await db.user_item_transaction(user, item, -1)):
-                return steal_item[1]
+                return steal_item
         else:
             return None
         
     @staticmethod
-    async def steal_money(user: User, target:User, item:Item, count:int) -> bool:
+    async def steal_money(user: User, target:User, item:InventoryItem, count:int) -> bool:
         if (target.money >= count):
             if (await db.update_user(target, {
-                    User.money.name: target.money - count
+                    UserORM.money.name: target.money - count
                 })  and
                 await db.update_user(user, {
-                    User.money.name: user.money + count
+                    UserORM.money.name: user.money + count
                 })  and 
                 await db.user_item_transaction(user, item, -1)):
                 return True

@@ -8,3 +8,4 @@ class BotSettings(BaseModel):
     last_captcha_time = sa.Column(sa.Date)
     chat_id = sa.Column(sa.BigInteger)
     alias = sa.Column(sa.Text)
+    events_enabled = sa.Column(sa.Boolean)

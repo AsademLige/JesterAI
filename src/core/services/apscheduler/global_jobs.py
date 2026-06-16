@@ -1,30 +1,29 @@
+from domain.controllers.bot_settings_controller import SettingsController
 from features.store.data.models.discounts_model import ProductDiscounts
-from core.utils.app_herald import AppHerald
+from features.user.data.user_repository import UserRepository
+from features.items.data.models.item_orm import ItemORM
+from features.user.data.dtos.user_dto import User
 from typing import Dict, List, Optional, Tuple
-from core.data.datasource import DataBase
-from core.consts.dictionary import Dictionary
-from features.items.data.models.item_model import Item
-from core.data.models.user_model import User
-from aiogram.enums import ParseMode
+from core.utils.app_herald import AppHerald
+from core.data.data_base import DataBase
 from core.consts.config import Prefs
-from aiogram import Bot
 import logging
 import random
 
-db = DataBase()
-dict = Dictionary()
-prefs = Prefs()
-bot = Bot(token=prefs.bot_token)
-logger:AppHerald = AppHerald()
 
-class SchedulerJobs():
+logger:AppHerald = AppHerald()
+user_repo:UserRepository = UserRepository()
+db = DataBase()
+prefs = Prefs()
+
+class GlobalJobs():
     @staticmethod
-    async def weekly_top():
+    async def weekly_top(notifier_func):
         """
         Еженедельное подведение итогов размера {{pencil_accu}}
         Каждая группа имеет свой топ и своих победителей
         """
-        users: List[User] = await db.get_all_users()
+        users: List[User] = await user_repo.get_users()
         indexed_users: Dict[int, List[User]] = {}
 
         for user in users:
@@ -35,44 +34,43 @@ class SchedulerJobs():
 
         for chat_id in indexed_users:
             try:
+                settings = await SettingsController.get_settings(chat_id, "")
+                if (not settings.events_enabled): continue
+                
                 rewards: List[int] = [15, 10, 5]
                 sorted_users: List[User] = sorted(indexed_users[chat_id], 
                                                     key=lambda u: u.length,
                                                     reverse=True)
                 for index, reward in enumerate(rewards):
                     if (len(sorted_users) > index):
-                        await db.update_user(sorted_users[index], {
+                        await user_repo.update_user(sorted_users[index], {
                             "money" : reward + sorted_users[index].money
                         })
-
-                await bot.send_message(chat_id, 
-                                    dict.weekly_winners(
-                                        sorted_users,
-                                        rewards), 
-                                    parse_mode=ParseMode.HTML)
+                
+                await notifier_func(chat_id, "weekly_winners", {"sorted_users": sorted_users, "rewards": rewards})
             except Exception as e:
                 logger.send_log("apscheduler", logging.WARNING, f"weekly_top - {e}")
 
     @staticmethod
-    async def day_salary():
+    async def day_salary(notifier_func):
         """
         Ежедневная получка для работяг
         """
-        await SchedulerJobs.give_all(dict.day_salary(10), 10)
+        await GlobalJobs.give_all(10, notifier_func, "day_salary")
 
     @staticmethod
-    async def tech_work_compensation():
+    async def tech_work_compensation(notifier_func):
         """
         Премия в честь обновления (без таймера, ручной запуск)
         """
-        await SchedulerJobs.give_all(dict.tech_work_compensation(15), 15)
+        await GlobalJobs.give_all(15, notifier_func, "tech_work_compensation")
 
     @staticmethod
-    async def give_all(message: str, money:int):
+    async def give_all(money:int, notifier_func, event:str):
         """
         Общий метод выдачи монеток всем игрокам
         """
-        users: List[User] = await db.get_all_users()
+        users: List[User] = await user_repo.get_users()
         indexed_users: Dict[int, List[User]] = {}
 
         for user in users:
@@ -83,25 +81,22 @@ class SchedulerJobs():
 
         for chat_id in indexed_users:
             try:
-                # Исключение продовых чатов для теста
-                # if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
+                settings = await SettingsController.get_settings(chat_id, "")
+                if (not settings.events_enabled): continue
 
-                await db.update_users_money_by_chat(chat_id, money)
-
-                await bot.send_message(chat_id, 
-                                    message, 
-                                    parse_mode=ParseMode.HTML)
+                await user_repo.update_users_money_by_chat(chat_id, money)
                 
+                await notifier_func(chat_id, event, {"money": money})
             except Exception as e:
                     logger.send_log("apscheduler", logging.WARNING, f"day_salary - {e}")
     
     @staticmethod
-    async def day_draw():
+    async def day_draw(notifier_func):
         """
         Ежедневный розыгрыш мази увеличения {{pencil_accu}}
         Каждая группа получает своего победителя
         """
-        users: List[User] = await db.get_daily_draw_participants()
+        users: List[User] = await user_repo.get_users(last_daily_draw_winner=False)
         indexed_users: Dict[int, List[User]] = {}
 
         for user in users:
@@ -112,6 +107,9 @@ class SchedulerJobs():
 
         for chat_id in indexed_users:
             try:
+                settings = await SettingsController.get_settings(chat_id, "")
+                if (not settings.events_enabled): continue
+
                 if (not indexed_users[chat_id]): continue
 
                 sorted_users: List[User] = sorted(indexed_users[chat_id], 
@@ -125,32 +123,31 @@ class SchedulerJobs():
                 else:
                     draw_winner_index = random.randrange(2, len(sorted_users) - 1)
                 
-                last_winner:Optional[User] = await db.get_last_day_draw_winner_in_chat(chat_id)
+                last_winner:Optional[User] = await user_repo.get_user(chat_id, last_daily_draw_winner=True)
                 length_change:int = random.randrange(5, 10)
                 
-                await db.update_user(sorted_users[draw_winner_index],
+                await user_repo.update_user(sorted_users[draw_winner_index],
                                      {"last_daily_draw_winner" : True,
                                       "length" : sorted_users[draw_winner_index].length + length_change})
                 
                 if (last_winner is not None):
-                    await db.update_user(last_winner, {"last_daily_draw_winner":False})
+                    await user_repo.update_user(last_winner, {"last_daily_draw_winner":False})
                 
-                await bot.send_message(chat_id, dict.draw(sorted_users[draw_winner_index], length_change), 
-                                    parse_mode=ParseMode.HTML)
+                await notifier_func(chat_id, "day_draw", {"winner": sorted_users[draw_winner_index], "length_change": length_change})
             except Exception as e:
                 logger.send_log("apscheduler", logging.WARNING, f"day_draw - {e}")
 
     @staticmethod
-    async def warehouse_update():
+    async def warehouse_update(notifier_func):
         """
         Ежедневное пополнение остатков магазина
         """
         try:
             if (await db.update_warehouse()):
                 await db.deactivate_discounts()
-                discounts:List[Tuple[ProductDiscounts, Item]] = await db.create_random_discount(2)
+                discounts:List[Tuple[ProductDiscounts, ItemORM]] = await db.create_random_discount(2)
 
-                users: List[User] = await db.get_all_users()
+                users: List[User] = await user_repo.get_users()
                 indexed_users: Dict[int, List[User]] = {}
 
                 for user in users:
@@ -160,11 +157,10 @@ class SchedulerJobs():
                         indexed_users[user.chat_id].append(user)
 
                 for chat_id in indexed_users:
-                    # Исключение продовых чатов для теста
-                    # if (chat_id == -1001603124529 or chat_id == -1001710720148): continue
-
-                    await bot.send_message(chat_id, dict.warehouse_update(discounts), 
-                                    parse_mode=ParseMode.HTML)     
+                    settings = await SettingsController.get_settings(chat_id, "")
+                    if (not settings.events_enabled): continue
+                    
+                    await notifier_func(chat_id, "warehouse_update", {"discounts": discounts})
 
         except Exception as e:
             logger.send_log("apscheduler", logging.WARNING, f"warehouse_update - {e}")

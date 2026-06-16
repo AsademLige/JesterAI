@@ -1,5 +1,5 @@
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from aiogram.fsm.context import FSMContext
 from core.consts.dictionary import Dictionary
 from core.utils.utils import Utils

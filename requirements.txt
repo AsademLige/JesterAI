@@ -6,6 +6,7 @@ pydantic-settings
 APScheduler<3.10
 psycopg2-binary
 aiohttp-socks
+cachetools
 gino
 pytz
 pillow

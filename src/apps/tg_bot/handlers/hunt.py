@@ -1,21 +1,21 @@
 from features.battles.battle_unit_entity import BattleUnit, BodyParts, MemberStrategy
-from features.items.data.models.user_inventory_item_model import UserInventoryItem
+from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.battles.battle_manager import BattleManager, BattlePhases
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
+from features.user.data.user_repository import UserRepository
 from features.items.items_controller import ItemsController
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF
 from aiogram.utils.deep_linking import create_deep_link
-from features.items.data.models.item_model import Item
+from features.items.data.models.item_orm import ItemORM
 from typing import Any, Dict, List, Optional, Tuple
+from features.user.data.dtos.user_dto import User
 from core.utils.safe_edit import SafeEditMessage
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
-from apps.tg_bot.commands import Commands as cn
 from core.consts.dictionary import Dictionary
-from core.data.models.user_model import User
 from aiogram.fsm.context import FSMContext
 from core.utils.enums import MemberStatus
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
@@ -29,10 +29,12 @@ import asyncio
 import math
 
 
+
 prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 combat_kb = BattleKeyboard()
+user_repo:UserRepository = UserRepository()
 links_cache = {}
 db = DataBase()
 rt = Router()
@@ -42,7 +44,7 @@ rt = Router()
 async def hunt_init(callback_query: CallbackQuery, state: FSMContext):
     message = callback_query.message
     
-    user: User = await db.get_user_by_chat_id(callback_query.from_user.id, message.chat.id)
+    user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
 
     await callback_query.answer()
 
@@ -70,7 +72,7 @@ async def hunt_init(callback_query: CallbackQuery, state: FSMContext):
         __hunt_init(message, state, message.chat.id) 
 
 async def __hunt_init(message: Message, state: FSMContext, chat_id:int):
-    user:User = await db.get_user_by_chat_id(message.from_user.id, chat_id)
+    user:User = await user_repo.get_user(message.from_user.id, chat_id)
     answer:Message
 
     await message.delete()
@@ -178,7 +180,7 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
     global game_controller
     user: User = state_data["user"]
     battle: BattleManager = state_data["battle"]
-    items:List[Tuple[UserInventoryItem, Item]] = []
+    items:List[Tuple[UserInventoryLinkORM, ItemORM]] = []
 
     if (user.tg_id != callback_data.user_id):
         return
@@ -218,7 +220,7 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
     global game_controller
     user: User = state_data["user"]
     battle: BattleManager = state_data["battle"]
-    items:List[Tuple[UserInventoryItem, Item]] = state_data["items"]
+    items:List[Tuple[UserInventoryLinkORM, ItemORM]] = state_data["items"]
 
     if (user.tg_id != callback_data.user_id):
         return

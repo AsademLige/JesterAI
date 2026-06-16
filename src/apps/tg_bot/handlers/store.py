@@ -1,14 +1,15 @@
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from apps.tg_bot.keyboards.store_keyboard import StoreKeyboard
+from features.user.data.user_repository import UserRepository
+from aiogram.types import FSInputFile, Message, CallbackQuery
 from features.store.domain.store_manager import StoreManager
 from apps.tg_bot.keyboards.callback_fabrics import StoreCF
-from aiogram.types import FSInputFile, Message, CallbackQuery
+from features.user.data.dtos.user_dto import User
 from aiogram.filters import Command, StateFilter
 from apps.tg_bot.commands import Commands as cn
 from core.consts.dictionary import Dictionary
-from core.data.models.user_model import User
 from aiogram.fsm.context import FSMContext
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
@@ -21,6 +22,7 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
+user_repo:UserRepository = UserRepository()
 store_kb = StoreKeyboard()
 db = DataBase()
 rt = Router()
@@ -31,7 +33,7 @@ store_mr = StoreManager(db, dict)
 async def store(callback_query: CallbackQuery, state: FSMContext):
     message = callback_query.message 
     
-    user: User = await db.get_user_by_chat_id(callback_query.from_user.id, message.chat.id)
+    user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
     result = await store_mr.openStore(user)
 
     if (result["error"]):
@@ -102,7 +104,7 @@ async def cancel_choice_product(callback: CallbackQuery, callback_data: StoreCF,
 
 @rt.callback_query(StoreCF.filter(F.action == "exit"))
 async def exit_store(callback: CallbackQuery, callback_data: StoreCF, state: FSMContext):
-    user:Optional[User] = await db.get_user_by_chat_id(store_mr.customer.tg_id, 
+    user:Optional[User] = await user_repo.get_user(store_mr.customer.tg_id, 
                                            callback.message.chat.id)
     answer:Message = None
 

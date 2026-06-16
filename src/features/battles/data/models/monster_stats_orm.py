@@ -2,7 +2,7 @@ from core.services.data_base.db_model import BaseModel
 import sqlalchemy as sa
 
 
-class MonsterStats(BaseModel):
+class MonsterStatsORM(BaseModel):
     __tablename__ = "monster_stats"
     id = sa.Column(sa.Integer, primary_key=True)
     monster_id = sa.Column(sa.Integer, sa.ForeignKey('monsters.id'))

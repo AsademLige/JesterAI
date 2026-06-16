@@ -1,14 +1,15 @@
 from features.battles.battle_unit_entity import AttackStatus, BattleUnit, MemberStand, MemberStrategy
 from core.utils.enums import BattleMode, BattlePhases, MemberStatus
+from features.battles.data.models.monster_orm import MonsterORM
 from core.utils.text_processing import TextProcessing as tp
 from typing import Any, Dict, List, Optional, Tuple, Union
-from core.data.datasource import DataBase
-from features.battles.data.models.monster_model import Monster
 from core.consts.dictionary import Dictionary
+from core.data.data_base import DataBase
 from datetime import datetime, timedelta
-from core.data.models.user_model import User
 from core.consts.config import Prefs
 import random
+
+from features.user.data.dtos.user_dto import User
 
 class BattleManager():
     db = DataBase()
@@ -54,7 +55,7 @@ class BattleManager():
 
     @classmethod
     async def hunt(cls, hunter:User, monster_count:int = 1, boss:bool = False):
-        lst:List[Union[Monster, User]] = [hunter]
+        lst:List[Union[MonsterORM, User]] = [hunter]
         lst.extend(await cls.db.get_random_monsters_by_tag(monster_count, tag="boss" if boss else "mob"))
 
         members:List[BattleUnit] = [await BattleUnit.create(entity) for entity in lst]
@@ -65,7 +66,7 @@ class BattleManager():
     
     @classmethod
     async def gladiators(cls, monster_count:int = 2):
-        monsters:List[Monster] = await cls.db.get_random_monsters_by_tag(monster_count)
+        monsters:List[MonsterORM] = await cls.db.get_random_monsters_by_tag(monster_count)
         members:List[BattleUnit] = [await BattleUnit.create(entity) for entity in monsters]
 
         return cls(

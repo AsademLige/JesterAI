@@ -1,15 +1,15 @@
 from features.battles.battle_manager import BattleManager, BattlePhases
 from features.battles.battle_unit_entity import BodyParts, MemberStand, MemberStrategy
-from features.items.data.models.user_inventory_item_model import UserInventoryItem
+from features.user.data.dtos.user_dto import User
+from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF, GladiatorsCF
-from core.utils.enums import AttackStatus, BattleMode
+from features.items.data.models.item_orm import ItemORM
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineKeyboardMarkup, Message
+from core.utils.enums import AttackStatus, BattleMode
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
 from core.consts.dictionary import Dictionary
 from typing import List, Optional, Tuple
-from core.data.models.user_model import User
-from features.items.data.models.item_model import Item
 from core.consts.config import Prefs
 import random
 
@@ -29,7 +29,7 @@ class BattleKeyboard():
         return builder.as_markup()
     
     def battle_keyboard(self, user:User, ctrl:BattleManager, 
-                        usable:Optional[List[Tuple[UserInventoryItem, Item]]] = None) -> InlineKeyboardMarkup:
+                        usable:Optional[List[Tuple[UserInventoryLinkORM, ItemORM]]] = None) -> InlineKeyboardMarkup:
         if (ctrl.mode == BattleMode.GLADIATORS):
             if (ctrl.phase == BattlePhases.PREPARE):
                 return self.__gladiators_bets(user, ctrl)
@@ -42,7 +42,7 @@ class BattleKeyboard():
             return self.__parts_selector(user, ctrl)
 
     def __hunt_strategy_select(self, user:User, ctrl:BattleManager, 
-                        usable:Optional[List[Tuple[UserInventoryItem, Item]]] = None) -> InlineKeyboardMarkup:
+                        usable:Optional[List[Tuple[UserInventoryLinkORM, ItemORM]]] = None) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text="⚔️",
                 callback_data=BattleCF(action=MemberStrategy.AGGRESSIVE.value,
