@@ -1,16 +1,20 @@
 from features.store.data.models.discounts_model import ProductDiscounts
+from features.user.data.repository.gino_user_repository import GinoUserRepository
+from features.user.data.models.user_model_orm import UserORM
 from features.store.data.models.warehouse import Warehouse
-from features.items.data.models.item_model import Item
+from features.items.data.models.item_orm import ItemORM
+from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
-from core.data.models.user_model import User
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from core.consts.consts import Consts
 from typing import List, Tuple
 import os
 
+
 class StoreManager:
-    products:List[Tuple[Warehouse, Item, ProductDiscounts]] = []
-    selected_product:Tuple[Warehouse, Item, ProductDiscounts]
+    products:List[Tuple[Warehouse, ItemORM, ProductDiscounts]] = []
+    selected_product:Tuple[Warehouse, ItemORM, ProductDiscounts]
+    user_repo:GinoUserRepository = GinoUserRepository()
     customer:User
     
     def __init__(self, db:DataBase, dictionary:Dictionary):
@@ -29,7 +33,7 @@ class StoreManager:
             "error": None
         }
     
-    def select_product(self, id:int) -> Tuple[Warehouse, Item, ProductDiscounts]:
+    def select_product(self, id:int) -> Tuple[Warehouse, ItemORM, ProductDiscounts]:
         self.selected_product = next((p for p in self.products if p[1].id == id), None)
         return self.selected_product
     
@@ -44,9 +48,9 @@ class StoreManager:
             return {"msg":self.dict.not_enough_money(self.customer)}
 
         if (await self.db.update_item_quantity_at_warehouse(self.selected_product) and 
-            await self.db.user_item_transaction(self.customer, self.selected_product[1]) and
-            await self.db.update_user(self.customer, {
-                User.money.name: User.money - final_price,
+            await self.user_repo.user_item_transaction(self.customer, self.selected_product[1]) and
+            await self.user_repo.update(self.customer, {
+                UserORM.money.name: UserORM.money - final_price,
             })):
             msg = self.dict.product_buying_thanks(self.customer)
         else:

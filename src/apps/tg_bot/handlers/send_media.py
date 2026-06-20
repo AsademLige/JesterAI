@@ -4,7 +4,7 @@ from core.utils.media import get_media_by_custom_sticker
 from core.data.models.sticker_set_model import StickerSet
 from apps.tg_bot.commands import Commands as cn
 from aiogram.filters import Command, StateFilter
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from aiogram.types import Message, InputFile
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext

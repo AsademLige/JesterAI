@@ -1,14 +1,15 @@
 from __future__ import annotations
 from core.utils.enums import AttackStatus, BattleMode, BodyParts, MemberStatus
-from features.battles.data.models.monster_model import Monster
-from features.items.data.models.item_model import Item
-from features.battles.loot_manager import LootManager
+from features.battles.data.models.monster_orm import MonsterORM
+from features.items.data.models.item_orm import ItemORM
 from typing import Dict, List, Optional, Tuple, Union
-from core.data.models.user_model import User
+from features.battles.loot_manager import LootManager
+from features.user.data.dtos.user_dto import User
 from enum import Enum
-import json
 import random
+import json
 import copy
+
 
 class MemberStrategy(Enum):
     AGGRESSIVE = "AGGRESSIVE"
@@ -25,7 +26,7 @@ class MonsterTags(Enum):
 
 
 class BattleUnit():
-    entity:Union[Monster, User]
+    entity:Union[MonsterORM, User]
     utf8_icon:str
 
     __attack_target:List[BodyParts]
@@ -43,7 +44,7 @@ class BattleUnit():
     __stand:MemberStand = MemberStand.ATTACK
 
     __last_turn_result:Optional[AttackStatus]
-    __inventory:Optional[Tuple[List[Item], int]]
+    __inventory:Optional[Tuple[List[ItemORM], int]]
     
     __fighting_style:Optional[Dict[MemberStrategy, int]] 
 
@@ -97,14 +98,14 @@ class BattleUnit():
     
     @property
     def is_monster(self) -> bool:
-        return type(self.entity) is Monster
+        return type(self.entity) is MonsterORM
     
     @property
     def is_player(self) -> bool:
         return type(self.entity) is User
     
     @property
-    def inventory(self) -> Optional[Tuple[List[Item], int]]: return self.__inventory
+    def inventory(self) -> Optional[Tuple[List[ItemORM], int]]: return self.__inventory
 
     @property
     def is_mob(self) -> bool:
@@ -116,16 +117,16 @@ class BattleUnit():
         return self.is_monster \
                and self.entity.tag == MonsterTags.BOSS.value
 
-    def __init__(self, entity:Union[Monster, User], 
-                 drop:Optional[Tuple[List[Item], int]], 
+    def __init__(self, entity:Union[MonsterORM, User], 
+                 drop:Optional[Tuple[List[ItemORM], int]], 
                  mode:BattleMode):
         self.entity = entity
         self.__bet_money = 0
         self.__attack_target = []
         self.__protected_parts = []
         self.__last_turn_result = None
-        self.__crit_chance = entity.crit_chance if type(self.entity) is Monster else 15
-        self.__max_hp = entity.health if type(self.entity) is Monster else 35
+        self.__crit_chance = entity.crit_chance if type(self.entity) is MonsterORM else 15
+        self.__max_hp = entity.health if type(self.entity) is MonsterORM else 35
         self.__hp = self.__max_hp
         self.utf8_icon = entity.utf8_icon if entity.utf8_icon else random.choice(["🥷","🧝‍♂️","🧙🏿‍♂️","🧙🏼"])
         self.__inventory = drop if (self.is_monster) else None
@@ -138,9 +139,9 @@ class BattleUnit():
         pass
     
     @classmethod
-    async def create(cls, entity:Union[Monster, User], mode:BattleMode = BattleMode.DUEL):
-        drop:Optional[Tuple[List[Item], int]] = await LootManager.generate_drop(entity)\
-                                                    if (type(entity) is Monster) else None
+    async def create(cls, entity:Union[MonsterORM, User], mode:BattleMode = BattleMode.DUEL):
+        drop:Optional[Tuple[List[ItemORM], int]] = await LootManager.generate_drop(entity)\
+                                                    if (type(entity) is MonsterORM) else None
         return cls(entity, drop, mode)
 
     def attacked(self, opponent:BattleUnit) -> Optional[Tuple[AttackStatus, int, bool]]:
@@ -228,7 +229,7 @@ class BattleUnit():
         self.__attack_target.clear()
         return list
     
-    def put_to_inventory(self, loot:Tuple[List[Item], int]):
+    def put_to_inventory(self, loot:Tuple[List[ItemORM], int]):
         if (self.__inventory):
             self.__inventory = (self.__inventory[0] + loot[0], 
                                 self.__inventory[1] + loot[1])

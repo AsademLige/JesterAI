@@ -5,7 +5,7 @@ from aiogram.types import Message, CallbackQuery, StickerSet
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 from apps.tg_bot.commands import Commands as cn
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from typing import Optional, Dict, Any, List
 from aiogram.fsm.context import FSMContext
 from core.consts.dictionary import Dictionary

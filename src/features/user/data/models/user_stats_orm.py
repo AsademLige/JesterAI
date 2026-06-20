@@ -2,7 +2,7 @@ from core.services.data_base.db_model import BaseModel
 import sqlalchemy as sa
 
 
-class UserStats(BaseModel):
+class UserStatsORM(BaseModel):
     __tablename__ = "user_stats"
     id = sa.Column(sa.Integer, primary_key=True)
     user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'))

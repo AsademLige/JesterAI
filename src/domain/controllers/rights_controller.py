@@ -1,5 +1,5 @@
 from aiogram.enums.chat_member_status import ChatMemberStatus
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from core.consts.config import Prefs
 from aiogram import Bot
 

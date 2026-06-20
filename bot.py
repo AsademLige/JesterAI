@@ -1,13 +1,14 @@
 from apps.tg_bot.middlewares.registration_middleware import RegistrationMiddleware
+from apps.tg_bot.providers.scheduler_provider import TelegramNotificationProvider
 from apps.tg_bot.middlewares.captcha_middleware import CaptchaMiddleware
 import apps.tg_bot.handlers.create_sticker_set as create_sticker_set
 import apps.tg_bot.handlers.edit_sticker_set as edit_sticker_set
+from core.services.apscheduler.scheduler_main import Scheduler
 from features.battles.game_controller import GameController
 from core.services.data_base.db_model import on_startup
 import apps.tg_bot.handlers.interactive as interactive
 import apps.tg_bot.handlers.gamba_house as gamba_house
 import apps.tg_bot.handlers.send_media as send_media
-from features.scheduler.scheduler import Scheduler
 from core.consts.dictionary import Dictionary
 import apps.tg_bot.handlers.captcha as captcha
 import apps.tg_bot.handlers.system as system
@@ -30,7 +31,8 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=prefs.bot_token)
 dp = Dispatcher()
 dict = Dictionary()
-scheduler = Scheduler()
+event_handler = TelegramNotificationProvider(bot)
+scheduler = Scheduler(event_handler.handle_event)
 
 game_controller = GameController()
 

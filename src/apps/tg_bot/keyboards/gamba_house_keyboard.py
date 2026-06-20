@@ -1,11 +1,10 @@
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, GladiatorsCF, TrashLotoCF
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
 from core.consts.dictionary import Dictionary
-from core.data.models.user_model import User
 from core.consts.config import Prefs
-from typing import List, Tuple
 
 prefs = Prefs()
 dict = Dictionary()

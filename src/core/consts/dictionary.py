@@ -1,18 +1,17 @@
-from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from features.store.data.models.discounts_model import ProductDiscounts
+from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
 from features.battles.battle_unit_entity import BattleUnit, BodyParts
-from features.items.data.models.user_inventory_item_model import UserInventoryItem
+from features.user.data.dtos.inventory_item_dto import InventoryItem
+from features.battles.data.models.monster_orm import MonsterORM
 from core.utils.text_processing import TextProcessing as tp
+from features.store.data.models.warehouse import Warehouse
+from core.data.models.winners_log_model import WinnersLog
+from features.items.data.models.item_orm import ItemORM
 from core.utils.enums import AttackStatus, BattleMode
 from typing import Optional, List, Dict, Tuple, Union
-from core.data.models.winners_log_model import WinnersLog
-from core.data.models.user_stats_model import UserStats
-from core.data.datasource import DataBase
-from features.battles.data.models.monster_model import Monster
-from features.store.data.models.warehouse import Warehouse
+from features.user.data.dtos.user_dto import User
+from core.data.data_base import DataBase
 from core.utils.utils import Utils
-from core.data.models.user_model import User
-from features.items.data.models.item_model import Item
 import random
 
 class Dictionary():
@@ -418,9 +417,13 @@ class Dictionary():
     ###интерактивные действия изменения размера
     ###------------------------------------------------------------
     
-    __positive_length_change:List[str] = []
+    __positive_length_change:List[str] = [
+        "плюс {{pencil}}"
+    ]
 
-    __negative_length_change:List[str] = []
+    __negative_length_change:List[str] = [
+        "минус {{pencil}}"
+    ]
 
     ### 0 - Именительный падеж
     ### 1 - Родительный
@@ -467,7 +470,7 @@ class Dictionary():
             "user":self.get_user_link(user.tg_name, user.tg_id),
         })
     
-    def hunt_monster_meeting(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
+    def hunt_monster_meeting(self, monster:MonsterORM, strategy:str, fighting_style_visual:str) -> str:
         return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + \
                                    f"\n\n{strategy}" + \
                                    f"\n\n❤️ <b>Здоровье: {monster.health}</b>\n"\
@@ -491,14 +494,14 @@ class Dictionary():
             "gladiators_ui":tp.text_replacement(self.gladiators_interface, {**ui_data})
         })
     
-    def battle_escape(self, member:Union[User, Monster]) -> str:
+    def battle_escape(self, member:Union[User, MonsterORM]) -> str:
         return tp.text_replacement(random.choice(self.__battle_escape), {
             "member" : self.get_user_link(member.tg_name, member.tg_id) if type(member) is User else f"<code>{member.name}</code>",
             "length": self.length_wrapper(member.length if type(member) is User else random.randint(1, 30)), 
             **self.random_member(),
         })
         
-    def store_description(self, products:List[Tuple[Warehouse, Item, ProductDiscounts]], user:User) -> str:
+    def store_description(self, products:List[Tuple[Warehouse, ItemORM, ProductDiscounts]], user:User) -> str:
         return tp.text_replacement(self.__store_description, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "products": self.__generate_products_list(products),
@@ -506,7 +509,7 @@ class Dictionary():
             **self.random_member(),
         }, recursive_parse_args = True)
     
-    def __generate_products_list(self, products:List[Tuple[Warehouse, Item, ProductDiscounts]]) -> str:
+    def __generate_products_list(self, products:List[Tuple[Warehouse, ItemORM, ProductDiscounts]]) -> str:
         products_str:str = ""
         index:int = 1
         for warehouse_item, product, discount in products:
@@ -522,7 +525,7 @@ class Dictionary():
 
         return products_str
     
-    def product_description(self, product:Tuple[Warehouse, Item, ProductDiscounts]) -> str:
+    def product_description(self, product:Tuple[Warehouse, ItemORM, ProductDiscounts]) -> str:
         price_formatted:str = f"{self.price_wrapper(product[1].price, False)}"
         if (product[2]):
             discount_price:int = round(product[1].price - (product[1].price * (product[2].discount_percent / 100)))
@@ -548,7 +551,7 @@ class Dictionary():
             **self.random_member(),
         })
     
-    def warehouse_update(self, discounts:List[Tuple[ProductDiscounts, Item]]) -> str:
+    def warehouse_update(self, discounts:List[Tuple[ProductDiscounts, ItemORM]]) -> str:
         discounts_description:str = ""
         for i, discount in enumerate(discounts):
             discounts_description += f"<blockquote>{discount[1].utf8_icon} {discount[1].title} "\
@@ -663,50 +666,50 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:User, place_in_top:int, user_stats:UserStats, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
+    def user_information(self, user:User, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
                                     "money": user.money,
                                     "medal": self.get_medal_emoji(place_in_top),
-                                    "user_stats": self.generate_user_stats(user_stats),
+                                    "user_stats": self.generate_user_stats(user),
                                     "place_in_top": place_in_top,
                                     "custom_title" : hcode(f'[{user.custom_title}]') if user.custom_title is not None else '',
                                     "length":self.length_wrapper(user.length, False),
                                     "time_to_pencil" : time_to_pencil,
                                     "time_to_dice" : time_to_dice})
     
-    def generate_user_stats(self, user_stats:UserStats) -> str:
+    def generate_user_stats(self, user:User) -> str:
         stats_str:str = ""
 
-        stats_str += f"🎰 Всего спинов\джекпотов: <b>{user_stats.trash_loto_spins} \ {user_stats.trash_loto_jackpots}</b>\n"
-        stats_str += f"🍀 Выигрыш в треш-лото: <b>{self.money_wrapper(user_stats.trash_loto_money_wins)} \ {self.length_wrapper(user_stats.trash_loto_length_wins)}</b>\n"
-        stats_str += f"🎲 Статистика игры в кости: <b>{user_stats.dice_games} \ 🎯{user_stats.dice_minor_wins + user_stats.dice_major_wins}</b>\n"
-        stats_str += f"🏟 Всадил/выиграл на арене: <b>{user_stats.gladiators_bet} \ {user_stats.gladiators_bet_win}</b>\n"
-        stats_str += f"🏹 Уничтожил чудовищ: <b>{user_stats.good_hunting_count}</b>"
+        stats_str += f"🎰 Всего спинов\джекпотов: <b>{user.trash_loto_spins} \ {user.trash_loto_jackpots}</b>\n"
+        stats_str += f"🍀 Выигрыш в треш-лото: <b>{self.money_wrapper(user.trash_loto_money_wins)} \ {self.length_wrapper(user.trash_loto_length_wins)}</b>\n"
+        stats_str += f"🎲 Статистика игры в кости: <b>{user.dice_games} \ 🎯{user.dice_minor_wins + user.dice_major_wins}</b>\n"
+        stats_str += f"🏟 Всадил/выиграл на арене: <b>{user.gladiators_bet} \ {user.gladiators_bet_win}</b>\n"
+        stats_str += f"🏹 Уничтожил чудовищ: <b>{user.good_hunting_count}</b>"
 
         return stats_str
     
-    def user_inventory(self, user:User, items:List[Tuple[UserInventoryItem, Item]]) -> str:
+    def user_inventory(self, user:User) -> str:
         return tp.text_replacement(self.__inventory_info, {
-            "items" : self.__generate_inventory_items_list(items) if items else "<b>В рюкзаке пусто!</b>",
+            "items" : self.__generate_inventory_items_list(user.inventory) if user.inventory else "<b>В рюкзаке пусто!</b>",
             "user_link": self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(), 
         }, recursive_parse_args = True)
     
-    def __generate_inventory_items_list(self, items:List[Tuple[UserInventoryItem, Item]]) -> str:
+    def __generate_inventory_items_list(self, items:List[InventoryItem]) -> str:
         items_str:str = ""
         index:int = 1
-        for inventory_item, store_item in items:
-            items_str += f"<b>({index})</b> {store_item.utf8_icon} {hcode(store_item.title)}<b> ({inventory_item.quantity}шт.)</b>\n"
+        for item in items:
+            items_str += f"<b>({index})</b> {item.utf8_icon} {hcode(item.title)}<b> ({item.quantity}шт.)</b>\n"
             index+=1
 
         return items_str
     
-    def inventory_item_info(self, item:Tuple[UserInventoryItem, Item]) -> str:
+    def inventory_item_info(self, item:InventoryItem) -> str:
         return tp.text_replacement(self.__inventory_item_info, {
-            "title": item[1].title,
-            "description": item[1].description,
+            "title": item.title,
+            "description": item.description,
             **self.random_member(),
         }, recursive_parse_args = True)
     
@@ -933,7 +936,7 @@ class Dictionary():
 
         return tp.text_replacement(status_icon + full_log, {**self.random_member()})
     
-    def hunt_loot(self, inventory:Optional[Tuple[List[Item], int]]) -> str:
+    def hunt_loot(self, inventory:Optional[Tuple[List[ItemORM], int]]) -> str:
         if (not inventory): return ""
         money:str = f" {'А так же монеты' if inventory[0] else 'Собрали с трупа горсть монет'} {self.money_wrapper(inventory[1])}" if (inventory[1]) else ""
 

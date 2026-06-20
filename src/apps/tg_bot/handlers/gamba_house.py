@@ -1,37 +1,36 @@
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, GladiatorsCF, TrashLotoCF
+from features.gamba_house.domain.trash_loto_manager import TrashLotoManager
 from apps.tg_bot.keyboards.gamba_house_keyboard import GambaHouseKeyboard
 from apps.tg_bot.providers.random_provider import TelegramRandomProvider
+from features.gamba_house.domain.dice_manager import DiceGameManager
 from domain.controllers.rights_controller import RightsController
+from features.user.data.models.user_stats_orm import UserStatsORM
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from aiogram.types import FSInputFile, Message, CallbackQuery
+from features.user.data.repository.gino_user_repository import GinoUserRepository
+from features.user.data.models.user_model_orm import UserORM
 from features.battles.battle_unit_entity import BattleUnit
 from features.battles.battle_manager import BattleManager
-from core.data.models.user_stats_model import UserStats
-from core.utils.safe_edit import SafeEditMessage
-from core.data.datasource import DataBase
-from core.consts.dictionary import Dictionary
+from features.user.data.dtos.user_dto import User
 from aiogram.filters import Command, StateFilter
+from core.utils.safe_edit import SafeEditMessage
 from apps.tg_bot.commands import Commands as cn
-from core.utils.enums import BattlePhases
-from core.consts.consts import Consts
+from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
+from core.utils.enums import BattlePhases
+from core.data.data_base import DataBase
 from typing import List, Optional, Tuple
-from datetime import timedelta, datetime
+from core.consts.consts import Consts
 from core.consts.config import Prefs
 from core.utils.utils import Utils
-from core.data.models.user_model import User
 from aiogram.enums import ParseMode
 from aiogram.types import Message
-import asyncio
-import random
-import math
-import os
-
+from datetime import timedelta
 from aiogram import Router, F
 from aiogram import Bot
-
-from features.gamba_house.domain.trash_loto_manager import TrashLotoManager
-from features.gamba_house.domain.dice_manager import DiceGameManager
+import asyncio
+import math
+import os
 
 prefs = Prefs()
 dict = Dictionary()
@@ -41,6 +40,7 @@ combat_kb = BattleKeyboard()
 db = DataBase()
 rt = Router()
 rp = TelegramRandomProvider(bot)
+user_repo:GinoUserRepository = GinoUserRepository()
 
 dice_manager = DiceGameManager(db, dict)
 trash_loto_manager = TrashLotoManager(db, dict)
@@ -48,17 +48,19 @@ trash_loto_manager = TrashLotoManager(db, dict)
 ###Открываем меню гамбы
 @rt.message(StateFilter(None), Command(cn.gamba_house))
 async def gamba_house(message: Message, state: FSMContext):
-    user:User = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
+    user:User = await user_repo.get_user(message.from_user.id, message.chat.id)
+    
     await state.update_data(user=user)
     answer:Message
     await message.delete()
 
-    users_stat:List[UserStats] = await db.get_users_stat_by_chat(message.chat.id)
     total:int = 0
 
-    for stat in users_stat:
-        total += stat.trash_loto_spins * 5 - stat.trash_loto_money_wins
-        total += stat.gladiators_bet - stat.gladiators_bet_win
+    users_in_chat: List[User] = await user_repo.get_users(message.chat.id)
+
+    for user in users_in_chat:
+        total += user.trash_loto_spins * 5 - user.trash_loto_money_wins
+        total += user.gladiators_bet - user.gladiators_bet_win
 
     photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"gamba_house.webp"))
 
@@ -110,7 +112,7 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     
-    user = state_data["user"]
+    user:User = state_data["user"]
     
     delta = await dice_manager.check_cool_down(user)
     if delta:
@@ -119,18 +121,9 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
         return await Utils.delete_old_message([answer], 10)
 
     result = await dice_manager.play(user, callback_data.action, rp)
-    
-    if result["is_minor_win"]:
-        msg = await bot.send_message(user.chat_id, dict.dice_minor_win(user, result["dice_values"], result["award"]), 
-                                     parse_mode=ParseMode.HTML)
-    elif result["is_major_win"]:
-        msg = await bot.send_message(user.chat_id, dict.dice_major_win(user, result["dice_values"], result["award"]),
-                                     parse_mode=ParseMode.HTML)
-    else:
-        msg = await bot.send_message(user.chat_id, dict.dice_lose(user, result["dice_values"]),
-                                     parse_mode=ParseMode.HTML)
-        
-    messages_to_delete = result["sent_messages"] + [msg]
+
+    msg = await bot.send_message(user.chat_id, result["msg"], parse_mode=ParseMode.HTML)    
+    messages_to_delete = result["roll_result"] + [msg]
     await Utils.delete_old_message(messages_to_delete, 10)
 
 ###Бесполезная трата денег
@@ -138,7 +131,7 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
 async def trash_loto(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):
     state_data = await state.get_data()
     if (not 'user' in state_data): return
-    user: User = state_data["user"]
+    user:User = state_data["user"]
 
     if (user.tg_id != callback_data.user_id):
         return
@@ -146,8 +139,6 @@ async def trash_loto(callback: CallbackQuery, callback_data: DiceGameCF, state: 
     have_delete_rights = (await RightsController.check_is_admin(callback.message.chat.id) and
         await RightsController.check_delete_messages_rights(callback.message.chat.id))
     await callback.message.delete()
-    
-    user: User = await db.get_user_by_chat_id(callback.from_user.id, callback.message.chat.id)
     
     loto_cost:int = 5
 
@@ -223,12 +214,10 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
         await Utils.delete_old_message([callback.message, answer])
         return
     
-    if (not await db.update_user(user, {User.money.name : User.money - callback_data.bet})):
+    if (not await user_repo.update(user, {UserORM.money.name : UserORM.money - callback_data.bet,
+                                               UserStatsORM.gladiators_bet.name :  UserStatsORM.gladiators_bet + callback_data.bet})):
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
-    
-    await db.update_user_status(user.id, 
-        {UserStats.gladiators_bet.name :  UserStats.gladiators_bet + callback_data.bet})
     
     battle:BattleManager = game_controller.get_battle(user)
 

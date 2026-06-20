@@ -2,7 +2,7 @@ from apps.tg_bot.keyboards.system_keyboard import SystemKeyboard
 from apps.tg_bot.keyboards.callback_fabrics import HelpCF
 from aiogram.types import CallbackQuery, Message
 from apps.tg_bot.commands import Commands as cn
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from core.consts.dictionary import Dictionary
 from core.utils.utils import Utils
 from aiogram.filters import Command

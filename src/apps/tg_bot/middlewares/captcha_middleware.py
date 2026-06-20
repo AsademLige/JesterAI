@@ -6,8 +6,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from apps.tg_bot.commands import Commands
 from core.utils.utils import Utils
-from datetime import timedelta, datetime
 from aiogram import BaseMiddleware
+from datetime import timedelta
 import math
 
 class CaptchaStates(StatesGroup):

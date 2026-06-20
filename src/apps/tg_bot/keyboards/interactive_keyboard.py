@@ -1,14 +1,13 @@
-from features.items.items_controller import ItemsController
-from features.items.data.models.user_inventory_item_model import UserInventoryItem
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, InventoryCF
+from features.user.data.dtos.inventory_item_dto import InventoryItem
+from features.items.items_controller import ItemsController
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
 from core.consts.dictionary import Dictionary
-from core.data.models.user_model import User
-from features.items.data.models.item_model import Item
 from core.consts.config import Prefs
-from typing import List, Tuple
+from typing import List
 
 prefs = Prefs()
 dict = Dictionary()
@@ -28,13 +27,13 @@ class InteractiveKeyboard():
         builder.adjust(2) 
         return builder.as_markup()
     
-    def inventory_items(self, items: List[Tuple[UserInventoryItem, Item]], user:User) -> InlineKeyboardMarkup:
+    def inventory_items(self, user:User) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
-        for i, item in enumerate(items):
-            if (item[0].quantity > 0):
-                builder.button(text=f"{i+1} {item[1].utf8_icon}",
+        for i, item in enumerate(user.inventory):
+            if (item.quantity > 0):
+                builder.button(text=f"{i+1} {item.utf8_icon}",
                     callback_data=InventoryCF(action="inventory_choice", 
-                                                item_id=item[1].id,
+                                                item_id=item.product_id,
                                                 user_id=user.tg_id))
             
         builder.button(text=dict.exit,
@@ -44,7 +43,7 @@ class InteractiveKeyboard():
         builder.adjust(2)
         return builder.as_markup()
     
-    def item_keyboard(self, user:User, item:Item) -> InlineKeyboardMarkup:
+    def item_keyboard(self, user:User, item:InventoryItem) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
         if (not ItemsController.is_steal_item(item) and 

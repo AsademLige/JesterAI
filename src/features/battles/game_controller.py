@@ -1,24 +1,25 @@
+from features.battles.data.models.monster_stats_orm import MonsterStatsORM
 from features.battles.battle_manager import BattleManager, BattlePhases
-from features.battles.data.models.monster_stats import MonsterStats
+from features.user.data.models.user_stats_orm import UserStatsORM
+from features.user.data.repository.gino_user_repository import GinoUserRepository
+from features.user.data.models.user_model_orm import UserORM
 from features.battles.battle_unit_entity import BattleUnit
-from core.data.models.user_stats_model import UserStats
-from features.items.data.models.item_model import Item
+from features.items.data.models.item_orm import ItemORM
+from features.user.data.dtos.user_dto import User
 from typing import Dict, List, Optional, Tuple
-from core.data.models.user_model import User
-from core.data.datasource import DataBase
+from core.data.data_base import DataBase
 from datetime import datetime, timedelta
 from core.utils.enums import BattleMode
 from core.consts.config import Prefs
-from core.utils.utils import Utils
 from aiogram.types import Message
 from aiogram import Bot
 import asyncio
-import math
 
 class GameController():
     _instance = None
     db = DataBase()
     prefs = Prefs()
+    user_repo:GinoUserRepository = GinoUserRepository()
     bot = Bot(token=prefs.bot_token)
     __battle_timer:timedelta = timedelta(seconds=60)
     __add_time_per_turn:timedelta = timedelta(seconds=15)
@@ -37,15 +38,10 @@ class GameController():
 
     async def prepare_hunt(self, hunter:User) -> Tuple[str, BattleManager]:
         get_boss:bool = False
-        
-        delta:timedelta = Utils.get_time_delta(hunter.last_boss_hunt)
-        if (await self.db.get_place_in_top_by_member(hunter.tg_id, hunter.chat_id) <= 3 and
-             math.floor(delta.total_seconds() / 3600) > 0):
-            get_boss = True
 
-        heal_item:Optional[Item] = await self.db.get_item_by_id(10)
+        heal_item:Optional[ItemORM] = await self.db.get_item_by_id(10)
         if (not await self.db.get_user_heal_items(hunter) and heal_item):
-            await self.db.user_item_transaction(hunter, heal_item)
+            await self.user_repo.user_item_transaction(hunter, heal_item)
 
         self.__started_battles[hunter.tg_id] = await BattleManager.hunt(hunter, boss=get_boss)
         return (self.__started_battles[hunter.tg_id].prepare_battle(), self.__started_battles[hunter.tg_id])
@@ -96,18 +92,19 @@ class GameController():
 
         for gladiator in battle.members:
             await self.db.update_monster_status(gladiator.entity.id, 
-                {MonsterStats.arena_fights.name : MonsterStats.arena_fights + 1, 
-                 MonsterStats.arena_wins.name : MonsterStats.arena_wins + (1 if (status[2] == gladiator) else 0)
+                {MonsterStatsORM.arena_fights.name : MonsterStatsORM.arena_fights + 1, 
+                 MonsterStatsORM.arena_wins.name : MonsterStatsORM.arena_wins + (1 if (status[2] == gladiator) else 0)
                 })
-            
-        await self.db.update_user(started_by, {
-                User.last_gladiators_bet.name: datetime.now(),
+
+        ###TODO:Можно объединить в один метод update_user
+        await self.user_repo.update(started_by, {
+                UserORM.last_gladiators_bet.name: datetime.now(),
             })
 
         if (status[2].bet_money > 0):
-            if (await self.db.update_user(started_by, {User.money.name : User.money + status[2].bet_money})):
-                await self.db.update_user_status(started_by.id, 
-                    {UserStats.gladiators_bet_win.name :  UserStats.gladiators_bet_win + status[2].bet_money})
+            if (await self.user_repo.update(started_by, {UserORM.money.name : UserORM.money + status[2].bet_money,
+                                                              UserStatsORM.gladiators_bet_win.name :  UserStatsORM.gladiators_bet_win + status[2].bet_money})):
+                
                 return "<i>\n\nСтавка сыграла! "\
                     f"{battle.dict.get_user_link(started_by.tg_name, started_by.tg_id)} "\
                     f"получает {battle.dict.money_wrapper(status[2].bet_money)}</i>\n"
@@ -117,13 +114,13 @@ class GameController():
                                   status:Optional[Tuple[str, BattlePhases, BattleUnit]]) -> str:
         if (status[2].is_player):
             monster:BattleUnit = battle.get_opponent()
-            await self.db.update_user_status(status[2].entity.id, 
-                {UserStats.good_hunting_count.name : UserStats.good_hunting_count + 1})
-            if ((await self.db.user_item_transaction(started_by, status[2].inventory[0][0]) if (status[2].inventory[0]) else True) and
-                await self.db.update_user(started_by, {
-                    User.money.name: User.money + status[2].inventory[1],
-                    User.last_hunt.name: datetime.now(),
-                    User.last_boss_hunt.name: datetime.now() + timedelta(hours=12) if monster.is_boss else User.last_boss_hunt,
+            
+            if ((await self.user_repo.user_item_transaction(started_by, status[2].inventory[0][0]) if (status[2].inventory[0]) else True) and
+                await self.user_repo.update(started_by, {
+                    UserORM.money.name: UserORM.money + status[2].inventory[1],
+                    UserStatsORM.good_hunting_count.name : UserStatsORM.good_hunting_count + 1,
+                    UserORM.last_hunt.name: datetime.now(),
+                    UserORM.last_boss_hunt.name: datetime.now() + timedelta(hours=12) if monster.is_boss else UserORM.last_boss_hunt,
                 })):
                 from core.consts.dictionary import Dictionary
                 log:str = f"\n\n📦 {Dictionary().hunt_loot(status[2].inventory)}\n" if (status[2].inventory) else ""
@@ -131,8 +128,8 @@ class GameController():
                               "(Босс не нападет на вас в течение 12 часов)</i>" if monster.is_boss else "")
             else: return f"Ой, ошибочка вышла..."
         elif status[2].is_mob or status[2].is_boss:
-            await self.db.update_user(started_by, {
-                User.last_hunt.name: datetime.now(),
+            await self.user_repo.update(started_by, {
+                UserORM.last_hunt.name: datetime.now(),
             })
         return ""
         
@@ -142,7 +139,7 @@ class GameController():
             status:str = self.__started_battles[member.tg_id].escape()
             monster:BattleUnit = self.__started_battles[member.tg_id].get_opponent()
             await self.db.update_user(member, {
-                User.last_hunt.name: datetime.now(),
+                UserORM.last_hunt.name: datetime.now(),
             })
             await self.delete_battle(member.tg_id, False)
             return status
@@ -191,10 +188,10 @@ class GameController():
             if (battle_key in self.__battles_history):
                 if (self.__battles_history[battle_key] and self.__started_battles[battle_key].mode == BattleMode.HUNT 
                     and not self.__started_battles[battle_key].phase == BattlePhases.BATTLE_END):
-                    user:User = await self.db.get_user_by_chat_id(battle_key, 
+                    user:User = await self.user_repo.get_user(battle_key, 
                                                             self.__battles_history[battle_key][0].chat.id)
-                    await self.db.update_user(user, {
-                        User.last_hunt.name: datetime.now(),
+                    await self.user_repo.update(user, {
+                        UserORM.last_hunt.name: datetime.now(),
                     })
                     await self.bot.send_message(self.__battles_history[battle_key][0].chat.id, 
                                                 "💀 Время вышло, охотник пропал без вести!")

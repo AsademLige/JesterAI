@@ -2,7 +2,7 @@ from core.services.data_base.db_model import BaseModel
 import sqlalchemy as sa
 
 
-class Monster(BaseModel):
+class MonsterORM(BaseModel):
     __tablename__ = "monsters"
     id = sa.Column(sa.Integer, primary_key=True)
     health = sa.Column(sa.Integer)

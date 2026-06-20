@@ -1,17 +1,17 @@
-from core.utils.text_processing import TextProcessing as tp
+from apps.tg_bot.providers.scheduler_provider import TelegramNotificationProvider
+from core.services.apscheduler.scheduler_main import Scheduler
 from apps.tg_bot.keyboards.system_keyboard import SystemKeyboard
-from features.scheduler.scheduler import Scheduler
 from apps.tg_bot.keyboards.callback_fabrics import JobsCF
-from apps.tg_bot.commands import Commands as cn
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
-from core.data.datasource import DataBase
+from apps.tg_bot.commands import Commands as cn
 from apps.tg_bot.states.system import EditJob
-from aiogram.fsm.context import FSMContext
 from core.consts.dictionary import Dictionary
+from aiogram.fsm.context import FSMContext
+from core.data.data_base import DataBase
+from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from aiogram.types import Message
-from core.consts.config import Prefs
 from apscheduler.job import Job
 from datetime import datetime
 from typing import List
@@ -23,7 +23,8 @@ prefs = Prefs()
 system_kb = SystemKeyboard()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
-scheduler = Scheduler()
+event_handler = TelegramNotificationProvider(bot)
+scheduler = Scheduler(event_handler.handle_event)
 db = DataBase()
 rt = Router()
 

@@ -1,7 +1,7 @@
-from features.battles.data.models.monster_model import Monster
+from features.battles.data.models.monster_orm import MonsterORM
+from features.items.data.models.item_orm import ItemORM
 from core.utils.app_herald import AppHerald
 from typing import List, Optional, Tuple
-from features.items.data.models.item_model import Item
 from enum import Enum
 import logging
 import random
@@ -18,10 +18,10 @@ class DropTags(Enum):
 class LootManager():
     
     @staticmethod
-    async def generate_drop(monster:Monster) -> Tuple[List[Item], int]:
+    async def generate_drop(monster:MonsterORM) -> Tuple[List[ItemORM], int]:
         logger:AppHerald = AppHerald()
 
-        drop_items:List[Item] = []
+        drop_items:List[ItemORM] = []
         rules = json.loads(monster.drop_rules)
 
         total_weight:int = 0
@@ -39,7 +39,7 @@ class LootManager():
             current += rules[DropTags.tags.name][tag]
             if roll <= current:
                 if (not DropTags[tag.lower()] == DropTags.none):
-                    item:Optional[Item] = await LootManager.get_item_by_tag(DropTags[tag.lower()])
+                    item:Optional[ItemORM] = await LootManager.get_item_by_tag(DropTags[tag.lower()])
                     logger.send_log("battle", logging.INFO, 
                                     f"drop: {tag} {rules[DropTags.tags.name][tag.lower()]} {item}")
                     if (item): drop_items.append(item)
@@ -55,7 +55,7 @@ class LootManager():
     
     @staticmethod
     async def get_item_by_tag(tag:DropTags):
-        from core.data.datasource import DataBase
+        from core.data.data_base import DataBase
         db:DataBase = DataBase()
         return await db.get_random_item_by_tag(tag)
 

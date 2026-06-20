@@ -2,7 +2,7 @@ from core.services.data_base.db_model import BaseModel
 import sqlalchemy as sa
 
 
-class Role(BaseModel):
+class UserRoleORM(BaseModel):
     __tablename__ = "roles"
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.Text)
