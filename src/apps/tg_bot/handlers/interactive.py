@@ -1,5 +1,5 @@
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.user.data.dtos.user_dto import User
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -23,7 +23,7 @@ dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
 marked_users:Dict[int, Tuple[datetime, datetime]] = {}
-user_repo:UserRepository = UserRepository()
+user_repo:GinoUserRepository = GinoUserRepository()
 db = DataBase()
 rt = Router()
 

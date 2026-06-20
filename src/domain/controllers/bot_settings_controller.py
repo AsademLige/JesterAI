@@ -1,4 +1,4 @@
-from core.data.models.bot_settings_model import BotSettings
+from core.data.models.bot_settings_orm import BotSettingsORM
 from core.data.data_base import DataBase
 from core.consts.config import Prefs
 from aiogram import Bot
@@ -9,6 +9,6 @@ bot = Bot(token=prefs.bot_token)
 
 class SettingsController():
     @staticmethod
-    async def get_settings(chat_id:int, chat_full_name:str) -> BotSettings:
+    async def get_settings(chat_id:int, chat_full_name:str) -> BotSettingsORM:
       return await db.get_settings(chat_id, chat_full_name)
         

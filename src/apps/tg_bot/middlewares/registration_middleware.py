@@ -1,5 +1,5 @@
 from aiogram.types import Chat, ChatMemberAdministrator, ChatMemberOwner, Message, CallbackQuery, TelegramObject, User
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from typing import Any, Callable, Dict, Awaitable, Optional
 from features.user.domain.user_manager import UserManager
 from core.consts.dictionary import Dictionary
@@ -8,8 +8,8 @@ from aiogram import BaseMiddleware
 from random import Random
 
 class RegistrationMiddleware(BaseMiddleware):
-    user_mr:UserManager = UserManager()
-    user_repo:UserRepository = UserRepository()
+    user_repo:GinoUserRepository = GinoUserRepository()
+    user_mr:UserManager = UserManager(repo=user_repo)
     dict:Dictionary = Dictionary()
 
     async def __call__(
@@ -40,7 +40,7 @@ class RegistrationMiddleware(BaseMiddleware):
         if (type(member) is ChatMemberAdministrator or type(member) is ChatMemberOwner):
             custom_title = member.custom_title
 
-        if (await self.user_repo.add_user(user.id, user.full_name, length, custom_title, chat.id)):
+        if (await self.user_repo.add(user.id, user.full_name, length, custom_title, chat.id)):
             return self.dict.first_meet(user.full_name, user.id, length, custom_title)
         else:
             return self.dict.error

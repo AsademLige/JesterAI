@@ -6,7 +6,7 @@ from features.store.data.models.discounts_model import ProductDiscounts
 from core.data.models.custom_sticker_model import CustomSticker
 from features.battles.data.models.monster_orm import MonsterORM
 from features.user.data.models.user_model_orm import UserORM
-from core.data.models.bot_settings_model import BotSettings
+from core.data.models.bot_settings_orm import BotSettingsORM
 from features.store.data.models.warehouse import Warehouse
 from core.data.models.sticker_set_model import StickerSet
 from core.data.models.winners_log_model import WinnersLog
@@ -130,11 +130,11 @@ class DataBase():
     ### Методы работы с данными настроек 
     ###-----------------------------------------
 
-    async def get_settings(self, chat_id:int, chat_full_name:str) -> Optional[BotSettings]:
+    async def get_settings(self, chat_id:int, chat_full_name:str) -> Optional[BotSettingsORM]:
         try:
-            settings:Optional[BotSettings] = await BotSettings.query.where(BotSettings.chat_id == chat_id).gino.first()
+            settings:Optional[BotSettingsORM] = await BotSettingsORM.query.where(BotSettingsORM.chat_id == chat_id).gino.first()
             if (not settings):
-                settings = BotSettings(
+                settings = BotSettingsORM(
                     chat_id=chat_id,
                     alias = chat_full_name
                 )
@@ -146,7 +146,7 @@ class DataBase():
         
     async def update_settings_by_chat_id(self, chat_id:int, args:Dict[str, Any] = {}) -> bool:
         try:
-            query = BotSettings.update.values(**args).where(BotSettings.chat_id == chat_id)
+            query = BotSettingsORM.update.values(**args).where(BotSettingsORM.chat_id == chat_id)
             await query.gino.status()
             return True
         except Exception as error:

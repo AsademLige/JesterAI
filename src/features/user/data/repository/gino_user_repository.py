@@ -1,4 +1,6 @@
+
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
+from features.user.data.repository.user_repository import IUserRepository
 from features.user.data.models.user_stats_orm import UserStatsORM
 from features.user.data.dtos.user_dto import InventoryItem, User
 from features.user.data.models.user_model_orm import UserORM
@@ -14,7 +16,8 @@ from cachetools import TTLCache
 from sqlalchemy import and_
 import logging
 
-class UserRepository:
+
+class GinoUserRepository(IUserRepository):
     _instance = None
     db = DataBase()
     prefs = Prefs()
@@ -204,7 +207,7 @@ class UserRepository:
             self.logger.send_log("user_repo", logging.ERROR, f"get users  error: {error}")
             return []
         
-    async def add_user(self, tg_id: int, tg_name: str, length: int, custom_title: str, chat_id:int):
+    async def add(self, tg_id: int, tg_name: str, length: int, custom_title: str, chat_id:int):
         try:
             user = UserORM(tg_id = tg_id, 
                                 tg_name = tg_name, 
@@ -219,7 +222,7 @@ class UserRepository:
             return False
         
     
-    async def update_user(self, user: User, args:Dict[str, Any] = {}) -> bool:
+    async def update(self, user: User, args:Dict[str, Any] = {}) -> bool:
         if not args:
             return True
         
@@ -366,3 +369,7 @@ class UserRepository:
             return role.id
         except:
             return None
+    
+    async def change_reputation(self, source_id: str, target_id: str, delta: int) -> None:
+        """Изменить репутацию (например, уменьшить при пакости)"""
+        return

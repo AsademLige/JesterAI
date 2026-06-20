@@ -1,7 +1,7 @@
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from features.user.data.dtos.inventory_item_dto import InventoryItem
 from apps.tg_bot.keyboards.callback_fabrics import InventoryCF
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.items.items_controller import ItemsController
 from features.user.domain.user_manager import UserManager
 from features.user.data.dtos.user_dto import User
@@ -23,8 +23,8 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
-repository:UserRepository = UserRepository()
-user_mr:UserManager = UserManager()
+repository:GinoUserRepository = GinoUserRepository()
+user_mr:UserManager = UserManager(repo=repository)
 db = DataBase()
 rt = Router()
 
@@ -37,8 +37,9 @@ async def pencil_change(message: Message, state: FSMContext):
 
     await message.delete()
     result = await user_mr.pencil_change(user)
+    msg = result["error"] if (result["error"]) else result["msg"]
 
-    await bot.send_message(user.chat_id, result["msg"], parse_mode=ParseMode.HTML)
+    await bot.send_message(user.chat_id, msg, parse_mode=ParseMode.HTML)
         
 
 ###Получение информации о пользователе

@@ -1,6 +1,6 @@
 from domain.controllers.bot_settings_controller import SettingsController
 from features.store.data.models.discounts_model import ProductDiscounts
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.items.data.models.item_orm import ItemORM
 from features.user.data.dtos.user_dto import User
 from typing import Dict, List, Optional, Tuple
@@ -12,7 +12,7 @@ import random
 
 
 logger:AppHerald = AppHerald()
-user_repo:UserRepository = UserRepository()
+user_repo:GinoUserRepository = GinoUserRepository()
 db = DataBase()
 prefs = Prefs()
 
@@ -43,7 +43,7 @@ class GlobalJobs():
                                                     reverse=True)
                 for index, reward in enumerate(rewards):
                     if (len(sorted_users) > index):
-                        await user_repo.update_user(sorted_users[index], {
+                        await user_repo.update(sorted_users[index], {
                             "money" : reward + sorted_users[index].money
                         })
                 
@@ -126,12 +126,12 @@ class GlobalJobs():
                 last_winner:Optional[User] = await user_repo.get_user(chat_id, last_daily_draw_winner=True)
                 length_change:int = random.randrange(5, 10)
                 
-                await user_repo.update_user(sorted_users[draw_winner_index],
+                await user_repo.update(sorted_users[draw_winner_index],
                                      {"last_daily_draw_winner" : True,
                                       "length" : sorted_users[draw_winner_index].length + length_change})
                 
                 if (last_winner is not None):
-                    await user_repo.update_user(last_winner, {"last_daily_draw_winner":False})
+                    await user_repo.update(last_winner, {"last_daily_draw_winner":False})
                 
                 await notifier_func(chat_id, "day_draw", {"winner": sorted_users[draw_winner_index], "length_change": length_change})
             except Exception as e:

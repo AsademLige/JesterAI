@@ -1,15 +1,14 @@
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from apps.tg_bot.keyboards.store_keyboard import StoreKeyboard
-from features.user.data.user_repository import UserRepository
 from aiogram.types import FSInputFile, Message, CallbackQuery
 from features.store.domain.store_manager import StoreManager
 from apps.tg_bot.keyboards.callback_fabrics import StoreCF
 from features.user.data.dtos.user_dto import User
-from aiogram.filters import Command, StateFilter
-from apps.tg_bot.commands import Commands as cn
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
 from core.data.data_base import DataBase
+from aiogram.filters import StateFilter
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
@@ -22,7 +21,7 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
-user_repo:UserRepository = UserRepository()
+user_repo:GinoUserRepository = GinoUserRepository()
 store_kb = StoreKeyboard()
 db = DataBase()
 rt = Router()

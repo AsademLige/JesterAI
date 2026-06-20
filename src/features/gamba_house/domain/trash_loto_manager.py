@@ -1,6 +1,6 @@
 from features.user.data.models.user_model_orm import UserORM
 from features.user.data.models.user_stats_orm import UserStatsORM
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from core.providers.random_provider import IRandomProvider
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
@@ -10,7 +10,7 @@ import random
 
 
 class TrashLotoManager:
-    user_repo:UserRepository = UserRepository()
+    user_repo:GinoUserRepository = GinoUserRepository()
     
     def __init__(self, db:DataBase, dictionary:Dictionary):
         self.db = db
@@ -38,7 +38,7 @@ class TrashLotoManager:
         # 777
         if is_jackpot:
             award =  random.randrange(20, 30)
-            if (await self.user_repo.update_user(user, {UserORM.money.name : UserORM.money + award - bet})):
+            if (await self.user_repo.update(user, {UserORM.money.name : UserORM.money + award - bet})):
                 slot_result_msg = self.dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award)
                 await self.db.add_win_log(user.id, event_type=0, money=award)
             else: error = self.dict.trash_loto_error
@@ -47,14 +47,14 @@ class TrashLotoManager:
             action = random.choices([1, 2])
             if (action[0] == 1):
                 length = random.randrange(2, 3)
-                if (await self.user_repo.update_user(user, {UserORM.length.name: UserORM.length + length, 
+                if (await self.user_repo.update(user, {UserORM.length.name: UserORM.length + length, 
                                                             UserORM.money.name : UserORM.money - bet})):
                     slot_result_msg = self.dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length)
                     await self.db.add_win_log(user.id, event_type=2, length=length)
                 else: error = self.dict.trash_loto_error
             else:
                 award =  random.randrange(10, 15)
-                if (await self.user_repo.update_user(user, {UserORM.money.name : UserORM.money + award - bet})):
+                if (await self.user_repo.update(user, {UserORM.money.name : UserORM.money + award - bet})):
                     slot_result_msg = self.dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award)
                     await self.db.add_win_log(user.id, event_type=2, money=award)
                 else: error = self.dict.trash_loto_error
@@ -62,7 +62,7 @@ class TrashLotoManager:
         # Проверка на одинаковые крайние
         elif is_consolation:
             award = random.randrange(1, 5)
-            if (await self.user_repo.update_user(user, {UserORM.money.name : UserORM.money + award - bet})):
+            if (await self.user_repo.update(user, {UserORM.money.name : UserORM.money + award - bet})):
                 slot_result_msg = self.dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award)
                 await self.db.add_win_log(user.id, event_type=3, money=award)
             else: error = self.dict.trash_loto_error
@@ -72,14 +72,14 @@ class TrashLotoManager:
             action = random.choices([1, 2])
             if (action[0] == 1):
                 length = 1
-                if (await self.user_repo.update_user(user, {UserORM.length.name: UserORM.length + length, 
+                if (await self.user_repo.update(user, {UserORM.length.name: UserORM.length + length, 
                                                      UserORM.money.name : UserORM.money - bet})):
                     slot_result_msg = self.dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length)
                     await self.db.add_win_log(user.id, event_type=1, length=length)
                 else: error = self.dict.trash_loto_error
             else:
                 award =  random.randrange(5, 10)
-                if (await self.user_repo.update_user(user, {UserORM.money.name : UserORM.money + award - bet})):
+                if (await self.user_repo.update(user, {UserORM.money.name : UserORM.money + award - bet})):
                     slot_result_msg = self.dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award)
                     await self.db.add_win_log(user.id, event_type=1, money=award)
                 else: error = self.dict.trash_loto_error
@@ -87,7 +87,7 @@ class TrashLotoManager:
             slot_result_msg = self.dict.trash_loto_lose(user.tg_name, user.tg_id)
         
         #TODO:объединить в один запрос
-        await self.user_repo.update_user(user, 
+        await self.user_repo.update(user, 
             {UserStatsORM.trash_loto_spins.name : UserStatsORM.trash_loto_spins + 1, 
             UserStatsORM.trash_loto_money_wins.name :  UserStatsORM.trash_loto_money_wins + award,
             UserStatsORM.trash_loto_length_wins.name :  UserStatsORM.trash_loto_length_wins + length,

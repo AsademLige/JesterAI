@@ -1,5 +1,5 @@
+from features.user.data.repository.user_repository import IUserRepository
 from features.user.data.models.user_model_orm import UserORM
-from features.user.data.user_repository import UserRepository
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from datetime import datetime, timedelta
@@ -7,15 +7,17 @@ from core.utils.utils import Utils
 import random
 import math
 
+
 class UserManager:
-    repo:UserRepository = UserRepository()
-    dictionary:Dictionary = Dictionary()
+    def __init__(self, repo:IUserRepository):
+        self.dictionary:Dictionary = Dictionary()
+        self.repo = repo
 
     async def pencil_change(self, user:User):
         delta:timedelta = Utils.get_time_delta(user.last_length_check)
 
         if (math.floor(delta.total_seconds() / 3600) < 0):
-            return {"msg": self.dictionary.timer_message(user, Utils.timedelta_to_hhmm(delta))}
+            return {"error": self.dictionary.timer_message(user, Utils.timedelta_to_hhmm(delta))}
 
         length_change:int = random.choice([-4, -3, -2, - 1, 1, 2, 3, 4, 5, 6])
         length_from_behind:int = 0
@@ -24,11 +26,11 @@ class UserManager:
             length_from_behind = random.choice([0, 1])
 
         ###Нужно будет заменить args
-        if (await self.repo.update_user(user, {
+        if (await self.repo.update(user, {
             UserORM.length.name: user.length + length_change + length_from_behind,
             UserORM.last_length_check.name : datetime.now()
         })):
-            return {"msg": self.dictionary.length_change(user.tg_name, length_change)}
+            return {"msg": self.dictionary.length_change(user.tg_name, length_change), "length_change":length_change}
         
     async def get_menu(self, user:User):
         place_in_top:int = await self.repo.get_place_in_top_by_member(user.tg_id, user.chat_id)

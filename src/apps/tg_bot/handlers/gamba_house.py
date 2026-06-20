@@ -7,7 +7,7 @@ from domain.controllers.rights_controller import RightsController
 from features.user.data.models.user_stats_orm import UserStatsORM
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from aiogram.types import FSInputFile, Message, CallbackQuery
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.user.data.models.user_model_orm import UserORM
 from features.battles.battle_unit_entity import BattleUnit
 from features.battles.battle_manager import BattleManager
@@ -40,7 +40,7 @@ combat_kb = BattleKeyboard()
 db = DataBase()
 rt = Router()
 rp = TelegramRandomProvider(bot)
-user_repo:UserRepository = UserRepository()
+user_repo:GinoUserRepository = GinoUserRepository()
 
 dice_manager = DiceGameManager(db, dict)
 trash_loto_manager = TrashLotoManager(db, dict)
@@ -214,7 +214,7 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
         await Utils.delete_old_message([callback.message, answer])
         return
     
-    if (not await user_repo.update_user(user, {UserORM.money.name : UserORM.money - callback_data.bet,
+    if (not await user_repo.update(user, {UserORM.money.name : UserORM.money - callback_data.bet,
                                                UserStatsORM.gladiators_bet.name :  UserStatsORM.gladiators_bet + callback_data.bet})):
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return

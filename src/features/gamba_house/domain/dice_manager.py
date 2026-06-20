@@ -1,6 +1,6 @@
 from features.user.data.models.user_stats_orm import UserStatsORM
 from src.core.providers.random_provider import IRandomProvider
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.user.data.models.user_model_orm import UserORM
 from core.consts.dictionary import Dictionary
 from core.data.data_base import DataBase
@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 from datetime import datetime
 
 class DiceGameManager:
-    user_repo:UserRepository = UserRepository()
+    user_repo:GinoUserRepository = GinoUserRepository()
 
     def __init__(self, db:DataBase, dictionary:Dictionary):
         self.db = db
@@ -31,7 +31,7 @@ class DiceGameManager:
         award = 5 if is_minor_win else (15 if is_major_win else 0)
         
         if award > 0:
-            await self.user_repo.update_user(user, {UserORM.money.name: UserORM.money + award,
+            await self.user_repo.update(user, {UserORM.money.name: UserORM.money + award,
                             UserStatsORM.dice_games.name: UserStatsORM.dice_games + 1,
                             UserORM.last_dice_play.name: datetime.now(),
                             UserStatsORM.dice_minor_wins.name: UserStatsORM.dice_minor_wins + (1 if is_minor_win else 0),

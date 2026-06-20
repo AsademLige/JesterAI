@@ -2,7 +2,7 @@ from features.battles.battle_unit_entity import BattleUnit, BodyParts, MemberStr
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.battles.battle_manager import BattleManager, BattlePhases
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.items.items_controller import ItemsController
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF
 from aiogram.utils.deep_linking import create_deep_link
@@ -34,7 +34,7 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 combat_kb = BattleKeyboard()
-user_repo:UserRepository = UserRepository()
+user_repo:GinoUserRepository = GinoUserRepository()
 links_cache = {}
 db = DataBase()
 rt = Router()

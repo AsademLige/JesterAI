@@ -417,9 +417,13 @@ class Dictionary():
     ###интерактивные действия изменения размера
     ###------------------------------------------------------------
     
-    __positive_length_change:List[str] = []
+    __positive_length_change:List[str] = [
+        "плюс {{pencil}}"
+    ]
 
-    __negative_length_change:List[str] = []
+    __negative_length_change:List[str] = [
+        "минус {{pencil}}"
+    ]
 
     ### 0 - Именительный падеж
     ### 1 - Родительный

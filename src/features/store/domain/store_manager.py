@@ -1,5 +1,5 @@
 from features.store.data.models.discounts_model import ProductDiscounts
-from features.user.data.user_repository import UserRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.user.data.models.user_model_orm import UserORM
 from features.store.data.models.warehouse import Warehouse
 from features.items.data.models.item_orm import ItemORM
@@ -14,7 +14,7 @@ import os
 class StoreManager:
     products:List[Tuple[Warehouse, ItemORM, ProductDiscounts]] = []
     selected_product:Tuple[Warehouse, ItemORM, ProductDiscounts]
-    user_repo:UserRepository = UserRepository()
+    user_repo:GinoUserRepository = GinoUserRepository()
     customer:User
     
     def __init__(self, db:DataBase, dictionary:Dictionary):
@@ -49,7 +49,7 @@ class StoreManager:
 
         if (await self.db.update_item_quantity_at_warehouse(self.selected_product) and 
             await self.user_repo.user_item_transaction(self.customer, self.selected_product[1]) and
-            await self.user_repo.update_user(self.customer, {
+            await self.user_repo.update(self.customer, {
                 UserORM.money.name: UserORM.money - final_price,
             })):
             msg = self.dict.product_buying_thanks(self.customer)

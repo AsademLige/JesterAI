@@ -41,3 +41,5 @@ class User(BaseModel):
     good_hunting_count: int = 0
     
     inventory: List[InventoryItem] = Field(default_factory=list)
+
+    relations:dict[int, int] = {}
