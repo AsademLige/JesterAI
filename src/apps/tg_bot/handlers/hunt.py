@@ -3,7 +3,7 @@ from features.user.data.models.user_inventory_link_orm import UserInventoryLinkO
 from features.battles.battle_manager import BattleManager, BattlePhases
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from features.user.data.repository.gino_user_repository import GinoUserRepository
-from features.items.items_controller import ItemsController
+from features.items.items_manager import ItemsManager
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF
 from aiogram.utils.deep_linking import create_deep_link
 from features.items.data.models.item_orm import ItemORM
@@ -35,6 +35,7 @@ dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 combat_kb = BattleKeyboard()
 user_repo:GinoUserRepository = GinoUserRepository()
+items_mg:ItemsManager = ItemsManager(user_repo)
 links_cache = {}
 db = DataBase()
 rt = Router()
@@ -199,7 +200,7 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
         if (items and not battle.phase == BattlePhases.BATTLE_END):
             status_extended += "\n\n<blockquote>🎒 В сумке охотника:</blockquote>\n"
             for item in items:
-                status_extended += ItemsController.effects_description(item[1]) + "\n"
+                status_extended += items_mg.effects_description(item[1]) + "\n"
                 
         await SafeEditMessage.safe_edit(callback, status_extended,
                                         reply_markup=combat_kb.battle_keyboard(user, battle, items) \
@@ -226,7 +227,7 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
         return
     
     old_hp:int = battle.active_member.hp
-    heal_status:Optional[Tuple[str, int]] = await ItemsController.use_heal_item(user, items[callback_data.item_index], battle.active_member)
+    heal_status:Optional[Tuple[str, int]] = await items_mg.use_heal_item(user, items[callback_data.item_index], battle.active_member)
     items = await db.get_user_heal_items(battle.active_member.entity)
     message:str = ""
 

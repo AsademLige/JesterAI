@@ -38,4 +38,4 @@ class TelegramNotificationProvider:
                 await self.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
 
         except Exception as e:
-            self.logger.send_log("telegram_scheduler", logging.WARNING, f"Failed to send {event_type}: {e}")
+            self.logger.send_log("telegram_scheduler", logging.ERROR, f"Failed to send {event_type}: {e}")

@@ -1,8 +1,7 @@
-from features.store.data.models.discounts_model import ProductDiscounts
-from features.user.data.repository.gino_user_repository import GinoUserRepository
+from features.store.data.repository.store_repository import IStoreRepository
+from features.user.data.repository.user_repository import IUserRepository
+from features.items.data.models.store_item_dto import StoreItem
 from features.user.data.models.user_model_orm import UserORM
-from features.store.data.models.warehouse import Warehouse
-from features.items.data.models.item_orm import ItemORM
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from core.data.data_base import DataBase
@@ -11,13 +10,19 @@ from typing import List, Tuple
 import os
 
 
+
 class StoreManager:
-    products:List[Tuple[Warehouse, ItemORM, ProductDiscounts]] = []
-    selected_product:Tuple[Warehouse, ItemORM, ProductDiscounts]
-    user_repo:GinoUserRepository = GinoUserRepository()
+    products:List[StoreItem] = []
+    selected_product:StoreItem
     customer:User
     
-    def __init__(self, db:DataBase, dictionary:Dictionary):
+    def __init__(self, db:DataBase, 
+                 dictionary:Dictionary, 
+                 user_repo: IUserRepository,
+                 store_repo: IStoreRepository):
+        
+        self.user_repo = user_repo
+        self.store_repo = store_repo
         self.db = db
         self.dict = dictionary
 
@@ -25,7 +30,7 @@ class StoreManager:
         if (self.products):
             return {"error" : "⛔️ Встань в очередь!"}
         
-        self.products = await self.db.get_store_items_with_quantity()
+        self.products = await self.store_repo.get_store_items_with_quantity()
         self.customer = user
 
         return {
@@ -33,24 +38,24 @@ class StoreManager:
             "error": None
         }
     
-    def select_product(self, id:int) -> Tuple[Warehouse, ItemORM, ProductDiscounts]:
-        self.selected_product = next((p for p in self.products if p[1].id == id), None)
+    def select_product(self, product_id:int) -> StoreItem:
+        self.selected_product = next((p for p in self.products if p.product_id == product_id), None)
         return self.selected_product
     
     async def buy_product(self) -> dict:
         msg:str
-        final_price:int = self.selected_product[1].price
-        if (self.selected_product[2]):
-            final_price = round(final_price - (final_price * (self.selected_product[2].discount_percent / 100)))
+        final_price:int = self.selected_product.price
+        if (self.selected_product.is_discount_active):
+            final_price = round(final_price - (final_price * (self.selected_product.discount_percent / 100)))
 
         if (self.customer.money < final_price):
             self.closeStore()
             return {"msg":self.dict.not_enough_money(self.customer)}
 
-        if (await self.db.update_item_quantity_at_warehouse(self.selected_product) and 
-            await self.user_repo.user_item_transaction(self.customer, self.selected_product[1]) and
+        if (await self.store_repo.update_item_quantity_at_warehouse(self.selected_product) and 
+            await self.user_repo.user_item_transaction(self.customer, self.selected_product) and
             await self.user_repo.update(self.customer, {
-                UserORM.money.name: UserORM.money - final_price,
+                UserORM.money.name: self.customer.money - final_price,
             })):
             msg = self.dict.product_buying_thanks(self.customer)
         else:

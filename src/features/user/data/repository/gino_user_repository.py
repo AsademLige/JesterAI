@@ -3,6 +3,7 @@ from features.user.data.models.user_inventory_link_orm import UserInventoryLinkO
 from features.user.data.repository.user_repository import IUserRepository
 from features.user.data.models.user_stats_orm import UserStatsORM
 from features.user.data.dtos.user_dto import InventoryItem, User
+from features.items.data.models.base_item_dto import BaseItem
 from features.user.data.models.user_model_orm import UserORM
 from features.user.data.models.role_orm import UserRoleORM
 from features.items.data.models.item_orm import ItemORM
@@ -67,7 +68,7 @@ class GinoUserRepository(IUserRepository):
             
         return None
     
-    def _clear_cache(self):
+    def clear_cache(self):
         self._cache.clear()
         self._chat_tg_map.clear()
         self._tg_id_map.clear()
@@ -80,6 +81,7 @@ class GinoUserRepository(IUserRepository):
         if (not tg_id and not id): return None
         
         cache_user = self._get_cache_user(tg_id, id, chat_id)
+
         if (cache_user): return cache_user
 
         try:
@@ -236,7 +238,6 @@ class GinoUserRepository(IUserRepository):
                 user_args[key] = value
 
         try:
-
             async with db.transaction():
                 if user_args:
                         await UserORM.update.values(**user_args).where(UserORM.id == user.id).gino.status()
@@ -257,6 +258,7 @@ class GinoUserRepository(IUserRepository):
                 if key in ("chat_id", "tg_id"):
                     index_needs_update = True
 
+
             if not cached_user:
                 self._add_to_cache(user)
             elif index_needs_update:
@@ -269,23 +271,47 @@ class GinoUserRepository(IUserRepository):
             return False
     
     ###TODO: Можно упростить
-    async def user_item_transaction(self, user:User, item:ItemORM, quantity:int = 1) -> bool:
+    async def user_item_transaction(self, user:User, item:BaseItem, quantity:int = 1) -> bool:
         try:
             existed_item:UserInventoryLinkORM = await UserInventoryLinkORM.\
-                query.where(and_(UserInventoryLinkORM.product_id == item.id,
+                query.where(and_(UserInventoryLinkORM.product_id == item.product_id,
                                  UserInventoryLinkORM.user_id == user.id)).gino.first()
             
+            new_quantity = quantity
             if (existed_item):
-                await UserInventoryLinkORM.update.where(and_(UserInventoryLinkORM.product_id == item.id,
+                new_quantity = existed_item.quantity + quantity
+                await UserInventoryLinkORM.update.where(and_(UserInventoryLinkORM.product_id == item.product_id,
                                                           UserInventoryLinkORM.user_id == user.id)).values(
-                quantity=UserInventoryLinkORM.quantity + quantity).gino.status()
+                quantity=new_quantity).gino.status()
             else:
                 new_item = UserInventoryLinkORM(
                     user_id = user.id,
-                    product_id = item.id,
+                    product_id = item.product_id,
                     quantity = quantity
                 )
                 await new_item.create()
+
+            inventory_item = next((i for i in user.inventory if i.product_id == item.product_id), None)
+
+            if inventory_item:
+                if new_quantity <= 0:
+                    inventory_item.quantity = 0
+                else:
+                    inventory_item.quantity = new_quantity
+            elif new_quantity > 0:
+                new_dto = InventoryItem(
+                    product_id=item.product_id,
+                    user_id=user.id,
+                    quantity=new_quantity,
+                    price=item.price,
+                    title=item.title,
+                    tag=item.tag,
+                    description=item.description,
+                    action=item.action,
+                    utf8_icon=item.utf8_icon
+                )
+                user.inventory.append(new_dto)
+
             return True
         except Exception as error:
             self.logger.send_log("user_repo", logging.ERROR, f"item transaction error: {error}")
@@ -296,7 +322,7 @@ class GinoUserRepository(IUserRepository):
             await UserORM.update.where(UserORM.chat_id == chat_id).values(
                 money=UserORM.money + money).gino.status()
             
-            self._clear_cache()
+            self.clear_cache()
 
             return True
         except Exception as error:
@@ -324,7 +350,7 @@ class GinoUserRepository(IUserRepository):
 
                 db_user_inventory_link, db_item = row
 
-                inventory_item_dto = InventoryItem.model_validate(db_user_inventory_link) 
+                inventory_item_dto = InventoryItem.from_orm(user.id, db_item, db_user_inventory_link) 
 
                 if db_item:
                     inventory_item_dto.price = db_item.price

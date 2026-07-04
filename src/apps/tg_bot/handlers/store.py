@@ -1,3 +1,4 @@
+from features.store.data.repository.gino_store_repository import GinoStoreRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from apps.tg_bot.keyboards.store_keyboard import StoreKeyboard
@@ -22,11 +23,12 @@ dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
 user_repo:GinoUserRepository = GinoUserRepository()
+store_repo:GinoStoreRepository = GinoStoreRepository()
 store_kb = StoreKeyboard()
 db = DataBase()
 rt = Router()
 
-store_mr = StoreManager(db, dict)
+store_mr = StoreManager(db, dict, user_repo, store_repo)
 
 @rt.callback_query(StateFilter(None), F.data == "hub_store")
 async def store(callback_query: CallbackQuery, state: FSMContext):

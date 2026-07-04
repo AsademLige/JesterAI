@@ -1,5 +1,7 @@
 from domain.controllers.bot_settings_controller import SettingsController
-from features.store.data.models.discounts_model import ProductDiscounts
+from features.items.data.models.store_item_dto import StoreItem
+from features.store.data.models.discounts_model_orm import ProductDiscountORM
+from features.store.data.repository.gino_store_repository import GinoStoreRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.items.data.models.item_orm import ItemORM
 from features.user.data.dtos.user_dto import User
@@ -13,6 +15,7 @@ import random
 
 logger:AppHerald = AppHerald()
 user_repo:GinoUserRepository = GinoUserRepository()
+store_repo:GinoStoreRepository = GinoStoreRepository()
 db = DataBase()
 prefs = Prefs()
 
@@ -143,9 +146,9 @@ class GlobalJobs():
         Ежедневное пополнение остатков магазина
         """
         try:
-            if (await db.update_warehouse()):
-                await db.deactivate_discounts()
-                discounts:List[Tuple[ProductDiscounts, ItemORM]] = await db.create_random_discount(2)
+            if (await store_repo.update_warehouse()):
+                await store_repo.deactivate_discounts()
+                items_discounts:List[StoreItem] = await store_repo.create_random_discount(2)
 
                 users: List[User] = await user_repo.get_users()
                 indexed_users: Dict[int, List[User]] = {}
@@ -160,7 +163,7 @@ class GlobalJobs():
                     settings = await SettingsController.get_settings(chat_id, "")
                     if (not settings.events_enabled): continue
                     
-                    await notifier_func(chat_id, "warehouse_update", {"discounts": discounts})
+                    await notifier_func(chat_id, "warehouse_update", {"discounts": items_discounts})
 
         except Exception as e:
             logger.send_log("apscheduler", logging.WARNING, f"warehouse_update - {e}")

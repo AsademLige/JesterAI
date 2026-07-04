@@ -1,12 +1,11 @@
-from features.store.data.models.discounts_model import ProductDiscounts
-from aiogram.utils.markdown import hbold, hcode, hblockquote, hitalic
+from features.items.data.models.inventory_item_dto import InventoryItem
 from features.battles.battle_unit_entity import BattleUnit, BodyParts
-from features.user.data.dtos.inventory_item_dto import InventoryItem
+from features.items.data.models.store_item_dto import StoreItem
 from features.battles.data.models.monster_orm import MonsterORM
+from features.items.data.models.base_item_dto import BaseItem
+from aiogram.utils.markdown import hbold, hcode, hblockquote
 from core.utils.text_processing import TextProcessing as tp
-from features.store.data.models.warehouse import Warehouse
 from core.data.models.winners_log_model import WinnersLog
-from features.items.data.models.item_orm import ItemORM
 from core.utils.enums import AttackStatus, BattleMode
 from typing import Optional, List, Dict, Tuple, Union
 from features.user.data.dtos.user_dto import User
@@ -501,7 +500,7 @@ class Dictionary():
             **self.random_member(),
         })
         
-    def store_description(self, products:List[Tuple[Warehouse, ItemORM, ProductDiscounts]], user:User) -> str:
+    def store_description(self, products:List[StoreItem], user:User) -> str:
         return tp.text_replacement(self.__store_description, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             "products": self.__generate_products_list(products),
@@ -509,33 +508,33 @@ class Dictionary():
             **self.random_member(),
         }, recursive_parse_args = True)
     
-    def __generate_products_list(self, products:List[Tuple[Warehouse, ItemORM, ProductDiscounts]]) -> str:
+    def __generate_products_list(self, products:List[StoreItem]) -> str:
         products_str:str = ""
         index:int = 1
-        for warehouse_item, product, discount in products:
+        for product in products:
             price_formatted:str = f"{self.price_wrapper(product.price, False)}"
-            if (discount):
-                discount_price:int = round(product.price - (product.price * (discount.discount_percent / 100)))
+            if (product.is_discount_active):
+                discount_price:int = round(product.price - (product.price * (product.discount_percent / 100)))
                 price_formatted = f"{self.price_wrapper(discount_price)} <s>{price_formatted}</s>💰"
             icon:str = f"<b>({index})</b> {random.choice(self.__buttons_types)}{product.utf8_icon}"
-            body:str = icon + f"{hcode(product.title)}<b>({warehouse_item.quantity}/{warehouse_item.max_capacity})</b> - {price_formatted}"
+            body:str = icon + f"{hcode(product.title)}<b>({product.warehouse_quantity}/{product.max_capacity})</b> - {price_formatted}"
 
             products_str += f"{body}\n"
             index+=1
 
         return products_str
     
-    def product_description(self, product:Tuple[Warehouse, ItemORM, ProductDiscounts]) -> str:
-        price_formatted:str = f"{self.price_wrapper(product[1].price, False)}"
-        if (product[2]):
-            discount_price:int = round(product[1].price - (product[1].price * (product[2].discount_percent / 100)))
+    def product_description(self, product:StoreItem) -> str:
+        price_formatted:str = f"{self.price_wrapper(product.price, False)}"
+        if (product):
+            discount_price:int = round(product.price - (product.price * (product.discount_percent / 100)))
             price_formatted = f"{self.price_wrapper(discount_price)} <s>{price_formatted}</s>💰"
         else:
             price_formatted = f"{price_formatted}💰"
         return tp.text_replacement(self.__product_description, {
-            "title": product[1].title,
-            "description": product[1].description,
-            "price": f"{price_formatted}" if (product[0].quantity > 0) else "<b>Нет в наличии!</b>",
+            "title": product.title,
+            "description": product.description,
+            "price": f"{price_formatted}" if (product.warehouse_quantity > 0) else "<b>Нет в наличии!</b>",
             **self.random_member(),
         }, recursive_parse_args = True)
     
@@ -551,11 +550,11 @@ class Dictionary():
             **self.random_member(),
         })
     
-    def warehouse_update(self, discounts:List[Tuple[ProductDiscounts, ItemORM]]) -> str:
+    def warehouse_update(self, discounts:List[StoreItem]) -> str:
         discounts_description:str = ""
         for i, discount in enumerate(discounts):
-            discounts_description += f"<blockquote>{discount[1].utf8_icon} {discount[1].title} "\
-                f"<b>-{discount[0].discount_percent}%</b>!</blockquote>\n"
+            discounts_description += f"<blockquote>{discount.utf8_icon} {discount.title} "\
+                f"<b>-{discount.discount_percent}%</b>!</blockquote>\n"
             
         return tp.text_replacement(self.__warehouse_update, {
             "discounts_description": discounts_description,
@@ -936,7 +935,7 @@ class Dictionary():
 
         return tp.text_replacement(status_icon + full_log, {**self.random_member()})
     
-    def hunt_loot(self, inventory:Optional[Tuple[List[ItemORM], int]]) -> str:
+    def hunt_loot(self, inventory:Optional[Tuple[List[BaseItem], int]]) -> str:
         if (not inventory): return ""
         money:str = f" {'А так же монеты' if inventory[0] else 'Собрали с трупа горсть монет'} {self.money_wrapper(inventory[1])}" if (inventory[1]) else ""
 

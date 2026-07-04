@@ -13,6 +13,7 @@ class UserORM(TimedBaseModel):
     custom_title = sa.Column(sa.Text)
     chat_id = sa.Column(sa.BigInteger)
     money = sa.Column(sa.Integer)
+    behavior = sa.Column(sa.Text)
 
     last_daily_draw_winner = sa.Column(sa.Boolean)
     last_length_check = sa.Column(sa.Date)

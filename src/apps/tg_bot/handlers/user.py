@@ -1,8 +1,10 @@
+from curses import has_key
+
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
-from features.user.data.dtos.inventory_item_dto import InventoryItem
+from features.items.data.models.inventory_item_dto import InventoryItem
 from apps.tg_bot.keyboards.callback_fabrics import InventoryCF
 from features.user.data.repository.gino_user_repository import GinoUserRepository
-from features.items.items_controller import ItemsController
+from features.items.items_manager import ItemsManager
 from features.user.domain.user_manager import UserManager
 from features.user.data.dtos.user_dto import User
 from aiogram.types import Message, CallbackQuery
@@ -25,6 +27,7 @@ bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
 repository:GinoUserRepository = GinoUserRepository()
 user_mr:UserManager = UserManager(repo=repository)
+items_mg:ItemsManager = ItemsManager(repository)
 db = DataBase()
 rt = Router()
 
@@ -37,7 +40,7 @@ async def pencil_change(message: Message, state: FSMContext):
 
     await message.delete()
     result = await user_mr.pencil_change(user)
-    msg = result["error"] if (result["error"]) else result["msg"]
+    msg = result["error"] if ('error' in result) else result["msg"]
 
     await bot.send_message(user.chat_id, msg, parse_mode=ParseMode.HTML)
         
@@ -99,7 +102,7 @@ async def on_item_use_myself(callback: CallbackQuery, callback_data: InventoryCF
         return
 
     item:InventoryItem = state_data["item"]
-    use_status:str = await ItemsController.use_item(user, item)
+    use_status:str = await items_mg.use_item(user, item)
     
     if (use_status):
         await callback.message.delete()
@@ -134,7 +137,7 @@ async def on_item_target_selected(callback: CallbackQuery, callback_data: Invent
     
     target: User = await repository.get_user(id=callback_data.item_id)
     item:InventoryItem = state_data["item"]
-    use_status:str = await ItemsController.use_item(user, item, target)
+    use_status:str = await items_mg.use_item(user, item, target)
 
     if (use_status):
         await callback.message.delete()

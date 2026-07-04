@@ -25,7 +25,7 @@ class CaptchaMiddleware(BaseMiddleware):
                 return await handler(event, data) 
             else: return
         
-        settings = await SettingsController.get_settings(event.chat)
+        settings = await SettingsController.get_settings(event.chat.id, event.chat.full_name)
 
         delta:timedelta = Utils.get_time_delta(settings.last_captcha_time, 0)
 

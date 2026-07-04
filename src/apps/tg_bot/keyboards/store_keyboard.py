@@ -1,8 +1,6 @@
-from features.store.data.models.discounts_model import ProductDiscounts
-from features.store.data.models.warehouse import Warehouse
+from features.items.data.models.store_item_dto import StoreItem
 from apps.tg_bot.keyboards.callback_fabrics import StoreCF
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from features.items.data.models.item_orm import ItemORM
 from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from core.consts.dictionary import Dictionary
@@ -16,12 +14,12 @@ class StoreKeyboard():
     def __init__(self):
         pass
 
-    def store_products(self, products: List[Tuple[Warehouse, ItemORM, ProductDiscounts]], user:User) -> InlineKeyboardMarkup:
+    def store_products(self, products: List[StoreItem], user:User) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         for i, product in enumerate(products):
-            builder.button(text=f"({i+1}) {product[1].utf8_icon} " + ("%" if product[2] else "$"),
+            builder.button(text=f"({i+1}) {product.utf8_icon} " + ("%" if product.is_discount_active else "$"),
                 callback_data=StoreCF(action="choice", 
-                                      id=product[1].id,
+                                      id=product.product_id,
                                       user_id=user.tg_id))
             
         builder.button(text=dict.exit,
@@ -32,13 +30,13 @@ class StoreKeyboard():
         
         return builder.as_markup()
     
-    def product_buying(self, product:Tuple[Warehouse, ItemORM, ProductDiscounts], user:User) -> InlineKeyboardMarkup:
+    def product_buying(self, product:StoreItem, user:User) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
-        if (product[0].quantity > 0):
+        if (product.warehouse_quantity > 0):
             builder.button(text="💰 Беру!",
                 callback_data=StoreCF(action="buy", 
-                                      id=product[1].id,
+                                      id=product.product_id,
                                       user_id=user.tg_id))
         
         builder.button(text=dict.back,

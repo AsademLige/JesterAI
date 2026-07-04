@@ -1,4 +1,5 @@
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, GladiatorsCF, TrashLotoCF
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.gamba_house.domain.trash_loto_manager import TrashLotoManager
 from apps.tg_bot.keyboards.gamba_house_keyboard import GambaHouseKeyboard
 from apps.tg_bot.providers.random_provider import TelegramRandomProvider
@@ -7,7 +8,6 @@ from domain.controllers.rights_controller import RightsController
 from features.user.data.models.user_stats_orm import UserStatsORM
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from aiogram.types import FSInputFile, Message, CallbackQuery
-from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.user.data.models.user_model_orm import UserORM
 from features.battles.battle_unit_entity import BattleUnit
 from features.battles.battle_manager import BattleManager
@@ -58,9 +58,9 @@ async def gamba_house(message: Message, state: FSMContext):
 
     users_in_chat: List[User] = await user_repo.get_users(message.chat.id)
 
-    for user in users_in_chat:
-        total += user.trash_loto_spins * 5 - user.trash_loto_money_wins
-        total += user.gladiators_bet - user.gladiators_bet_win
+    for chat_user in users_in_chat:
+        total += chat_user.trash_loto_spins * 5 - chat_user.trash_loto_money_wins
+        total += chat_user.gladiators_bet - chat_user.gladiators_bet_win
 
     photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"gamba_house.webp"))
 
@@ -214,8 +214,8 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
         await Utils.delete_old_message([callback.message, answer])
         return
     
-    if (not await user_repo.update(user, {UserORM.money.name : UserORM.money - callback_data.bet,
-                                               UserStatsORM.gladiators_bet.name :  UserStatsORM.gladiators_bet + callback_data.bet})):
+    if (not await user_repo.update(user, {UserORM.money.name : user.money - callback_data.bet,
+                                               UserStatsORM.gladiators_bet.name :  user.gladiators_bet + callback_data.bet})):
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
     

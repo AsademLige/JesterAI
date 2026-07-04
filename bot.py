@@ -23,7 +23,7 @@ from aiogram import Bot, Dispatcher
 import logging
 import asyncio
 
-###python3.9 bot.py - start bot
+###PYTHONPATH=src python3 bot.py - start bot
 ###Ctrl+c - stop bot
 
 prefs = Prefs()

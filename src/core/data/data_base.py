@@ -2,12 +2,12 @@ from core.data.models.str_assets_negative_length_change_model import StrAssetsNe
 from core.data.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.battles.data.models.monster_stats_orm import MonsterStatsORM
-from features.store.data.models.discounts_model import ProductDiscounts
+from features.store.data.models.discounts_model_orm import ProductDiscountORM
 from core.data.models.custom_sticker_model import CustomSticker
 from features.battles.data.models.monster_orm import MonsterORM
 from features.user.data.models.user_model_orm import UserORM
 from core.data.models.bot_settings_orm import BotSettingsORM
-from features.store.data.models.warehouse import Warehouse
+from features.store.data.models.warehouse_item_orm import WarehouseItemORM
 from core.data.models.sticker_set_model import StickerSet
 from core.data.models.winners_log_model import WinnersLog
 from features.items.data.models.item_orm import ItemORM
@@ -156,84 +156,6 @@ class DataBase():
     ###-----------------------------------------
     ### Методы работы с магазином
     ###-----------------------------------------
-
-    async def get_store_items_with_quantity(self) -> List[Tuple[Warehouse, ItemORM, ProductDiscounts]]:
-        query = ItemORM.join(Warehouse).outerjoin(
-            ProductDiscounts, 
-            and_(
-                ItemORM.id == ProductDiscounts.product_id,
-                ProductDiscounts.is_active == True
-            )
-        ).select()
-        return await query.gino.load((Warehouse, ItemORM, ProductDiscounts)).all()
-    
-    async def update_item_quantity_at_warehouse(self, item:Tuple[Warehouse, ItemORM, ProductDiscounts], quantity:int = 1) -> bool:
-        try:
-            if (item[0].quantity - quantity >= 0):
-                await Warehouse.update.where(Warehouse.id == item[0].id).values(
-                    quantity=Warehouse.quantity - quantity).gino.status()
-                return True
-            else:
-                return False
-        except Exception as error:
-            print(f"update warehouse error: {error}")
-            return False
-
-
-    async def update_warehouse(self) -> bool:
-        try:
-            await Warehouse.update.where(Warehouse.quantity < Warehouse.max_capacity).values(
-                    quantity=Warehouse.max_capacity).gino.status()
-            return True
-        except Exception as error:
-            print(f"warehouse items get error: {error}")
-            return False
-        
-    async def deactivate_discounts(self) -> bool:
-        try:
-            await ProductDiscounts.update.where(ProductDiscounts.is_active == True).\
-                    values(is_active=False).gino.status()
-            return True
-        except Exception as error:
-            print(f"discount update error: {error}")
-            return False
-        
-    async def create_random_discount(self, discounts_count:int = 1) -> List[Tuple[ProductDiscounts, ItemORM]]:
-        try:
-            query = ItemORM.join(Warehouse).\
-                outerjoin(ProductDiscounts,
-                        ProductDiscounts.is_active == False).\
-                select().\
-                distinct(ItemORM.id).\
-                where(and_(Warehouse.quantity > 0))
-        
-            discount_items:List[ItemORM] = await query.gino.load(ItemORM).all()
-            #TODO:Шел час ночи и я так и не смог 
-            #корректно достать рандомное количество из базы без дублей
-            random.shuffle(discount_items)
-            discount_items = discount_items[:discounts_count]
-
-            discounts:List[Tuple[ProductDiscounts, ItemORM]] = []
-
-            for discount_item in discount_items:
-                existed_discount:ProductDiscounts = await ProductDiscounts.\
-                query.where(ProductDiscounts.product_id == discount_item.id).gino.first()
-            
-                if (existed_discount):
-                    await ProductDiscounts.update.where(ProductDiscounts.product_id == discount_item.id).\
-                        values(is_active=True, discount_percent = random.choice([25, 35, 45, 50])).gino.status()
-                    discounts.append((existed_discount, discount_item))
-                else:
-                    new_discount = ProductDiscounts(
-                        product_id = discount_item.id,
-                        discount_percent = random.choice([25, 35, 45, 50])
-                    )
-                    await new_discount.create()
-                    discounts.append((new_discount, discount_item))
-            return discounts
-        except Exception as error:
-            print(f"discount create error: {error}")
-            return []
         
     ###-----------------------------------------
     ### Методы работы с монстрами

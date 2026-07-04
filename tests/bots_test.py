@@ -1,6 +1,6 @@
 from features.user.data.repository.local_user_repository import LocalUserRepository
+from features.bots.bot_engine import BotEngine, BotProfile
 from features.user.data.dtos.user_dto import User
-from features.bots.bot_engine import BotEngine
 from core.utils.app_herald import AppHerald
 from datetime import datetime, timedelta
 from freezegun import freeze_time
@@ -17,17 +17,29 @@ async def main():
         user:User = data["actor"]
         result = data["result"]
         action = data["action"]
+        
+        msg:str = None
 
         if (action == "pencil_check" and result.get("msg")):
-            logger.send_log(f"simulation", logging.INFO, f"[{action}] - ({user.id}):{user.tg_name} {user.custom_title} - {result['msg']}: {user.length - result['length_change']} -> {user.length}", show_time=False)
+            msg = f"simulation time: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+            msg += f"[{action}] - ({user.id}):{user.tg_name} {user.custom_title} - {result['msg']}"
+
+        if (result.get("length_change")):
+            msg += f": {user.length - result['length_change']} -> {user.length}"
+
+        if (msg):
+            logger.send_log(f"simulation", logging.INFO, msg, show_time=False)
 
     def simulation(users:List[User], start_date:datetime, duration:timedelta, tick:timedelta = timedelta(hours=1)):
-        logger.send_log("simulation", logging.INFO, f"\n------------ simulation started! Day: {day_number}", show_time=False)
+        logger.send_log("simulation", logging.INFO, f"\n------------ simulation started! Day: 1", show_time=False)
         user_repo = LocalUserRepository(snapshot_dir="snapshots")
         users_ai:Dict[int, BotEngine] = {}
         
         for user in users:
-            users_ai[user.id] = BotEngine(user, user_repo, on_data_received)
+            profile:BotProfile = BotProfile.from_type(user.behavior)
+
+            users_ai[user.id] = BotEngine(user, profile, user_repo, on_data_received)
+            
 
         end_date = start_date + duration
         last_logged_day = datetime.now().day
@@ -36,8 +48,6 @@ async def main():
                 day_number = (datetime.now().date() - start_date.date()).days + 1
                 logger.send_log("simulation", logging.INFO, f"\n------------ simulation day: {day_number}", show_time=False)
                 last_logged_day = datetime.now().day
-
-            logger.send_log(f"simulation", logging.INFO, f"simulation time: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}", show_time=False)
 
             for user in users:
                 try:

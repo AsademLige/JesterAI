@@ -1,7 +1,8 @@
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, InventoryCF
-from features.user.data.dtos.inventory_item_dto import InventoryItem
-from features.items.items_controller import ItemsController
+from features.items.data.models.inventory_item_dto import InventoryItem
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from features.items.items_manager import ItemsManager
 from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
@@ -9,11 +10,14 @@ from core.consts.dictionary import Dictionary
 from core.consts.config import Prefs
 from typing import List
 
+
 prefs = Prefs()
 dict = Dictionary()
 
 class InteractiveKeyboard():
     def __init__(self):
+        self.user_repo = GinoUserRepository()
+        self.items_mg:ItemsManager = ItemsManager(self.user_repo)
         pass
 
     def user_information_buttons(self, user:User) -> InlineKeyboardMarkup:
@@ -46,13 +50,13 @@ class InteractiveKeyboard():
     def item_keyboard(self, user:User, item:InventoryItem) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
-        if (not ItemsController.is_steal_item(item) and 
-            not ItemsController.is_heal_item(item)):
+        if (not self.items_mg.is_steal_item(item) and 
+            not self.items_mg.is_heal_item(item)):
             builder.button(text=dict.use_myself,
             callback_data=InventoryCF(action="use_myself",
                                     user_id=user.tg_id))
         
-        if (not ItemsController.is_heal_item(item)):
+        if (not self.items_mg.is_heal_item(item)):
             builder.button(text=dict.select_target,
             callback_data=InventoryCF(action="select_target",
                                     user_id=user.tg_id))

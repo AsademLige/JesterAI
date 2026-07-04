@@ -1,4 +1,4 @@
-from features.user.data.dtos.inventory_item_dto import InventoryItem
+from features.items.data.models.inventory_item_dto import InventoryItem
 from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 from datetime import datetime
@@ -16,6 +16,7 @@ class User(BaseModel):
     chat_id: int
     money: int
     role_id: Optional[int] = None
+    behavior: Optional[str] = None
     
     last_daily_draw_winner: Optional[bool] = None
     last_gladiators_bet: Optional[datetime] = None

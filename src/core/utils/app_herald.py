@@ -34,7 +34,7 @@ class AppHerald():
             self.logs_init(module, show_time=show_time)
 
         logger = self.__loggers[module]
-        logger.log(level, message)
+        logger.log(level, message, exc_info = True)
 
     def logs_init(self, module: str, 
                   maxBytes: int = 1024 * 1024,

@@ -15,8 +15,7 @@ class UserManager:
 
     async def pencil_change(self, user:User):
         delta:timedelta = Utils.get_time_delta(user.last_length_check)
-
-        if (math.floor(delta.total_seconds() / 3600) < 0):
+        if math.floor(delta.total_seconds() / 3600) < 0:
             return {"error": self.dictionary.timer_message(user, Utils.timedelta_to_hhmm(delta))}
 
         length_change:int = random.choice([-4, -3, -2, - 1, 1, 2, 3, 4, 5, 6])
@@ -31,13 +30,15 @@ class UserManager:
             UserORM.last_length_check.name : datetime.now()
         })):
             return {"msg": self.dictionary.length_change(user.tg_name, length_change), "length_change":length_change}
+        else:
+            return {"error": "что-то пошло не по плану..."}
         
     async def get_menu(self, user:User):
         place_in_top:int = await self.repo.get_place_in_top_by_member(user.tg_id, user.chat_id)
         
-        delta_pencil:timedelta = Utils.get_time_delta(user.last_length_check)
-        if math.floor(delta_pencil.total_seconds() / 3600) < 0:
-            time_to_pencil = Utils.timedelta_to_hhmm(delta_pencil)
+        delta:timedelta = Utils.get_time_delta(user.last_length_check)
+        if math.floor(delta.total_seconds() / 3600) < 0:
+            time_to_pencil = Utils.timedelta_to_hhmm(delta)
         else:
             time_to_pencil = "Готов"
         
@@ -59,4 +60,9 @@ class UserManager:
     
     async def is_registered_in_chat(self, tg_id:int, chat_id: int) -> bool:
         return await self.repo.get_user(tg_id, chat_id) is not None or tg_id == chat_id
+    
+    @staticmethod
+    def check_pencil_ready(last_length_check:datetime) -> bool:
+        delta:timedelta = Utils.get_time_delta(last_length_check)
+        return not math.floor(delta.total_seconds() / 3600) < 0
     

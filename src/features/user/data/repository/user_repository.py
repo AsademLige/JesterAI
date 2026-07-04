@@ -1,4 +1,4 @@
-from features.items.data.models.item_orm import ItemORM
+from features.items.data.models.base_item_dto import BaseItem
 from features.user.data.dtos.user_dto import User
 from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
@@ -34,7 +34,7 @@ class IUserRepository(ABC):
         pass
 
     @abstractmethod
-    async def user_item_transaction(self, user:User, item:ItemORM, quantity:int = 1) -> bool:
+    async def user_item_transaction(self, user:User, item:BaseItem, quantity:int = 1) -> bool:
         """Перемещение предмета в инвентарь пользователя/бота"""
         pass
     
