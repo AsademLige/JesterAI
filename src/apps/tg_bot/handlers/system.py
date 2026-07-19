@@ -1,7 +1,7 @@
 from apps.tg_bot.providers.scheduler_provider import TelegramNotificationProvider
+from core.services.apscheduler.scheduler_main import Scheduler
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.system_keyboard import SystemKeyboard
-from core.services.apscheduler.scheduler_main import Scheduler
 from apps.tg_bot.keyboards.callback_fabrics import JobsCF
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -25,7 +25,6 @@ system_kb = SystemKeyboard()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 event_handler = TelegramNotificationProvider(bot)
-scheduler = Scheduler(event_handler.handle_event)
 user_repo = GinoUserRepository()
 rt = Router()
 
@@ -36,7 +35,7 @@ async def get_all_jobs(message: Message, state: FSMContext):
         await message.answer("Не по масти тебе такие команды мне давать... ")    
         return
 
-    jobs: List[Job] = scheduler.scheduler.get_jobs()
+    jobs: List[Job] = Scheduler.get_current_instance().core.get_jobs()
     jobs_text:str = ""
     
     for job in jobs:
@@ -60,8 +59,10 @@ async def edit_sticker_set_handler(callback: CallbackQuery, callback_data: JobsC
                                          parse_mode=ParseMode.HTML)
     elif (callback_data.action == "trigger"):
         state_data = await state.get_data()
-        job:Job = scheduler.scheduler.get_job(state_data["job_id"])
-        scheduler.scheduler.add_job(job.func, 'date', 
+        
+        scheduler = Scheduler.get_current_instance()
+        job:Job = scheduler.core.get_job(state_data["job_id"])
+        scheduler.core.add_job(job.func, 'date', 
                                     run_date=datetime.now(), 
                                     misfire_grace_time=15)
         

@@ -132,6 +132,19 @@ class LocalUserRepository(IUserRepository):
         self._save_user_file(updated_user)
         return True
     
+    async def update_users_money_by_chat(self, chat_id: int, money:int) -> bool:
+        all_users = self._load_all_users()
+        
+        for user in all_users:
+            if chat_id is not None and user.chat_id != chat_id:
+                continue
+
+            user_dict = user.model_dump()
+            user_dict.update({"money":user.money + money})
+            User.model_validate(user_dict)
+
+        return True
+    
     async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:
         """Возвращает порядковый номер в топе по размеру {{pencil}}"""
         return 1

@@ -1,21 +1,14 @@
 from core.data.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from core.data.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
-from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
-from features.battles.data.models.monster_stats_orm import MonsterStatsORM
-from features.store.data.models.discounts_model_orm import ProductDiscountORM
 from core.data.models.custom_sticker_model import CustomSticker
-from features.battles.data.models.monster_orm import MonsterORM
 from features.user.data.models.user_model_orm import UserORM
 from core.data.models.bot_settings_orm import BotSettingsORM
-from features.store.data.models.warehouse_item_orm import WarehouseItemORM
 from core.data.models.sticker_set_model import StickerSet
 from core.data.models.winners_log_model import WinnersLog
-from features.items.data.models.item_orm import ItemORM
-from features.battles.loot_manager import DropTags
 from core.services.data_base.db_model import db
-from typing import List, Dict, Any, Tuple
-from sqlalchemy import func, select
 from core.consts.config import Prefs
+from sqlalchemy import func, select
+from typing import List, Dict, Any
 from datetime import  datetime
 from typing import Optional
 from sqlalchemy import and_
@@ -27,34 +20,6 @@ prefs = Prefs()
 class DataBase():
     def __init__(self):
         pass
-    ###--------------------------------------
-    ### Методы работы с данными пользователей 
-    ###--------------------------------------
-        
-    async def get_user_heal_items(self, user:UserORM) -> List[Tuple[UserInventoryLinkORM, ItemORM]]:
-        try:
-            query = ItemORM.join(UserInventoryLinkORM).select().where(and_(ItemORM.action.ilike(f"%heal%"), 
-                                                                     UserInventoryLinkORM.quantity > 0,
-                                                                     UserInventoryLinkORM.user_id == user.id))
-            return await query.gino.load((UserInventoryLinkORM, ItemORM)).all()
-        except Exception as error:
-            print(f"get user heal items error: {error}")
-            return []
-        
-    async def get_item_by_id(self, item_id:int) -> Optional[ItemORM]:
-        try:
-            return await ItemORM.query.where(ItemORM.id == item_id).gino.first()
-        except Exception as error:
-            print(f"add to inventory error: {error}")
-            return None
-        
-    async def get_random_item_by_tag(self, tag:DropTags) -> Optional[ItemORM]:
-        try:
-            return await ItemORM.query.order_by(func.random()).\
-                    where(ItemORM.tag.ilike(f"%{tag.name}%")).gino.first()
-        except Exception as error:
-            print(f"get item by tag error: {error}")
-            return None
         
     ###-----------------------------------------
     ### Методы работы с данными наборов стикеров 
@@ -125,46 +90,6 @@ class DataBase():
     async def delete_sticker_set_by_name(self, short_name:str):
         return await StickerSet.delete.\
             where(StickerSet.short_name == short_name).gino.status()
-    
-    ###-----------------------------------------
-    ### Методы работы с данными настроек 
-    ###-----------------------------------------
-
-    async def get_settings(self, chat_id:int, chat_full_name:str) -> Optional[BotSettingsORM]:
-        try:
-            settings:Optional[BotSettingsORM] = await BotSettingsORM.query.where(BotSettingsORM.chat_id == chat_id).gino.first()
-            if (not settings):
-                settings = BotSettingsORM(
-                    chat_id=chat_id,
-                    alias = chat_full_name
-                )
-                await settings.create()
-            return settings
-        except Exception as error:
-            print(f"settings get error: {error}")
-            return None
-        
-    async def update_settings_by_chat_id(self, chat_id:int, args:Dict[str, Any] = {}) -> bool:
-        try:
-            query = BotSettingsORM.update.values(**args).where(BotSettingsORM.chat_id == chat_id)
-            await query.gino.status()
-            return True
-        except Exception as error:
-            print(f"update settings error: {error}")
-            return False
-        
-    ###-----------------------------------------
-    ### Методы работы с магазином
-    ###-----------------------------------------
-        
-    ###-----------------------------------------
-    ### Методы работы с монстрами
-    ###-----------------------------------------
-    
-    async def get_random_monsters_by_tag(self, monster_count:int = 1, tag:str = "mob") -> List[MonsterORM]:
-        random_monster:List[MonsterORM] = await MonsterORM.query.order_by(func.random()).\
-                            where(MonsterORM.tag.ilike(f"%{tag}%")).limit(monster_count).gino.all()
-        return random_monster
 
     ###-----------------------------------------
     ### Методы работы с статистикой выигрышей 
@@ -208,24 +133,6 @@ class DataBase():
             return True
         except Exception as error: 
             print(f"log create error: {error}")
-            return False
-    
-        
-    ###-----------------------------------------
-    ### Методы работы с статистикой монстра
-    ###-----------------------------------------
-    
-    async def update_monster_status(self, monster_id:int, args:Dict[str, Any] = {}) -> bool:
-        try:
-            monster_stats:Optional[MonsterStatsORM] = await MonsterStatsORM.query.\
-                            where(MonsterStatsORM.monster_id == monster_id).gino.first()
-            if (not monster_stats):
-                monster_stats = MonsterStatsORM(monster_id = monster_id)
-                await monster_stats.create()
-            await monster_stats.update(**args).apply()
-            return True
-        except Exception as error: 
-            print(f"monster stats update error: {error}")
             return False
 
     ###-----------------------------------------

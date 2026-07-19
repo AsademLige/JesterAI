@@ -1,9 +1,9 @@
 from features.items.data.models.inventory_item_dto import InventoryItem
 from features.battles.battle_unit_entity import BattleUnit, BodyParts
 from features.items.data.models.store_item_dto import StoreItem
-from features.battles.data.models.monster_orm import MonsterORM
 from features.items.data.models.base_item_dto import BaseItem
 from aiogram.utils.markdown import hbold, hcode, hblockquote
+from features.battles.data.models.monster_dto import Monster
 from core.utils.text_processing import TextProcessing as tp
 from core.data.models.winners_log_model import WinnersLog
 from core.utils.enums import AttackStatus, BattleMode
@@ -98,7 +98,8 @@ class Dictionary():
     
     __user_information:str = f'{hblockquote("🔍 {{user_link}} {{custom_title}} Имеет {{pencil_accu}} длинной {{length}}!")}\n'\
     '{{medal}} Место в топе: {{place_in_top}}\n'\
-    '💰 Монет на руках: {{money}}\n\n'\
+    '💰 Монет на руках: {{money}}\n'\
+    '⚡️ {{energy}}\n\n'\
     '{{user_stats}}\n\n'\
     '⏰ <i>До проверки {{pencil_gen}}: {{time_to_pencil}}</i>\n'\
     '⏰ <i>До игры в кости: {{time_to_dice}}</i>'
@@ -450,6 +451,8 @@ class Dictionary():
     __hunt_timer_message:str = "{{user_link}}, отдохни, вылечи раны с последней охоты!\n"\
     "<blockquote>⏰ Осталось потерпеть: {{time_left}}</blockquote>"
     
+    __energy_drain:str = "<blockquote>⚡️ {{user_link}}, у тебя недостаточно энергии!</blockquote>"
+    
     ###------------------------------------------------------------
     ###Методы
     ###------------------------------------------------------------
@@ -469,7 +472,7 @@ class Dictionary():
             "user":self.get_user_link(user.tg_name, user.tg_id),
         })
     
-    def hunt_monster_meeting(self, monster:MonsterORM, strategy:str, fighting_style_visual:str) -> str:
+    def hunt_monster_meeting(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
         return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + \
                                    f"\n\n{strategy}" + \
                                    f"\n\n❤️ <b>Здоровье: {monster.health}</b>\n"\
@@ -493,7 +496,7 @@ class Dictionary():
             "gladiators_ui":tp.text_replacement(self.gladiators_interface, {**ui_data})
         })
     
-    def battle_escape(self, member:Union[User, MonsterORM]) -> str:
+    def battle_escape(self, member:Union[User, Monster]) -> str:
         return tp.text_replacement(random.choice(self.__battle_escape), {
             "member" : self.get_user_link(member.tg_name, member.tg_id) if type(member) is User else f"<code>{member.name}</code>",
             "length": self.length_wrapper(member.length if type(member) is User else random.randint(1, 30)), 
@@ -665,11 +668,12 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:User, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов") -> str:
+    def user_information(self, user:User, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов", max_energy:int = 5) -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
                                     "money": user.money,
+                                    "energy": f"{Utils.progress_bar(user.energy, max_energy)}",
                                     "medal": self.get_medal_emoji(place_in_top),
                                     "user_stats": self.generate_user_stats(user),
                                     "place_in_top": place_in_top,
@@ -864,6 +868,11 @@ class Dictionary():
     def hunt_timer_message(self, user:User, time_left:str) -> str:
         return tp.text_replacement(self.__hunt_timer_message, {
             "time_left" : time_left,
+            "user_link" : self.get_user_link(user.tg_name, user.tg_id),
+            })
+    
+    def energy_drain(self, user:User) -> str:
+        return tp.text_replacement(self.__hunt_timer_message, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             })
     

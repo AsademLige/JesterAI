@@ -37,7 +37,7 @@ class InteractiveKeyboard():
             if (item.quantity > 0):
                 builder.button(text=f"{i+1} {item.utf8_icon}",
                     callback_data=InventoryCF(action="inventory_choice", 
-                                                item_id=item.product_id,
+                                                item_id=item.id,
                                                 user_id=user.tg_id))
             
         builder.button(text=dict.exit,

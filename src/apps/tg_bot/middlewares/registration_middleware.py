@@ -1,4 +1,5 @@
 from aiogram.types import Chat, ChatMemberAdministrator, ChatMemberOwner, Message, CallbackQuery, TelegramObject, User
+from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from typing import Any, Callable, Dict, Awaitable, Optional
 from features.user.domain.user_manager import UserManager
@@ -8,8 +9,9 @@ from aiogram import BaseMiddleware
 from random import Random
 
 class RegistrationMiddleware(BaseMiddleware):
+    settings_repo:GinoBotSettingsRepository = GinoBotSettingsRepository()
     user_repo:GinoUserRepository = GinoUserRepository()
-    user_mr:UserManager = UserManager(repo=user_repo)
+    user_mr:UserManager = UserManager(repo=user_repo, settings_repo=settings_repo)
     dict:Dictionary = Dictionary()
 
     async def __call__(

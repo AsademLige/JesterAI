@@ -107,3 +107,15 @@ class Utils():
     def is_valid_index(list: List[Any], index: int) -> bool:
         """Проверяет, существует ли индекс в списке"""
         return 0 <= index < len(list)
+    
+    @staticmethod
+    def progress_bar(current, maximum, length=10, recover=0):
+        """Создает полоску заполнения"""
+        filled_bars = int((current / maximum) * length)
+        filled_bars = min(filled_bars, length)
+        
+        healed_bars = int((recover / maximum) * length) if recover > 0 else 0
+        healed_bars = min(healed_bars, length - filled_bars)
+        
+        # ▰ текущее значение, ░ восстановленное, □ максимальное
+        return ("▰" * filled_bars + "+" * healed_bars + "□" * (length - filled_bars - healed_bars)) + f" {current+recover}/{maximum}"

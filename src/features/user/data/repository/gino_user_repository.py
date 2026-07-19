@@ -1,4 +1,5 @@
 
+from features.battles.loot_manager import DropTags
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.user.data.repository.user_repository import IUserRepository
 from features.user.data.models.user_stats_orm import UserStatsORM
@@ -274,24 +275,24 @@ class GinoUserRepository(IUserRepository):
     async def user_item_transaction(self, user:User, item:BaseItem, quantity:int = 1) -> bool:
         try:
             existed_item:UserInventoryLinkORM = await UserInventoryLinkORM.\
-                query.where(and_(UserInventoryLinkORM.product_id == item.product_id,
+                query.where(and_(UserInventoryLinkORM.product_id == item.id,
                                  UserInventoryLinkORM.user_id == user.id)).gino.first()
             
             new_quantity = quantity
             if (existed_item):
                 new_quantity = existed_item.quantity + quantity
-                await UserInventoryLinkORM.update.where(and_(UserInventoryLinkORM.product_id == item.product_id,
+                await UserInventoryLinkORM.update.where(and_(UserInventoryLinkORM.product_id == item.id,
                                                           UserInventoryLinkORM.user_id == user.id)).values(
                 quantity=new_quantity).gino.status()
             else:
                 new_item = UserInventoryLinkORM(
                     user_id = user.id,
-                    product_id = item.product_id,
+                    product_id = item.id,
                     quantity = quantity
                 )
                 await new_item.create()
 
-            inventory_item = next((i for i in user.inventory if i.product_id == item.product_id), None)
+            inventory_item = next((i for i in user.inventory if i.id == item.id), None)
 
             if inventory_item:
                 if new_quantity <= 0:
@@ -300,7 +301,7 @@ class GinoUserRepository(IUserRepository):
                     inventory_item.quantity = new_quantity
             elif new_quantity > 0:
                 new_dto = InventoryItem(
-                    product_id=item.product_id,
+                    id=item.id,
                     user_id=user.id,
                     quantity=new_quantity,
                     price=item.price,
@@ -363,6 +364,64 @@ class GinoUserRepository(IUserRepository):
                 user.inventory.append(inventory_item_dto)
         except Exception as error:
             self.logger.send_log("user_repo", logging.ERROR, f"get user inventory error: {error}")
+            return None
+        
+    async def get_user_heal_items(self, user:UserORM) -> List[InventoryItem]:
+        try:
+            query = (
+                select([UserInventoryLinkORM, ItemORM])
+                .select_from(ItemORM.join(UserInventoryLinkORM))
+                .where(
+                    and_(
+                        ItemORM.action.ilike(f"%heal%"), 
+                        UserInventoryLinkORM.user_id == user.id,
+                        UserInventoryLinkORM.quantity > 0
+                    )
+                )
+            )
+
+            rows = await query.gino.load((UserInventoryLinkORM, ItemORM)).all()
+            items:List[InventoryItem] = []
+
+            for row in rows:
+                db_item: ItemORM
+                db_user_inventory_link: UserInventoryLinkORM
+
+                db_user_inventory_link, db_item = row
+
+                inventory_item_dto = InventoryItem.from_orm(user.id, db_item, db_user_inventory_link) 
+
+                if db_item:
+                    inventory_item_dto.price = db_item.price
+                    inventory_item_dto.title = db_item.title
+                    inventory_item_dto.tag = db_item.tag
+                    inventory_item_dto.description = db_item.description
+                    inventory_item_dto.action = db_item.action
+                    inventory_item_dto.utf8_icon = db_item.utf8_icon
+
+                items.append(inventory_item_dto)
+
+            return items
+        except Exception as error:
+            print(f"get user heal items error: {error}")
+            return []
+        
+    async def get_item_by_id(self, item_id:int) -> Optional[BaseItem]:
+        try:
+            item_db = await ItemORM.query.where(ItemORM.id == item_id).gino.first()
+            return BaseItem.model_validate(item_db)
+        except Exception as error:
+            print(f"add to inventory error: {error}")
+            return None
+        
+    async def get_random_item_by_tag(self, tag:DropTags) -> Optional[BaseItem]:
+        try:
+            item_db = await ItemORM.query.order_by(func.random()).\
+                    where(ItemORM.tag.ilike(f"%{tag.name}%")).gino.first()
+            
+            return BaseItem.model_validate(item_db)
+        except Exception as error:
+            print(f"get item by tag error: {error}")
             return None
         
     async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:

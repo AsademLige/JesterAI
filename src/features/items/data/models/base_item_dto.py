@@ -4,7 +4,7 @@ from typing import Optional
 class BaseItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
-    product_id: int
+    id: int
     price: int
     title: str
     tag: Optional[str] = None

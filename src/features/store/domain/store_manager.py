@@ -39,7 +39,7 @@ class StoreManager:
         }
     
     def select_product(self, product_id:int) -> StoreItem:
-        self.selected_product = next((p for p in self.products if p.product_id == product_id), None)
+        self.selected_product = next((p for p in self.products if p.id == product_id), None)
         return self.selected_product
     
     async def buy_product(self) -> dict:

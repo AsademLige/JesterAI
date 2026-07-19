@@ -1,21 +1,23 @@
+from core.utils.utils import Utils
 from features.battles.battle_unit_entity import AttackStatus, BattleUnit, MemberStand, MemberStrategy
+from features.battles.data.repository.monsters_repository import IMonstersRepository
 from core.utils.enums import BattleMode, BattlePhases, MemberStatus
-from features.battles.data.models.monster_orm import MonsterORM
+from features.battles.data.models.monster_dto import Monster
 from core.utils.text_processing import TextProcessing as tp
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
-from core.data.data_base import DataBase
+from core.utils.app_herald import AppHerald
 from datetime import datetime, timedelta
 from core.consts.config import Prefs
+import logging
 import random
 
-from features.user.data.dtos.user_dto import User
-
 class BattleManager():
-    db = DataBase()
     dict = Dictionary()
     prefs = Prefs()
     members:List[BattleUnit]
+    logger:AppHerald = AppHerald()
     __mode:BattleMode
     __phase:BattlePhases
 
@@ -40,7 +42,7 @@ class BattleManager():
         return self.__phase
     
     @property
-    def battle_timer(self) -> int:
+    def battle_timer(self) -> timedelta:
         return self.__battle_timer
     
     @property
@@ -54,9 +56,12 @@ class BattleManager():
         pass
 
     @classmethod
-    async def hunt(cls, hunter:User, monster_count:int = 1, boss:bool = False):
-        lst:List[Union[MonsterORM, User]] = [hunter]
-        lst.extend(await cls.db.get_random_monsters_by_tag(monster_count, tag="boss" if boss else "mob"))
+    async def hunt(cls, hunter:User, monsters_repo:IMonstersRepository, monster_count:int = 1, boss:bool = False):
+        lst:List[Union[Monster, User]] = [hunter]
+        lst.extend(await monsters_repo.get_random_monsters_by_tag(monster_count, tag="boss" if boss else "mob"))
+        
+        cls.logger.send_log("battle", logging.INFO, 
+                                    f"\n\nBattle: {hunter.tg_name} vs {lst[1].name} --------------------------------------------------")
 
         members:List[BattleUnit] = [await BattleUnit.create(entity) for entity in lst]
         return cls(
@@ -65,8 +70,8 @@ class BattleManager():
         )
     
     @classmethod
-    async def gladiators(cls, monster_count:int = 2):
-        monsters:List[MonsterORM] = await cls.db.get_random_monsters_by_tag(monster_count)
+    async def gladiators(cls, monsters_repo:IMonstersRepository, monster_count:int = 2):
+        monsters:List[Monster] = await monsters_repo.get_random_monsters_by_tag(monster_count)
         members:List[BattleUnit] = [await BattleUnit.create(entity) for entity in monsters]
 
         return cls(
@@ -143,7 +148,7 @@ class BattleManager():
 
             members_ui[f"player{i+1}"] = self.members[i].full_battle_name + bet
             members_ui[f"player{i+1}_icon"] = self.members[i].utf8_icon
-            members_ui[f"health{i+1}"] = self.health_bar(self.members[i].hp, self.members[i].max_hp)
+            members_ui[f"health{i+1}"] = Utils.progress_bar(self.members[i].hp, self.members[i].max_hp)
             
             if (self.members[i] == self.__active_member):
                 members_ui["turn"] = f"<b>({self.__active_member.motions_left}/2)</b> {self.members[i].link}"
@@ -188,16 +193,27 @@ class BattleManager():
 
         if (status[0] == AttackStatus.KILLED and opponent_status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
+            self.logger.send_log("battle", logging.INFO, 
+                                    f"\nBattle End Draw --------------------------------------------------")
+            
             return ("⚰️⚰️ Бой кровавый, и победителя в нем нет, лежат все без дыхания...", self.__phase, None)
         elif (opponent_status and opponent_status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
             if (self.mode == BattleMode.HUNT):
                 opponent.loot_by(self.__active_member)
             turn_result = self.dict.battle_end(opponent, self.__active_member, self.__mode, (opponent_status[1], opponent_status[2]))
+
+            self.logger.send_log("battle", logging.INFO, 
+                                    f"\nBattle End user WIN --------------------------------------------------")
+            
             return (turn_result, self.__phase, self.__active_member)
         elif (status[0] == AttackStatus.KILLED):
             self.__phase = BattlePhases.BATTLE_END
             turn_result = self.dict.battle_end(self.__active_member, opponent, self.__mode, (status[1], status[2]))
+
+            self.logger.send_log("battle", logging.INFO, 
+                                    f"\nBattle End user LOSE --------------------------------------------------")
+            
             return (turn_result, self.__phase, opponent)
 
         turn_result += self.dict.battle_turn_log(self.__active_member, opponent, 
@@ -231,16 +247,3 @@ class BattleManager():
     
     def get_bet_gladiator(self) -> Optional[BattleUnit]:
         return next((gld for gld in self.members if gld.bet_money > 0), None)
-
-    @staticmethod
-    def health_bar(current, maximum, length=10, heal=0):
-        """Создает полоску здоровья"""
-        """Создает полоску здоровья с отображением вылеченного здоровья"""
-        filled_bars = int((current / maximum) * length)
-        filled_bars = min(filled_bars, length)
-        
-        healed_bars = int((heal / maximum) * length) if heal > 0 else 0
-        healed_bars = min(healed_bars, length - filled_bars)
-        
-        # Создаем полоску: ▰ - текущее здоровье, ░ - вылеченное, □ - потерянное
-        return ("▰" * filled_bars + "+" * healed_bars + "□" * (length - filled_bars - healed_bars)) + f" {current+heal}/{maximum}"

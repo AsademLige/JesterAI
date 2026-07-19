@@ -1,10 +1,11 @@
 from logging.handlers import RotatingFileHandler
 from logging import Logger, StreamHandler
-from core.consts.consts import Consts
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
+from core.consts.consts import Consts
+from typing import Dict
 import logging
 import glob
+import sys
 import re
 import os
 
@@ -34,7 +35,7 @@ class AppHerald():
             self.logs_init(module, show_time=show_time)
 
         logger = self.__loggers[module]
-        logger.log(level, message, exc_info = True)
+        logger.log(level, message, exc_info=bool(sys.exc_info()[0]))
 
     def logs_init(self, module: str, 
                   maxBytes: int = 1024 * 1024,

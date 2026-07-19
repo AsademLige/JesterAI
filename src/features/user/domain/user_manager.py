@@ -1,5 +1,7 @@
+from core.data.repository.bot_settings_repository import IBotSettingsRepository
 from features.user.data.repository.user_repository import IUserRepository
 from features.user.data.models.user_model_orm import UserORM
+from core.data.models.bot_settings_dto import BotSettings
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from datetime import datetime, timedelta
@@ -9,8 +11,9 @@ import math
 
 
 class UserManager:
-    def __init__(self, repo:IUserRepository):
+    def __init__(self, repo:IUserRepository, settings_repo:IBotSettingsRepository):
         self.dictionary:Dictionary = Dictionary()
+        self.settings_repo = settings_repo
         self.repo = repo
 
     async def pencil_change(self, user:User):
@@ -35,6 +38,7 @@ class UserManager:
         
     async def get_menu(self, user:User):
         place_in_top:int = await self.repo.get_place_in_top_by_member(user.tg_id, user.chat_id)
+        settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
         
         delta:timedelta = Utils.get_time_delta(user.last_length_check)
         if math.floor(delta.total_seconds() / 3600) < 0:
@@ -52,7 +56,8 @@ class UserManager:
             "msg": self.dictionary.user_information(user, 
                                          place_in_top, 
                                          time_to_pencil, 
-                                         time_to_dice)
+                                         time_to_dice,
+                                         max_energy=settings.max_users_energy)
         }
     
     async def is_admin(self, tg_id:int) -> bool:

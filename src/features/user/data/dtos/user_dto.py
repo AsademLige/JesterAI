@@ -15,6 +15,7 @@ class User(BaseModel):
     custom_title: Optional[str] = None
     chat_id: int
     money: int
+    energy: int
     role_id: Optional[int] = None
     behavior: Optional[str] = None
     

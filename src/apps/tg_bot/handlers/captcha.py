@@ -2,6 +2,7 @@ from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from core.data.data_base import DataBase
 from aiogram.fsm.context import FSMContext
 from core.consts.dictionary import Dictionary
+from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from core.utils.utils import Utils
 from datetime import datetime, timedelta
 from aiogram.types import CallbackQuery
@@ -14,13 +15,12 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
-db = DataBase()
 rt = Router()
 
 @rt.callback_query(F.data == "verify_human")
 async def verify_human(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await db.update_settings_by_chat_id(callback.message.chat.id, {
+    await GinoBotSettingsRepository().update_settings_by_chat_id(callback.message.chat.id, {
         "last_captcha_time" : datetime.now() + timedelta(hours=1)
     })
     answer = await callback.message.edit_text(

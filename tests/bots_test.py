@@ -1,4 +1,5 @@
 from features.user.data.repository.local_user_repository import LocalUserRepository
+from core.services.apscheduler.scheduler_main import Scheduler
 from features.bots.bot_engine import BotEngine, BotProfile
 from features.user.data.dtos.user_dto import User
 from core.utils.app_herald import AppHerald
@@ -10,6 +11,8 @@ import asyncio
 import time
 
 async def main():
+    scheduler = await Scheduler.background(test_handle_event)
+    
     user_repo = LocalUserRepository(snapshot_dir="snapshots")
     logger:AppHerald = AppHerald()
 
@@ -48,6 +51,9 @@ async def main():
                 day_number = (datetime.now().date() - start_date.date()).days + 1
                 logger.send_log("simulation", logging.INFO, f"\n------------ simulation day: {day_number}", show_time=False)
                 last_logged_day = datetime.now().day
+            
+            with scheduler.core._jobstores_lock:
+                scheduler.core._process_jobs()
 
             for user in users:
                 try:
@@ -57,7 +63,8 @@ async def main():
 
             frozen_time.tick(tick)
             time.sleep(0.1)
-            
+
+        scheduler.core.shutdown()
     
     with freeze_time(datetime.now()) as frozen_time:
         bot1 = await user_repo.get_user(tg_id=111)
@@ -72,6 +79,30 @@ async def main():
 
         simulation([bot1, bot2], datetime.now(), timedelta(days=7), tick=timedelta(hours=6))
 
+async def test_handle_event(self, chat_id: int, event_type: str, data: dict):
+    try:
+        if event_type == "weekly_winners":
+            # text = self.dict.weekly_winners(data["sorted_users"], data["rewards"])
+            print(data)
+
+        elif event_type == "day_salary":
+            # text = self.dict.day_salary(data["money"])
+            print(data)
+
+        elif event_type == "tech_work_compensation":
+            # text = self.dict.tech_work_compensation(data["money"])
+            print(data)
+
+        elif event_type == "day_draw":
+            # text = self.dict.draw(data["winner"], data["length_change"])
+            print(data)
+            
+        elif event_type == "warehouse_update":
+            # text = self.dict.warehouse_update(data["discounts"])
+            print(data)
+
+    except Exception as e:
+        self.logger.send_log("telegram_scheduler", logging.ERROR, f"Failed to send {event_type}: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

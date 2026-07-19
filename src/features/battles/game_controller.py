@@ -1,13 +1,13 @@
 from features.battles.data.models.monster_stats_orm import MonsterStatsORM
+from features.battles.data.repository.monsters_repository import IMonstersRepository
+from features.user.data.repository.user_repository import IUserRepository
 from features.battles.battle_manager import BattleManager, BattlePhases
 from features.user.data.models.user_stats_orm import UserStatsORM
-from features.user.data.repository.gino_user_repository import GinoUserRepository
+from features.items.data.models.base_item_dto import BaseItem
 from features.user.data.models.user_model_orm import UserORM
 from features.battles.battle_unit_entity import BattleUnit
-from features.items.data.models.item_orm import ItemORM
 from features.user.data.dtos.user_dto import User
 from typing import Dict, List, Optional, Tuple
-from core.data.data_base import DataBase
 from datetime import datetime, timedelta
 from core.utils.enums import BattleMode
 from core.consts.config import Prefs
@@ -15,11 +15,10 @@ from aiogram.types import Message
 from aiogram import Bot
 import asyncio
 
+
 class GameController():
     _instance = None
-    db = DataBase()
     prefs = Prefs()
-    user_repo:GinoUserRepository = GinoUserRepository()
     bot = Bot(token=prefs.bot_token)
     __battle_timer:timedelta = timedelta(seconds=60)
     __add_time_per_turn:timedelta = timedelta(seconds=15)
@@ -27,27 +26,30 @@ class GameController():
     __battles_history:Dict[int, List[Message]] = {}
     __battles_tasks:Dict[int, List[asyncio.Task]] = {}
     
-    def __new__(cls):
+    def __new__(cls, user_repo:IUserRepository, monster_repo:IMonstersRepository):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, user_repo:IUserRepository, monster_repo:IMonstersRepository):
+        self.user_repo = user_repo
+        self.monster_repo = monster_repo
         if not hasattr(self, 'initialized'):
             self.initialized = True
 
     async def prepare_hunt(self, hunter:User) -> Tuple[str, BattleManager]:
         get_boss:bool = False
-
-        heal_item:Optional[ItemORM] = await self.db.get_item_by_id(10)
-        if (not await self.db.get_user_heal_items(hunter) and heal_item):
+        
+        ##TODO:Можно переделать на временные предметы внутри боя (отдельное поле в User)
+        heal_item:Optional[BaseItem] = await self.user_repo.get_item_by_id(10)
+        if (not await self.user_repo.get_user_heal_items(hunter) and heal_item):
             await self.user_repo.user_item_transaction(hunter, heal_item)
 
-        self.__started_battles[hunter.tg_id] = await BattleManager.hunt(hunter, boss=get_boss)
+        self.__started_battles[hunter.tg_id] = await BattleManager.hunt(hunter, self.monster_repo, boss=get_boss)
         return (self.__started_battles[hunter.tg_id].prepare_battle(), self.__started_battles[hunter.tg_id])
     
     async def prepare_gladiators(self, started_by:User):
-        self.__started_battles[started_by.tg_id] = await BattleManager.gladiators()
+        self.__started_battles[started_by.tg_id] = await BattleManager.gladiators(self.monster_repo)
         return self.__started_battles[started_by.tg_id].prepare_battle()
     
     def start_battle(self, started_by:User, init_message:Message):
@@ -124,8 +126,7 @@ class GameController():
                 })):
                 from core.consts.dictionary import Dictionary
                 log:str = f"\n\n📦 {Dictionary().hunt_loot(status[2].inventory)}\n" if (status[2].inventory) else ""
-                return log + ("\n<i>Вы победили бедствие, и оно отступило на время... Но очень скоро вернется, длинночлен! "\
-                              "(Босс не нападет на вас в течение 12 часов)</i>" if monster.is_boss else "")
+                return log + ("\n<i>Вы победили бедствие, и оно отступило на время...</i>" if monster.is_boss else "")
             else: return f"Ой, ошибочка вышла..."
         elif status[2].is_mob or status[2].is_boss:
             await self.user_repo.update(started_by, {
@@ -138,7 +139,7 @@ class GameController():
         if (member.tg_id in self.__started_battles):
             status:str = self.__started_battles[member.tg_id].escape()
             monster:BattleUnit = self.__started_battles[member.tg_id].get_opponent()
-            await self.db.update_user(member, {
+            await self.user_repo.update(member, {
                 UserORM.last_hunt.name: datetime.now(),
             })
             await self.delete_battle(member.tg_id, False)

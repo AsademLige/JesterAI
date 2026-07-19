@@ -1,13 +1,13 @@
 from features.battles.battle_unit_entity import BattleUnit, BodyParts, MemberStrategy
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.battles.battle_manager import BattleManager, BattlePhases
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
-from features.user.data.repository.gino_user_repository import GinoUserRepository
-from features.items.items_manager import ItemsManager
+from features.user.data.models.user_model_orm import UserORM
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF
 from aiogram.utils.deep_linking import create_deep_link
 from features.items.data.models.item_orm import ItemORM
-from typing import Any, Dict, List, Optional, Tuple
+from features.items.items_manager import ItemsManager
 from features.user.data.dtos.user_dto import User
 from core.utils.safe_edit import SafeEditMessage
 from aiogram.types import Message, CallbackQuery
@@ -16,19 +16,16 @@ from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
 from core.utils.enums import MemberStatus
 from core.data.data_base import DataBase
+from typing import List, Optional, Tuple
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
 from aiogram.types import Message
 from bot import game_controller
-from datetime import timedelta
 from aiogram import Router, F
 from aiogram import Bot
 import secrets
 import asyncio
-import math
-
-
 
 prefs = Prefs()
 dict = Dictionary()
@@ -78,11 +75,11 @@ async def __hunt_init(message: Message, state: FSMContext, chat_id:int):
 
     await message.delete()
 
-    delta:timedelta = Utils.get_time_delta(user.last_hunt, 1)
-
-    if (math.floor(delta.total_seconds() / 3600) < 0):
+    if (user.energy > 0):
+        await user_repo.update(user, {UserORM.energy.name: user.energy - 1})
+    else:
         answer = await bot.send_message(user.chat_id, 
-                                        dict.hunt_timer_message(user, Utils.timedelta_to_hhmm(delta)), 
+                                        dict.energy_drain(user), 
                              parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([answer], 10)
         return
@@ -232,7 +229,7 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
     message:str = ""
 
     if (heal_status):
-        message += heal_status[0] + f"\nHP: {BattleManager.health_bar(old_hp, battle.active_member.max_hp, heal=heal_status[1])}"
+        message += heal_status[0] + f"\nHP: {Utils.progress_bar(old_hp, battle.active_member.max_hp, heal=heal_status[1])}"
     
     if (heal_status):
         await callback.answer()

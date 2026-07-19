@@ -4,8 +4,6 @@ from features.store.data.models.warehouse_item_orm import WarehouseItemORM
 from features.items.data.models.store_item_dto import StoreItem
 from features.items.data.models.item_orm import ItemORM
 from core.utils.app_herald import AppHerald
-from core.data.data_base import DataBase
-from core.consts.config import Prefs
 from typing import List, Optional
 from sqlalchemy import and_
 import logging
@@ -13,8 +11,6 @@ import random
 
 class GinoStoreRepository(IStoreRepository):
     _instance = None
-    db = DataBase()
-    prefs = Prefs()
 
     logger:AppHerald = AppHerald()
     
@@ -57,7 +53,7 @@ class GinoStoreRepository(IStoreRepository):
     async def update_item_quantity_at_warehouse(self, item:StoreItem, quantity:int = 1) -> bool:
         try:
             if (item.warehouse_quantity - quantity >= 0):
-                await WarehouseItemORM.update.where(WarehouseItemORM.product_id == item.product_id).values(
+                await WarehouseItemORM.update.where(WarehouseItemORM.product_id == item.id).values(
                     quantity=WarehouseItemORM.quantity - quantity).gino.status()
                 item.warehouse_quantity -= quantity
                 return True

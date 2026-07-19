@@ -1,4 +1,4 @@
-from domain.controllers.bot_settings_controller import SettingsController
+from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from typing import Any, Callable, Dict, Awaitable
 from aiogram.types import TelegramObject, Message
@@ -25,7 +25,7 @@ class CaptchaMiddleware(BaseMiddleware):
                 return await handler(event, data) 
             else: return
         
-        settings = await SettingsController.get_settings(event.chat.id, event.chat.full_name)
+        settings = await GinoBotSettingsRepository().get_settings(event.chat.id, event.chat.full_name)
 
         delta:timedelta = Utils.get_time_delta(settings.last_captcha_time, 0)
 

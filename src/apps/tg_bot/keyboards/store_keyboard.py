@@ -19,7 +19,7 @@ class StoreKeyboard():
         for i, product in enumerate(products):
             builder.button(text=f"({i+1}) {product.utf8_icon} " + ("%" if product.is_discount_active else "$"),
                 callback_data=StoreCF(action="choice", 
-                                      id=product.product_id,
+                                      id=product.id,
                                       user_id=user.tg_id))
             
         builder.button(text=dict.exit,
@@ -36,7 +36,7 @@ class StoreKeyboard():
         if (product.warehouse_quantity > 0):
             builder.button(text="💰 Беру!",
                 callback_data=StoreCF(action="buy", 
-                                      id=product.product_id,
+                                      id=product.id,
                                       user_id=user.tg_id))
         
         builder.button(text=dict.back,

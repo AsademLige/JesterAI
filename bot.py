@@ -1,5 +1,9 @@
+from features.battles.data.repository.gino_monsters_repository import GinoMonstersRepository
+from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.store.data.repository.gino_store_repository import GinoStoreRepository
 from apps.tg_bot.middlewares.registration_middleware import RegistrationMiddleware
 from apps.tg_bot.providers.scheduler_provider import TelegramNotificationProvider
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.middlewares.captcha_middleware import CaptchaMiddleware
 import apps.tg_bot.handlers.create_sticker_set as create_sticker_set
 import apps.tg_bot.handlers.edit_sticker_set as edit_sticker_set
@@ -32,9 +36,12 @@ bot = Bot(token=prefs.bot_token)
 dp = Dispatcher()
 dict = Dictionary()
 event_handler = TelegramNotificationProvider(bot)
-scheduler = Scheduler(event_handler.handle_event)
+monster_repository = GinoMonstersRepository()
+user_repository = GinoUserRepository()
+store_repository = GinoStoreRepository()
+settings_repository = GinoBotSettingsRepository()
 
-game_controller = GameController()
+game_controller = GameController(user_repository, monster_repository)
 
 async def main():
     dp.include_routers(create_sticker_set.rt,
@@ -56,7 +63,10 @@ async def main():
     dp.message.outer_middleware(CaptchaMiddleware())
     await on_startup(dp)
     await dict.init()
-    await scheduler.init()
+    await Scheduler.asyncIOS(event_handler.handle_event,
+                             user_repo=user_repository,
+                             store_repo=store_repository,
+                             settings_repo=settings_repository)
     await Commands.setup_bot_commands()
     await dp.start_polling(bot)
 

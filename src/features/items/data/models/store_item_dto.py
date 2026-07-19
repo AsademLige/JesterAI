@@ -25,7 +25,7 @@ class StoreItem(BaseItem):
         discount: Optional[ProductDiscountORM] = None
     ) -> "StoreItem":
         return cls(
-            product_id=item.id,
+            id=item.id,
             price=item.price,
             title=item.title,
             tag=item.tag,

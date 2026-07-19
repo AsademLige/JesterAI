@@ -1,11 +1,10 @@
-from curses import has_key
-
+from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from features.items.data.models.inventory_item_dto import InventoryItem
 from apps.tg_bot.keyboards.callback_fabrics import InventoryCF
-from features.user.data.repository.gino_user_repository import GinoUserRepository
-from features.items.items_manager import ItemsManager
 from features.user.domain.user_manager import UserManager
+from features.items.items_manager import ItemsManager
 from features.user.data.dtos.user_dto import User
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -18,6 +17,7 @@ from aiogram.enums import ParseMode
 from core.utils.utils import Utils
 from aiogram.types import Message
 from aiogram import Router, F
+from curses import has_key
 from typing import List
 from aiogram import Bot
 
@@ -26,7 +26,8 @@ dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
 repository:GinoUserRepository = GinoUserRepository()
-user_mr:UserManager = UserManager(repo=repository)
+settings_repo = GinoBotSettingsRepository()
+user_mr:UserManager = UserManager(repo=repository, settings_repo=settings_repo)
 items_mg:ItemsManager = ItemsManager(repository)
 db = DataBase()
 rt = Router()
@@ -84,7 +85,7 @@ async def on_inventory_item_select(callback: CallbackQuery, callback_data: Inven
     if (user.tg_id != callback_data.user_id):
         return
 
-    item:InventoryItem = next((p for p in user.inventory if p.product_id == callback_data.item_id), None)
+    item:InventoryItem = next((p for p in user.inventory if p.id == callback_data.item_id), None)
 
     await state.update_data(item=item)
     await callback.message.edit_text(dict.inventory_item_info(item),
