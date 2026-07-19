@@ -99,7 +99,7 @@ class Dictionary():
     __user_information:str = f'{hblockquote("🔍 {{user_link}} {{custom_title}} Имеет {{pencil_accu}} длинной {{length}}!")}\n'\
     '{{medal}} Место в топе: {{place_in_top}}\n'\
     '💰 Монет на руках: {{money}}\n'\
-    '⚡️ {{energy}}\n\n'\
+    '⚡️ {{energy}} {{time_to_energy_restore}}\n\n'\
     '{{user_stats}}\n\n'\
     '⏰ <i>До проверки {{pencil_gen}}: {{time_to_pencil}}</i>\n'\
     '⏰ <i>До игры в кости: {{time_to_dice}}</i>'
@@ -668,12 +668,14 @@ class Dictionary():
             **self.random_member(),
         }) 
 
-    def user_information(self, user:User, place_in_top:int, time_to_pencil:str = "Готов", time_to_dice:str = "Готов", max_energy:int = 5) -> str:
+    def user_information(self, user:User, place_in_top:int, time_to_pencil:str = "Готов", 
+                         time_to_dice:str = "Готов", max_energy:int = 5, time_to_energy_restore:str="") -> str:
         return tp.text_replacement(self.__user_information,
                                    {**self.random_member(),
                                     "user_link" : self.get_user_link(user.tg_name, user.tg_id),
                                     "money": user.money,
                                     "energy": f"{Utils.progress_bar(user.energy, max_energy)}",
+                                    "time_to_energy_restore": time_to_energy_restore,
                                     "medal": self.get_medal_emoji(place_in_top),
                                     "user_stats": self.generate_user_stats(user),
                                     "place_in_top": place_in_top,
@@ -872,7 +874,7 @@ class Dictionary():
             })
     
     def energy_drain(self, user:User) -> str:
-        return tp.text_replacement(self.__hunt_timer_message, {
+        return tp.text_replacement(self.__energy_drain, {
             "user_link" : self.get_user_link(user.tg_name, user.tg_id),
             })
     

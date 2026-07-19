@@ -2,7 +2,7 @@ from core.data.models.str_assets_negative_length_change_model import StrAssetsNe
 from core.data.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from core.data.models.custom_sticker_model import CustomSticker
 from features.user.data.models.user_model_orm import UserORM
-from core.data.models.bot_settings_orm import BotSettingsORM
+from features.game_engine.data.models.bot_settings_orm import BotSettingsORM
 from core.data.models.sticker_set_model import StickerSet
 from core.data.models.winners_log_model import WinnersLog
 from core.services.data_base.db_model import db

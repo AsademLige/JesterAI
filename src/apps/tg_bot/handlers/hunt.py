@@ -1,10 +1,12 @@
 from features.battles.battle_unit_entity import BattleUnit, BodyParts, MemberStrategy
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.user.data.repository.gino_user_repository import GinoUserRepository
+from features.items.data.models.inventory_item_dto import InventoryItem
 from features.battles.battle_manager import BattleManager, BattlePhases
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
-from features.user.data.models.user_model_orm import UserORM
+from features.game_engine.domain.game_engine import GameEngine
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF
+from features.battles.game_controller import GameController
 from aiogram.utils.deep_linking import create_deep_link
 from features.items.data.models.item_orm import ItemORM
 from features.items.items_manager import ItemsManager
@@ -15,13 +17,11 @@ from aiogram.filters import Command, StateFilter
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
 from core.utils.enums import MemberStatus
-from core.data.data_base import DataBase
 from typing import List, Optional, Tuple
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
 from aiogram.types import Message
-from bot import game_controller
 from aiogram import Router, F
 from aiogram import Bot
 import secrets
@@ -34,21 +34,36 @@ combat_kb = BattleKeyboard()
 user_repo:GinoUserRepository = GinoUserRepository()
 items_mg:ItemsManager = ItemsManager(user_repo)
 links_cache = {}
-db = DataBase()
 rt = Router()
 
 ###Отправиться на охоту
 @rt.callback_query(StateFilter(None), F.data == "hub_hunt")
-async def hunt_init(callback_query: CallbackQuery, state: FSMContext):
+async def hunt_init(callback_query: CallbackQuery, 
+                    state: FSMContext, game_controller:GameController, 
+                    game_engine:GameEngine):
     message = callback_query.message
     
     user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
+
+    await message.delete()
+    if (user.energy > 0):
+        await user_repo.update(user, energy=user.energy - 1)
+        game_engine.create_energy_restore_timer(user)
+    else:
+        answer = await bot.send_message(user.chat_id, 
+                                        dict.energy_drain(user), 
+                             parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([answer], 10)
+        return
 
     await callback_query.answer()
 
     if (not message.chat.type == "private"):
         bot_info = await bot.me()
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
 
         payload = {
             "action" : "hunt",
@@ -67,24 +82,15 @@ async def hunt_init(callback_query: CallbackQuery, state: FSMContext):
 
         await Utils.delete_old_message([link_message], 20)
     else:
-        __hunt_init(message, state, message.chat.id) 
+        __hunt_init(message, state, message.chat.id, game_controller) 
 
-async def __hunt_init(message: Message, state: FSMContext, chat_id:int):
+async def __hunt_init(message: Message, state: FSMContext, 
+                      chat_id:int, game_controller:GameController):
     user:User = await user_repo.get_user(message.from_user.id, chat_id)
     answer:Message
 
     await message.delete()
 
-    if (user.energy > 0):
-        await user_repo.update(user, {UserORM.energy.name: user.energy - 1})
-    else:
-        answer = await bot.send_message(user.chat_id, 
-                                        dict.energy_drain(user), 
-                             parse_mode=ParseMode.HTML)
-        await Utils.delete_old_message([answer], 10)
-        return
-
-    global game_controller
     if (game_controller.get_battle(user)):
         answer = await message.answer("⚔️ Ты уже в бою!")
         await Utils.delete_old_message([answer], 5)
@@ -100,13 +106,14 @@ async def __hunt_init(message: Message, state: FSMContext, chat_id:int):
                                     parse_mode=ParseMode.HTML)
 
 @rt.message(Command("start"))
-async def hunt_deep_link(message: Message, state: FSMContext):
+async def hunt_deep_link(message: Message, state: FSMContext, 
+                         game_controller:GameController):
     if message.text and len(message.text.split()) > 1 \
         and message.text.split()[1] in links_cache:
 
         payload = links_cache[message.text.split()[1]]
         if (payload["action"] == "hunt"):
-            await __hunt_init(message, state, payload["chat_id"])
+            await __hunt_init(message, state, payload["chat_id"], game_controller)
             await Utils.delete_old_message([message], 0)
             return
         
@@ -118,12 +125,12 @@ async def save_temp_data(link_id, data, ttl=20):
 
 ###Начало боя
 @rt.callback_query(BattleCF.filter(F.action.in_([a.value for a in MemberStrategy])))
-async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF,
+                         state: FSMContext, game_controller:GameController):
     if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
 
     if (not 'user' in state_data and not 'battle' in state_data): return
-    global game_controller
     user: User = state_data["user"]
     battle: BattleManager = state_data["battle"]
 
@@ -144,11 +151,11 @@ async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF, state
 
 ###Действие атаки
 @rt.callback_query(BattleCF.filter(F.action == "attack"))
-async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF,
+                          state: FSMContext, game_controller:GameController):
     if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data and not 'battle' in state_data): return
-    global game_controller
     user: User = state_data["user"]
     battle: BattleManager = state_data["battle"]
 
@@ -171,14 +178,14 @@ async def on_turn_attack(callback: CallbackQuery, callback_data: BattleCF, state
 
 ###Действие защиты
 @rt.callback_query(BattleCF.filter(F.action == "defense"))
-async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, 
+                          state: FSMContext, game_controller:GameController):
     if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data and not 'battle' in state_data): return
-    global game_controller
     user: User = state_data["user"]
     battle: BattleManager = state_data["battle"]
-    items:List[Tuple[UserInventoryLinkORM, ItemORM]] = []
+    items:List[InventoryItem] = []
 
     if (user.tg_id != callback_data.user_id):
         return
@@ -187,7 +194,7 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
 
     if (battle.active_member.status == MemberStatus.EXHAUSTED 
         and battle.active_member.strategy == MemberStrategy.DEFENSE):
-        items = await db.get_user_heal_items(battle.active_member.entity)
+        items = await  user_repo.get_user_heal_items(battle.active_member.entity)
         await state.update_data(items=items)
 
     status:Optional[Tuple[str, BattlePhases, BattleUnit]] = await game_controller.get_battle_status(user)
@@ -197,7 +204,7 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF, stat
         if (items and not battle.phase == BattlePhases.BATTLE_END):
             status_extended += "\n\n<blockquote>🎒 В сумке охотника:</blockquote>\n"
             for item in items:
-                status_extended += items_mg.effects_description(item[1]) + "\n"
+                status_extended += items_mg.effects_description(item) + "\n"
                 
         await SafeEditMessage.safe_edit(callback, status_extended,
                                         reply_markup=combat_kb.battle_keyboard(user, battle, items) \
@@ -215,7 +222,6 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
     if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data and not 'battle' in state_data): return
-    global game_controller
     user: User = state_data["user"]
     battle: BattleManager = state_data["battle"]
     items:List[Tuple[UserInventoryLinkORM, ItemORM]] = state_data["items"]
@@ -225,11 +231,11 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
     
     old_hp:int = battle.active_member.hp
     heal_status:Optional[Tuple[str, int]] = await items_mg.use_heal_item(user, items[callback_data.item_index], battle.active_member)
-    items = await db.get_user_heal_items(battle.active_member.entity)
+    items = await user_repo.get_user_heal_items(battle.active_member.entity)
     message:str = ""
 
     if (heal_status):
-        message += heal_status[0] + f"\nHP: {Utils.progress_bar(old_hp, battle.active_member.max_hp, heal=heal_status[1])}"
+        message += heal_status[0] + f"\nHP: {Utils.progress_bar(old_hp, battle.active_member.max_hp, recover=heal_status[1])}"
     
     if (heal_status):
         await callback.answer()
@@ -239,15 +245,15 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
 
 ###Побег от монстра
 @rt.callback_query(BattleCF.filter(F.action == "escape"))
-async def on_hunt_escape(callback: CallbackQuery, callback_data: BattleCF, state: FSMContext):
+async def on_hunt_escape(callback: CallbackQuery, callback_data: BattleCF,
+                          state: FSMContext, game_controller:GameController):
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
 
     if (user.tg_id != callback_data.user_id):
         return
-    
-    global game_controller
+
     status:str = await game_controller.escape_battle(user)
     if (status):
         await callback.answer()

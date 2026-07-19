@@ -26,7 +26,7 @@ class IUserRepository(ABC):
         pass
     
     @abstractmethod
-    async def update(self, user: User, args:Dict[str, Any] = {}) -> bool:
+    async def update(self, user: User, **kwargs: Any) -> bool:
         """Обновление данных пользователя/бота"""
         pass
 

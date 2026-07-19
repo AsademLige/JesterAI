@@ -1,11 +1,11 @@
-from core.data.repository.bot_settings_repository import IBotSettingsRepository
+from features.game_engine.data.repository.bot_settings_repository import IBotSettingsRepository
 from features.user.data.repository.user_repository import IUserRepository
-from features.user.data.models.user_model_orm import UserORM
-from core.data.models.bot_settings_dto import BotSettings
+from features.game_engine.data.models.bot_settings_dto import BotSettings
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from datetime import datetime, timedelta
 from core.utils.utils import Utils
+from typing import Optional
 import random
 import math
 
@@ -28,15 +28,13 @@ class UserManager:
             length_from_behind = random.choice([0, 1])
 
         ###Нужно будет заменить args
-        if (await self.repo.update(user, {
-            UserORM.length.name: user.length + length_change + length_from_behind,
-            UserORM.last_length_check.name : datetime.now()
-        })):
+        if (await self.repo.update(user, length=user.length + length_change + length_from_behind, 
+                                   last_length_check=datetime.now())):
             return {"msg": self.dictionary.length_change(user.tg_name, length_change), "length_change":length_change}
         else:
             return {"error": "что-то пошло не по плану..."}
         
-    async def get_menu(self, user:User):
+    async def get_menu(self, user:User, energy_restore_time:Optional[datetime]):
         place_in_top:int = await self.repo.get_place_in_top_by_member(user.tg_id, user.chat_id)
         settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
         
@@ -51,13 +49,20 @@ class UserManager:
             time_to_dice = Utils.timedelta_to_hhmm(delta_dice)
         else:
             time_to_dice = "Готов"
+
+        time_to_energy_restore = ""
+        if (energy_restore_time):
+            energy_restore_time_delta = datetime.now() - energy_restore_time
+            if math.floor(energy_restore_time_delta.total_seconds() / 3600) < 0:
+                time_to_energy_restore = f"({Utils.timedelta_to_hhmm(energy_restore_time_delta)})"
         
         return {
             "msg": self.dictionary.user_information(user, 
                                          place_in_top, 
                                          time_to_pencil, 
                                          time_to_dice,
-                                         max_energy=settings.max_users_energy)
+                                         max_energy=settings.max_users_energy,
+                                         time_to_energy_restore=time_to_energy_restore)
         }
     
     async def is_admin(self, tg_id:int) -> bool:

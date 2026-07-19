@@ -1,4 +1,4 @@
-from core.data.repository.bot_settings_repository import IBotSettingsRepository
+from features.game_engine.data.repository.bot_settings_repository import IBotSettingsRepository
 from features.store.data.repository.store_repository import IStoreRepository
 from apscheduler.schedulers.asyncio import AsyncIOScheduler, BaseScheduler
 from features.user.data.repository.user_repository import IUserRepository

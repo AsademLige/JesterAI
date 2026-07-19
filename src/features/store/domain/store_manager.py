@@ -1,12 +1,11 @@
 from features.store.data.repository.store_repository import IStoreRepository
 from features.user.data.repository.user_repository import IUserRepository
 from features.items.data.models.store_item_dto import StoreItem
-from features.user.data.models.user_model_orm import UserORM
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from core.data.data_base import DataBase
 from core.consts.consts import Consts
-from typing import List, Tuple
+from typing import List
 import os
 
 
@@ -54,9 +53,7 @@ class StoreManager:
 
         if (await self.store_repo.update_item_quantity_at_warehouse(self.selected_product) and 
             await self.user_repo.user_item_transaction(self.customer, self.selected_product) and
-            await self.user_repo.update(self.customer, {
-                UserORM.money.name: self.customer.money - final_price,
-            })):
+            await self.user_repo.update(self.customer, money=self.customer.money - final_price)):
             msg = self.dict.product_buying_thanks(self.customer)
         else:
             msg = "Мы где-то наебались, мы где-то обсчитались..."

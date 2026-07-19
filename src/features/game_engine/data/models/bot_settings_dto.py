@@ -7,7 +7,10 @@ class BotSettings(BaseModel):
     
     id: int
     chat_id: int
-    last_gladiators_bet: Optional[datetime] = None
+    last_captcha_time: Optional[datetime] = None
     max_users_energy:int
+
+    ###Время восстановления энергии в секундах
+    energy_restore_time:int = 10
     events_enabled:bool
     alias: str

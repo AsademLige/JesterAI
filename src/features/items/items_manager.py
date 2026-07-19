@@ -1,6 +1,5 @@
 from features.user.data.repository.user_repository import IUserRepository
 from features.items.data.models.inventory_item_dto import InventoryItem
-from features.user.data.models.user_model_orm import UserORM
 from core.utils.text_processing import TextProcessing as tp
 from features.battles.battle_unit_entity import BattleUnit
 from features.user.data.dtos.user_dto import User
@@ -156,24 +155,18 @@ class ItemsManager():
 
     
     async def length_change_effect(self, user: User, target:User, item:InventoryItem, length_change:int) -> bool:
-        if (await self.user_repo.update(target, {
-                UserORM.length.name: UserORM.length + length_change,
-            }) and await self.user_repo.user_item_transaction(user, item, -1)):
-
+        if (await self.user_repo.update(target, length=user.length + length_change) 
+            and await self.user_repo.user_item_transaction(user, item, -1)):
             return True
     
     async def reset_dice_game_timer(self, user: User, target:User, item:InventoryItem) -> bool:
-        if (await self.user_repo.update(target, {
-                UserORM.last_dice_play.name: datetime.now() - timedelta(hours=1)
-            }) and await self.user_repo.user_item_transaction(user, item, -1)):
-
+        if (await self.user_repo.update(target, last_dice_play=datetime.now() - timedelta(hours=1)) 
+            and await self.user_repo.user_item_transaction(user, item, -1)):
             return True
         
     async def reset_pencil_timer(self, user: User, target:User, item:InventoryItem) -> bool:
-        if (await self.user_repo.update(target, {
-                UserORM.last_length_check.name: datetime.now() - timedelta(hours=24)
-            }) and await self.user_repo.user_item_transaction(user, item, -1)):
-
+        if (await self.user_repo.update(target, last_length_check=datetime.now() - timedelta(hours=24)) 
+            and await self.user_repo.user_item_transaction(user, item, -1)):
             return True
         
     async def heal_effect(self, user: User, target:BattleUnit, item:InventoryItem, hp:int = 0) -> bool:
@@ -193,12 +186,8 @@ class ItemsManager():
         
     async def steal_money(self, user: User, target:User, item:InventoryItem, count:int) -> bool:
         if (target.money >= count):
-            if (await self.user_repo.update(target, {
-                    UserORM.money.name: target.money - count
-                })  and
-                await self.user_repo.update(user, {
-                    UserORM.money.name: user.money + count
-                })  and 
+            if (await self.user_repo.update(target, money=target.money - count) and
+                await self.user_repo.update(user, money=user.money + count)  and 
                 await self.user_repo.user_item_transaction(user, item, -1)):
                 return True
         else:

@@ -10,7 +10,7 @@ class TelegramRandomProvider(IRandomProvider):
     async def roll_dice(self, chat_id: int) -> Tuple[List[int], List[Any]]:
         dice1 = await self.bot.send_dice(chat_id, emoji='🎲')
         dice2 = await self.bot.send_dice(chat_id, emoji='🎲')
-        await asyncio.sleep(7) # Ждем окончания анимации
+        await asyncio.sleep(7)
         return [dice1.dice.value, dice2.dice.value], [dice1, dice2]
 
     async def spin_slot(self, chat_id: int) -> Tuple[int, Any]:

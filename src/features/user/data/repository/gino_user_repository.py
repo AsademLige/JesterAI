@@ -1,5 +1,4 @@
 
-from features.battles.loot_manager import DropTags
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.user.data.repository.user_repository import IUserRepository
 from features.user.data.models.user_stats_orm import UserStatsORM
@@ -8,10 +7,11 @@ from features.items.data.models.base_item_dto import BaseItem
 from features.user.data.models.user_model_orm import UserORM
 from features.user.data.models.role_orm import UserRoleORM
 from features.items.data.models.item_orm import ItemORM
+from features.battles.loot_manager import DropTags
 from core.services.data_base.db_model import db
-from typing import Any, Dict, List, Optional
 from core.utils.app_herald import AppHerald
 from core.data.data_base import DataBase
+from typing import Any, List, Optional
 from core.consts.config import Prefs
 from sqlalchemy import func, select
 from cachetools import TTLCache
@@ -55,11 +55,6 @@ class GinoUserRepository(IUserRepository):
         
         if id in self._cache:
             return self._cache[id]
-        
-        if tg_id in self._tg_id_map:
-            user_id = self._tg_id_map[tg_id]
-            if user_id in self._cache:
-                return self._cache[user_id]
             
         cache_key = (chat_id, tg_id)
         if cache_key in self._chat_tg_map:
@@ -225,14 +220,14 @@ class GinoUserRepository(IUserRepository):
             return False
         
     
-    async def update(self, user: User, args:Dict[str, Any] = {}) -> bool:
-        if not args:
+    async def update(self, user: User, **kwargs: Any) -> bool:
+        if not kwargs:
             return True
         
         user_args = {}
         stats_args = {}
         
-        for key, value in args.items():
+        for key, value in kwargs.items():
             if key in UserStatsORM.__table__.c:
                 stats_args[key] = value
             elif key in UserORM.__table__.c:
@@ -250,7 +245,7 @@ class GinoUserRepository(IUserRepository):
             
             index_needs_update = False
             
-            for key, value in args.items():
+            for key, value in kwargs.items():
                 if cached_user and hasattr(cached_user, key):
                     setattr(cached_user, key, value)
                 if hasattr(user, key):
@@ -366,7 +361,7 @@ class GinoUserRepository(IUserRepository):
             self.logger.send_log("user_repo", logging.ERROR, f"get user inventory error: {error}")
             return None
         
-    async def get_user_heal_items(self, user:UserORM) -> List[InventoryItem]:
+    async def get_user_heal_items(self, user:User) -> List[InventoryItem]:
         try:
             query = (
                 select([UserInventoryLinkORM, ItemORM])

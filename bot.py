@@ -1,13 +1,15 @@
+from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from features.battles.data.repository.gino_monsters_repository import GinoMonstersRepository
-from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from apps.tg_bot.providers.notification_provider import TelegramNotificationProvider
 from features.store.data.repository.gino_store_repository import GinoStoreRepository
 from apps.tg_bot.middlewares.registration_middleware import RegistrationMiddleware
-from apps.tg_bot.providers.scheduler_provider import TelegramNotificationProvider
 from features.user.data.repository.gino_user_repository import GinoUserRepository
+from apps.tg_bot.providers.scheduler_provider import SchedulerTelegramProvider
 from apps.tg_bot.middlewares.captcha_middleware import CaptchaMiddleware
 import apps.tg_bot.handlers.create_sticker_set as create_sticker_set
 import apps.tg_bot.handlers.edit_sticker_set as edit_sticker_set
 from core.services.apscheduler.scheduler_main import Scheduler
+from features.game_engine.domain.game_engine import GameEngine
 from features.battles.game_controller import GameController
 from core.services.data_base.db_model import on_startup
 import apps.tg_bot.handlers.interactive as interactive
@@ -35,13 +37,15 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=prefs.bot_token)
 dp = Dispatcher()
 dict = Dictionary()
-event_handler = TelegramNotificationProvider(bot)
+event_handler = SchedulerTelegramProvider(bot)
 monster_repository = GinoMonstersRepository()
 user_repository = GinoUserRepository()
 store_repository = GinoStoreRepository()
 settings_repository = GinoBotSettingsRepository()
-
 game_controller = GameController(user_repository, monster_repository)
+game_engine = GameEngine(settings_repository, 
+                         user_repository, 
+                         TelegramNotificationProvider(bot))
 
 async def main():
     dp.include_routers(create_sticker_set.rt,
@@ -62,6 +66,9 @@ async def main():
     dp.message.outer_middleware(RegistrationMiddleware())
     dp.message.outer_middleware(CaptchaMiddleware())
     await on_startup(dp)
+    await game_engine.start()
+    dp['game_engine'] = game_engine 
+    dp['game_controller'] = game_controller
     await dict.init()
     await Scheduler.asyncIOS(event_handler.handle_event,
                              user_repo=user_repository,

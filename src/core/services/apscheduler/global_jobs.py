@@ -1,8 +1,8 @@
-from core.data.repository.bot_settings_repository import IBotSettingsRepository
+from features.game_engine.data.repository.bot_settings_repository import IBotSettingsRepository
 from features.store.data.repository.store_repository import IStoreRepository
 from features.user.data.repository.user_repository import IUserRepository
 from features.items.data.models.store_item_dto import StoreItem
-from core.data.models.bot_settings_dto import BotSettings
+from features.game_engine.data.models.bot_settings_dto import BotSettings
 from features.user.data.dtos.user_dto import User
 from core.utils.app_herald import AppHerald
 from typing import Dict, List, Optional

@@ -1,4 +1,5 @@
-from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.game_engine.domain.game_engine import GameEngine
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from features.items.data.models.inventory_item_dto import InventoryItem
@@ -48,12 +49,13 @@ async def pencil_change(message: Message, state: FSMContext):
 
 ###Получение информации о пользователе
 @rt.message(StateFilter(None), Command(cn.me))
-async def user_information(message: Message, state: FSMContext):
+async def user_information(message: Message, 
+                           state: FSMContext, game_engine:GameEngine):
     await message.delete()
     user: User = await repository.get_user(message.from_user.id, message.chat.id)
     await state.update_data(user=user)
 
-    result = await user_mr.get_menu(user)
+    result = await user_mr.get_menu(user, game_engine.get_energy_restore_time(user))
 
     answer = await bot.send_message(user.chat_id, result["msg"],
                          reply_markup=interactive_kb.user_information_buttons(user),

@@ -112,7 +112,7 @@ class LocalUserRepository(IUserRepository):
         self._save_user_file(new_user)
         self._next_id += 1
     
-    async def update(self, user: User, args: Dict[str, Any] = {}) -> bool:
+    async def update(self, user: User, **kwargs: Any) -> bool:
         """
         Обновление данных пользователя. 
         Принимает либо измененный объект User, либо словарь args с новыми полями.
@@ -122,9 +122,9 @@ class LocalUserRepository(IUserRepository):
             return False
         
 
-        if args:
+        if kwargs:
             user_dict = user.model_dump()
-            user_dict.update(args)
+            user_dict.update(kwargs)
             updated_user = User.model_validate(user_dict)
         else:
             updated_user = user

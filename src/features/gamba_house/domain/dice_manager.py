@@ -1,13 +1,12 @@
 from features.user.data.repository.gino_user_repository import GinoUserRepository
-from features.user.data.models.user_stats_orm import UserStatsORM
 from src.core.providers.random_provider import IRandomProvider
-from features.user.data.models.user_model_orm import UserORM
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from core.data.data_base import DataBase
+from datetime import datetime, timedelta
 from core.utils.utils import Utils
-from typing import Optional, Tuple
-from datetime import datetime
+from typing import Optional
+import math
 
 class DiceGameManager:
     user_repo:GinoUserRepository = GinoUserRepository()
@@ -16,9 +15,9 @@ class DiceGameManager:
         self.db = db
         self.dict = dictionary
 
-    async def check_cool_down(self, user:User) -> Optional[Tuple[int, int, int]]:
+    async def check_cool_down(self, user:User) -> Optional[timedelta]:
         delta = Utils.get_time_delta(user.last_dice_play, 1)
-        if delta.total_seconds() < 3600: 
+        if math.floor(delta.total_seconds() / 3600) < 0: 
             return delta
         return None
 
@@ -32,17 +31,16 @@ class DiceGameManager:
         award = 5 if is_minor_win else (15 if is_major_win else 0)
         
         if award > 0:
-            await self.user_repo.update(user, {UserORM.money.name: user.money + award,
-                            UserStatsORM.dice_games.name: user.dice_games + 1,
-                            UserORM.last_dice_play.name: datetime.now(),
-                            UserStatsORM.dice_minor_wins.name: user.dice_minor_wins + (1 if is_minor_win else 0),
-                            UserStatsORM.dice_major_wins.name: user.dice_major_wins + (1 if is_major_win else 0),})
+            await self.user_repo.update(user, money=user.money + award,
+                                        dice_games=user.dice_games + 1,
+                                        last_dice_play=datetime.now(),
+                                        dice_minor_wins=user.dice_minor_wins + (1 if is_minor_win else 0),
+                                        dice_major_wins=user.dice_major_wins + (1 if is_major_win else 0))
             
             await self.db.add_win_log(user.id, event_type=4 if is_minor_win else 5, money=award)
         else:
-            await self.user_repo.update(user, {
-                            UserStatsORM.dice_games.name: user.dice_games + 1,
-                            UserORM.last_dice_play.name: datetime.now()})
+            await self.user_repo.update(user, dice_games=user.dice_games + 1,
+                                        last_dice_play=datetime.now())
 
         msg:str
 

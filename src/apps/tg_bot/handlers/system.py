@@ -1,4 +1,4 @@
-from apps.tg_bot.providers.scheduler_provider import TelegramNotificationProvider
+from apps.tg_bot.providers.scheduler_provider import SchedulerTelegramProvider
 from core.services.apscheduler.scheduler_main import Scheduler
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.system_keyboard import SystemKeyboard
@@ -24,7 +24,7 @@ prefs = Prefs()
 system_kb = SystemKeyboard()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
-event_handler = TelegramNotificationProvider(bot)
+event_handler = SchedulerTelegramProvider(bot)
 user_repo = GinoUserRepository()
 rt = Router()
 

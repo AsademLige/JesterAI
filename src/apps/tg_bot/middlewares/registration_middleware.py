@@ -1,5 +1,5 @@
 from aiogram.types import Chat, ChatMemberAdministrator, ChatMemberOwner, Message, CallbackQuery, TelegramObject, User
-from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from typing import Any, Callable, Dict, Awaitable, Optional
 from features.user.domain.user_manager import UserManager

@@ -1,16 +1,15 @@
-from features.battles.battle_manager import BattleManager, BattlePhases
 from features.battles.battle_unit_entity import BodyParts, MemberStand, MemberStrategy
-from features.user.data.dtos.user_dto import User
-from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF, GladiatorsCF
-from features.items.data.models.item_orm import ItemORM
+from features.items.data.models.inventory_item_dto import InventoryItem
+from features.battles.battle_manager import BattleManager, BattlePhases
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from core.utils.enums import AttackStatus, BattleMode
+from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
 from core.consts.dictionary import Dictionary
-from typing import List, Optional, Tuple
 from core.consts.config import Prefs
+from typing import List, Optional
 import random
 
 prefs = Prefs()
@@ -29,7 +28,7 @@ class BattleKeyboard():
         return builder.as_markup()
     
     def battle_keyboard(self, user:User, ctrl:BattleManager, 
-                        usable:Optional[List[Tuple[UserInventoryLinkORM, ItemORM]]] = None) -> InlineKeyboardMarkup:
+                        usable:Optional[List[InventoryItem]] = None) -> InlineKeyboardMarkup:
         if (ctrl.mode == BattleMode.GLADIATORS):
             if (ctrl.phase == BattlePhases.PREPARE):
                 return self.__gladiators_bets(user, ctrl)
@@ -42,7 +41,7 @@ class BattleKeyboard():
             return self.__parts_selector(user, ctrl)
 
     def __hunt_strategy_select(self, user:User, ctrl:BattleManager, 
-                        usable:Optional[List[Tuple[UserInventoryLinkORM, ItemORM]]] = None) -> InlineKeyboardMarkup:
+                        usable:Optional[List[InventoryItem]] = None) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text="⚔️",
                 callback_data=BattleCF(action=MemberStrategy.AGGRESSIVE.value,
@@ -61,8 +60,8 @@ class BattleKeyboard():
                 
                 if (ctrl.phase == BattlePhases.REST):
                         for i in range(len(usable)):
-                                if (usable[i][0].quantity > 0):
-                                        builder.add(InlineKeyboardButton(text=f"{usable[i][1].utf8_icon} ({usable[i][0].quantity})",
+                                if (usable[i].quantity > 0):
+                                        builder.add(InlineKeyboardButton(text=f"{usable[i].utf8_icon} ({usable[i].quantity})",
                                                 callback_data=BattleCF(action="heal",
                                                                 item_index= i,
                                                                 user_id=user.tg_id).pack()))

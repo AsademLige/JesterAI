@@ -5,7 +5,7 @@ from aiogram import Bot
 import logging
 
 ###TODO: Не хватает абстракции для класса
-class TelegramNotificationProvider:
+class SchedulerTelegramProvider:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.dict = Dictionary()

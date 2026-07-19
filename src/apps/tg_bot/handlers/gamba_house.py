@@ -5,10 +5,9 @@ from apps.tg_bot.keyboards.gamba_house_keyboard import GambaHouseKeyboard
 from apps.tg_bot.providers.random_provider import TelegramRandomProvider
 from features.gamba_house.domain.dice_manager import DiceGameManager
 from domain.controllers.rights_controller import RightsController
-from features.user.data.models.user_stats_orm import UserStatsORM
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from aiogram.types import FSInputFile, Message, CallbackQuery
-from features.user.data.models.user_model_orm import UserORM
+from features.battles.game_controller import GameController
 from features.battles.battle_unit_entity import BattleUnit
 from features.battles.battle_manager import BattleManager
 from features.user.data.dtos.user_dto import User
@@ -111,14 +110,7 @@ async def dice_game(callback: CallbackQuery, callback_data: DiceGameCF, state: F
 async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):
     state_data = await state.get_data()
     if (not 'user' in state_data): return
-    
     user:User = state_data["user"]
-    
-    delta = await dice_manager.check_cool_down(user)
-    if delta:
-        answer = await bot.send_message(user.chat_id, dict.timer_message(user, Utils.timedelta_to_hhmm(delta)),
-                                        parse_mode=ParseMode.HTML)
-        return await Utils.delete_old_message([answer], 10)
 
     result = await dice_manager.play(user, callback_data.action, rp)
 
@@ -165,7 +157,9 @@ async def trash_loto(callback: CallbackQuery, callback_data: DiceGameCF, state: 
         
 ###Гладиаторы!
 @rt.callback_query(GladiatorsCF.filter(F.action == "gladiators"))
-async def gladiators(callback: CallbackQuery, callback_data: GladiatorsCF, state: FSMContext):
+async def gladiators(callback: CallbackQuery, callback_data: GladiatorsCF, 
+                     state: FSMContext, game_controller:GameController):
+    
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
@@ -182,8 +176,6 @@ async def gladiators(callback: CallbackQuery, callback_data: GladiatorsCF, state
         await Utils.delete_old_message([answer], 10)
         return
     
-    global game_controller
-    from bot import game_controller
     if (game_controller.get_battle(user)):
         answer = await callback.message.answer("⚔️ Ставка уже сделана!")
         await Utils.delete_old_message([answer], 5)
@@ -197,11 +189,11 @@ async def gladiators(callback: CallbackQuery, callback_data: GladiatorsCF, state
     
 ###Ставка на гладиатора
 @rt.callback_query(GladiatorsCF.filter(F.action == "bet"))
-async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, state: FSMContext):
+async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, 
+                         state: FSMContext, game_controller:GameController):
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
-    global game_controller
 
     if (user.tg_id != callback_data.user_id or not callback_data.bet):
         return
@@ -214,8 +206,9 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
         await Utils.delete_old_message([callback.message, answer])
         return
     
-    if (not await user_repo.update(user, {UserORM.money.name : user.money - callback_data.bet,
-                                               UserStatsORM.gladiators_bet.name :  user.gladiators_bet + callback_data.bet})):
+    if (not await user_repo.update(user, money=user.money - callback_data.bet, 
+                                   gladiators_bet=user.gladiators_bet + callback_data.bet)):
+    
         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
         return
     
@@ -236,7 +229,8 @@ async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, s
     
 ###Бой гладиаторов
 @rt.callback_query(GladiatorsCF.filter(F.action == "gladiators_fight"))
-async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF, state: FSMContext):
+async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF, 
+                           state: FSMContext, game_controller:GameController):
     if (await SafeEditMessage.is_locked(callback)): return
     state_data = await state.get_data()
     if (not 'user' in state_data): return
@@ -245,7 +239,6 @@ async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF,
     if (user.tg_id != callback_data.user_id):
         return
     
-    global game_controller
     battle:BattleManager = game_controller.get_battle(user)
     status:Optional[Tuple[str, BattlePhases, Optional[BattleUnit]]] = await game_controller.get_battle_status(user)
 

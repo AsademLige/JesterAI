@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from core.data.models.bot_settings_dto import BotSettings
+from features.game_engine.data.models.bot_settings_dto import BotSettings
 from abc import ABC, abstractmethod
 
 

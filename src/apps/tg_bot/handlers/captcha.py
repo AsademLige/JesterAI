@@ -2,7 +2,7 @@ from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from core.data.data_base import DataBase
 from aiogram.fsm.context import FSMContext
 from core.consts.dictionary import Dictionary
-from core.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from core.utils.utils import Utils
 from datetime import datetime, timedelta
 from aiogram.types import CallbackQuery
