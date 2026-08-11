@@ -10,6 +10,7 @@ cachetools
 freezegun
 py_trees
 gino
+tqdm
 pytz
 pillow
 moviepy

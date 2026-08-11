@@ -34,7 +34,7 @@ class RegistrationMiddleware(BaseMiddleware):
         
 
     async def register_user(self, user: User, chat: Chat) -> str:
-        length : int = Random().randint(10, 30)
+        length : int = Random().randint(10, 15)
         from bot import bot
         member  = await bot.get_chat_member(chat.id, user.id)
         custom_title : Optional[str] = None

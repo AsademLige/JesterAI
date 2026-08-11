@@ -70,7 +70,7 @@ async def main():
     dp['game_engine'] = game_engine 
     dp['game_controller'] = game_controller
     await dict.init()
-    await Scheduler.asyncIOS(event_handler.handle_event,
+    await Scheduler.sql_alchemy(event_handler.handle_event,
                              user_repo=user_repository,
                              store_repo=store_repository,
                              settings_repo=settings_repository)

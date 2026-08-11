@@ -12,5 +12,5 @@ class BotSettings(BaseModel):
 
     ###Время восстановления энергии в секундах
     energy_restore_time:int = 10
-    events_enabled:bool
+    events_enabled:bool = True
     alias: str

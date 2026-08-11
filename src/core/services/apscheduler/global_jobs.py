@@ -1,13 +1,23 @@
 from features.game_engine.data.repository.bot_settings_repository import IBotSettingsRepository
 from features.store.data.repository.store_repository import IStoreRepository
 from features.user.data.repository.user_repository import IUserRepository
-from features.items.data.models.store_item_dto import StoreItem
 from features.game_engine.data.models.bot_settings_dto import BotSettings
+from features.items.data.models.store_item_dto import StoreItem
 from features.user.data.dtos.user_dto import User
 from core.utils.app_herald import AppHerald
 from typing import Dict, List, Optional
 import logging
 import random
+
+class TestJobTracker:
+    def __init__(self):
+        self.fired_jobs = {}
+
+    def should_fire(self, job_id: str, current_date: str) -> bool:
+        if self.fired_jobs.get(job_id) != current_date:
+            self.fired_jobs[job_id] = current_date
+            return True
+        return False
 
 class GlobalJobs():
     def __init__(self, user_repo:IUserRepository, 
@@ -79,7 +89,7 @@ class GlobalJobs():
 
         for chat_id in indexed_users:
             try:
-                settings:BotSettings = await self.settings_repo.get_settings(chat_id, "")
+                settings:BotSettings = await self.settings_repo.get_settings(chat_id)
                 if (not settings.events_enabled): continue
 
                 await self.user_repo.update_users_money_by_chat(chat_id, money)
@@ -104,7 +114,7 @@ class GlobalJobs():
 
         for chat_id in indexed_users:
             try:
-                settings:BotSettings = await self.settings_repo.get_settings(chat_id, "")
+                settings:BotSettings = await self.settings_repo.get_settings(chat_id)
                 if (not settings.events_enabled): continue
 
                 if (not indexed_users[chat_id]): continue
@@ -116,19 +126,20 @@ class GlobalJobs():
                 draw_winner_index:int = 0
                 
                 if (len(sorted_users) <= 3):
-                    draw_winner_index = random.randrange(0, len(sorted_users) - 1)
+                    draw_winner_index = random.randrange(0, len(sorted_users))
                 else:
-                    draw_winner_index = random.randrange(2, len(sorted_users) - 1)
+                    draw_winner_index = random.randrange(2, len(sorted_users))
                 
-                last_winner:Optional[User] = await self.user_repo.get_user(chat_id, last_daily_draw_winner=True)
-                length_change:int = random.randrange(5, 10)
+                last_winner:Optional[User] = await self.user_repo.get_user(chat_id=chat_id, last_daily_draw_winner=True)
+
+                length_change:int = random.randrange(1, 3)
                 
                 await self.user_repo.update(sorted_users[draw_winner_index],
-                                     {"last_daily_draw_winner" : True,
-                                      "length" : sorted_users[draw_winner_index].length + length_change})
+                                       last_daily_draw_winner = True,
+                                       length = sorted_users[draw_winner_index].length + length_change)
                 
                 if (last_winner is not None):
-                    await self.user_repo.update(last_winner, {"last_daily_draw_winner":False})
+                    await self.user_repo.update(last_winner, last_daily_draw_winner = False)
                 
                 await notifier_func(chat_id, "day_draw", {"winner": sorted_users[draw_winner_index], "length_change": length_change})
             except Exception as e:

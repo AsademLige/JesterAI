@@ -1,7 +1,7 @@
 bot_behaviors:dict[str, dict] = {
     "normal" : {
         "personality": {
-            "laziness": 0.75
+            "laziness": 0.2
         },
         "interests": {
             "pencil": 0.5,

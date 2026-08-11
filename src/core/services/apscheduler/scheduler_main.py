@@ -38,12 +38,13 @@ class Scheduler():
         pass
 
     @classmethod
-    async def background(cls, notification_handler,
+    async def local(cls, notification_handler,
                         user_repo:IUserRepository, 
                         store_repo:IStoreRepository, 
                         settings_repo:IBotSettingsRepository):
         
-        scheduler = BackgroundScheduler()
+        jobstores = {'default': MemoryJobStore()}
+        scheduler = AsyncIOScheduler(jobstores=jobstores, timezone=pytz.timezone('Europe/Moscow'))
 
         if cls._instance is None:
             cls._instance = cls(scheduler = scheduler,
@@ -56,7 +57,7 @@ class Scheduler():
         return cls._instance
     
     @classmethod
-    async def asyncIOS(cls, notification_handler,
+    async def sql_alchemy(cls, notification_handler,
                         user_repo:IUserRepository, 
                         store_repo:IStoreRepository, 
                         settings_repo:IBotSettingsRepository):
@@ -98,6 +99,10 @@ class Scheduler():
         await self.game_core.warehouse_update(self.notifier)
 
     async def init(self, scheduler: BaseScheduler):
+        # Команда без автоматического выполнения (проще дергать из одного списка задач в случае необходимости)
+        # scheduler.add_job(self.run_tech_work_compensation, 'date', run_date=datetime.now() + timedelta(days=1000), id='tech_work_compensation', 
+        #                         replace_existing=True)
+                
         scheduler.add_job(self.run_day_draw, 'cron', id='day_draw', 
                                replace_existing=True, misfire_grace_time=15, hour=10, minute=30)
         
@@ -107,10 +112,6 @@ class Scheduler():
         scheduler.add_job(self.run_warehouse_update, 'cron', id='warehouse_update', 
                                replace_existing=True, misfire_grace_time=15,
                                hour=9, minute=00)
-        
-        # Команда без автоматического выполнения (проще дергать из одного списка задач в случае необходимости)
-        scheduler.add_job(self.run_tech_work_compensation, 'date', run_date=datetime.now() + timedelta(days=1000), id='tech_work_compensation', 
-                               replace_existing=True)
         
         # self.scheduler.add_job(
         #     BotSchedulerJobs.event_trigger, 
