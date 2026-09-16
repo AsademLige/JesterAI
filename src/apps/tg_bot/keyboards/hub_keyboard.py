@@ -11,7 +11,7 @@ def get_hub_keyboard() -> InlineKeyboardMarkup:
                                      callback_data="hub_store"))
     
     builder.add(InlineKeyboardButton(text="🎣 Рыбалка", 
-                                     callback_data="fishing"))
+                                     callback_data="hub_fishing"))
     
     builder.adjust(2, 2) 
     return builder.as_markup()

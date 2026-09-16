@@ -52,7 +52,6 @@ class GinoUserRepository(IUserRepository):
     def _get_cache_user(self, tg_id: Optional[int] = None, 
                        id: Optional[int] = None, 
                        chat_id: Optional[int] = None) -> Optional[User]:
-        
         if id in self._cache:
             return self._cache[id]
             

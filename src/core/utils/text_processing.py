@@ -7,7 +7,8 @@ class TextProcessing():
     #TODO:Надо добавить возможность делать первую букву значения заглавной
     def text_replacement(text:str, args: Dict[str, Any], 
                          parse_mode:ParseMode = ParseMode.HTML, 
-                         recursive_parse_args:bool = False) -> str:
+                         recursive_parse_args:bool = False,
+                         ignore_missing_keys:bool = False) -> str:
         """
         Экранируем символы входящей строки,
         затем подменяем args значения по ключам.
@@ -23,7 +24,7 @@ class TextProcessing():
                 buf_list[id] = value
                 text = text.replace(match, id)
             else:
-                text = text.replace(match, "&missing_key&")
+                text = text.replace(match, "&missing_key&" if (not ignore_missing_keys) else "")
         
         if (parse_mode == ParseMode.MARKDOWN_V2):
             text = TextProcessing.escape_md2(text)

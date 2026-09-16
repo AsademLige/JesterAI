@@ -4,6 +4,7 @@ from features.user.data.repository.user_repository import IUserRepository
 from core.providers.notification_provider import INotificationProvider
 from features.user.data.dtos.user_dto import User
 from datetime import datetime, timedelta
+from core.consts.config import Prefs
 from typing import List, Optional
 import asyncio
 
@@ -11,6 +12,7 @@ class GameEngine:
     def __init__(self, settings_repo: IBotSettingsRepository, 
                  user_repo:IUserRepository,
                  notification_provider:INotificationProvider):
+        self.prefs = Prefs()
         self._next_energy_restore: dict[int, datetime] = {}
         self.notification_provider = notification_provider
         self.settings_repo = settings_repo
@@ -20,6 +22,7 @@ class GameEngine:
     async def start(self):
         self._is_running = True
 
+        if (self.prefs.debug == "1"): return
         users:List[User] = await self.user_repo.get_users()
         for user in users:
             settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)

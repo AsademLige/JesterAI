@@ -1,4 +1,4 @@
-from features.battles.battle_unit_entity import BodyParts, MemberStand, MemberStrategy
+from features.battles.battle_unit_entity import BodyParts, MemberStand, UnitStrategy
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF, GladiatorsCF
 from features.items.data.models.inventory_item_dto import InventoryItem
 from features.battles.battle_manager import BattleManager, BattlePhases
@@ -27,8 +27,7 @@ class BattleKeyboard():
         builder.adjust(1) 
         return builder.as_markup()
     
-    def battle_keyboard(self, user:User, ctrl:BattleManager, 
-                        usable:Optional[List[InventoryItem]] = None) -> InlineKeyboardMarkup:
+    def battle_keyboard(self, user:User, ctrl:BattleManager) -> InlineKeyboardMarkup:
         if (ctrl.mode == BattleMode.GLADIATORS):
             if (ctrl.phase == BattlePhases.PREPARE):
                 return self.__gladiators_bets(user, ctrl)
@@ -36,37 +35,52 @@ class BattleKeyboard():
                 return self.__gladiators_fight(user, ctrl)
 
         if (ctrl.phase == BattlePhases.PREPARE or ctrl.phase == BattlePhases.REST):
-                return self.__hunt_strategy_select(user, ctrl, usable)
+                return self.__hunt_strategy_select(user, ctrl)
         else:
             return self.__parts_selector(user, ctrl)
 
-    def __hunt_strategy_select(self, user:User, ctrl:BattleManager, 
-                        usable:Optional[List[InventoryItem]] = None) -> InlineKeyboardMarkup:
+    def __hunt_strategy_select(self, user:User, ctrl:BattleManager) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text="⚔️",
-                callback_data=BattleCF(action=MemberStrategy.AGGRESSIVE.value,
+                callback_data=BattleCF(action=UnitStrategy.AGGRESSIVE.value,
                                         user_id=user.tg_id).pack()))
-        builder.add(InlineKeyboardButton(text="🗡🛡",
-                callback_data=BattleCF(action=MemberStrategy.CONTR_STRIKE.value,
-                                        user_id=user.tg_id).pack()))
-        builder.add(InlineKeyboardButton(text="🛡🛡",
-                callback_data=BattleCF(action=MemberStrategy.DEFENSE.value,
+        builder.add(InlineKeyboardButton(text="🛡",
+                callback_data=BattleCF(action=UnitStrategy.DEFENSE.value,
                                         user_id=user.tg_id).pack()))
         
-        if (ctrl.phase == BattlePhases.PREPARE or ctrl.active_member.strategy == MemberStrategy.DEFENSE):
+        builder.add(InlineKeyboardButton(text="🔮",
+                callback_data=BattleCF(action="spells",
+                                        user_id=user.tg_id).pack()))
+
+        builder.add(InlineKeyboardButton(text="🎒 Сумка охотника",
+                        callback_data=BattleCF(action="items",
+                                                user_id=user.tg_id).pack()))
+        
+        # if (ctrl.phase == BattlePhases.PREPARE):
                 # builder.add(InlineKeyboardButton(text="💨 Побег",
                 #         callback_data=BattleCF(action="escape", 
                 #                                 user_id=user.tg_id).pack()))
                 
-                if (ctrl.phase == BattlePhases.REST):
-                        for i in range(len(usable)):
-                                if (usable[i].quantity > 0):
-                                        builder.add(InlineKeyboardButton(text=f"{usable[i].utf8_icon} ({usable[i].quantity})",
-                                                callback_data=BattleCF(action="heal",
-                                                                item_index= i,
-                                                                user_id=user.tg_id).pack()))
+                        
         builder.adjust(3) 
         return builder.as_markup()
+
+    def hunt_items(self, user:User, usable:Optional[List[InventoryItem]] = None) -> InlineKeyboardMarkup:
+            builder = InlineKeyboardBuilder()
+
+            for i in range(len(usable)):
+                if (usable[i].quantity > 0):
+                        builder.add(InlineKeyboardButton(text=f"{usable[i].utf8_icon} ({usable[i].quantity})",
+                                callback_data=BattleCF(action="heal",
+                                                item_index= i,
+                                                user_id=user.tg_id).pack()))
+
+            builder.add(InlineKeyboardButton(text=f"🔙 Назад",
+                                            callback_data=BattleCF(action="items_select_cancel",
+                                                            user_id=user.tg_id).pack()))
+
+            builder.adjust(2) 
+            return builder.as_markup()
     
     def __parts_selector(self, user:User, ctrl:BattleManager) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()

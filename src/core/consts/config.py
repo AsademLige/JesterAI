@@ -1,9 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from typing import List
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+    debug: SecretStr = Field(default=SecretStr("0"))
     media_folder: SecretStr
     super_users: SecretStr
     pg_password: SecretStr
@@ -26,6 +27,10 @@ class Prefs():
     @property 
     def media_folder(self) -> str:
         return self.__config.media_folder.get_secret_value()
+    
+    @property 
+    def debug(self) -> str:
+        return self.__config.debug.get_secret_value()
     
     @property 
     def pg_password(self) -> str:

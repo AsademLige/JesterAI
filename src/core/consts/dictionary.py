@@ -1,5 +1,5 @@
+from features.battles.battle_unit_entity import BattleUnit, BodyParts, AttackResult
 from features.items.data.models.inventory_item_dto import InventoryItem
-from features.battles.battle_unit_entity import BattleUnit, BodyParts
 from features.items.data.models.store_item_dto import StoreItem
 from features.items.data.models.base_item_dto import BaseItem
 from aiogram.utils.markdown import hbold, hcode, hblockquote
@@ -246,13 +246,11 @@ class Dictionary():
     ###Текстовые переменные битвы
     ###------------------------------------------------------------
     
-    combat_interface:str = "{{fight_name}}\n\n"\
-                             "{{player1_icon}} : {{player1}}\n"\
-                             "HP: {{health1}}\n\n"\
-                             "{{player2_icon}} : {{player2}}\n"\
-                             "HP: {{health2}}\n"\
-                             "━━━━━━━━━━━━━\n"\
-                             "⏳ Таймер: {{timer}}\n"\
+    combat_interface:str = "\n{{player1_icon}} : {{player1}}\n"\
+                             "HP: {{health1}} {{player1_status_change}}\n"\
+                             "MP: {{mana1}}\n\n"\
+                             "{{player2_icon}} : {{player2}} {{player2_strategy}}\n"\
+                             "HP: {{health2}} {{player2_status_change}}"
                              
     gladiators_interface:str = "{{player1_icon}} : {{player1}}\n"\
                                "HP: {{health1}}\n\n"\
@@ -260,11 +258,11 @@ class Dictionary():
                                "HP: {{health2}}\n"\
     
     __monster_meeting:List[str] = [
-        "❗️ Из кустов выползает <code>{{monster_name}}</code>, а его {{pencil}} смотрит прямо на тебя! Что будешь делать?"
+        "❗️<code>{{monster_name}}</code>"
     ]
 
     __boss_meeting:List[str] = [
-        "<blockquote>🚧 ОПАСНОСТЬ! Сильный противник <code>{{monster_name}}</code> встречается на твоем пути, а его {{pencil}} в другой весовой категории!🚧</blockquote>"
+        "<blockquote>🚧 ОПАСНОСТЬ! Сильный противник <code>{{monster_name}}</code> 🚧</blockquote>"
     ]
 
     __gladiators_introduce:List[str] = [
@@ -330,7 +328,8 @@ class Dictionary():
     battle_dead_description:List[str] = [
         "сдох, обоссавшись и обосравшись!",
         "прикрывает рукой  {{part_accu}}, затем падает без дыхания",
-        "становиться отрицательно живым"
+        "становиться отрицательно живым",
+        "Добыча сбежала, порвав на прощание твой туз"
     ]
 
     gladiators_cheer_up:List[str] = [
@@ -481,13 +480,12 @@ class Dictionary():
         })
     
     def hunt_monster_meeting(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
-        return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + \
-                                   f"\n\n{strategy}" + \
+        return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + f" ({strategy})" + \
                                    f"\n\n❤️ <b>Здоровье: {monster.health}</b>\n"\
                                    f"🔪 <b>Атака: {monster.min_damage}-{monster.max_damage}</b>\n"\
                                    f"🎯 <b>Крит. шанс: {monster.crit_chance}%</b>\n"\
                                    f"🥋 <b>Стиль боя</b>: {fighting_style_visual}\n"
-                                   f"\n<b>Описание:</b> <i>{monster.description}</i>", {
+                                   f"\n<b>Описание:</b> <i>{monster.description}</i>" , {
             "monster_name": monster.name,
             **self.random_member(),
         })
@@ -913,13 +911,20 @@ class Dictionary():
         return "⚰️⚰️ Бой кровавый, и победителя в нем нет, лежат все без дыхания..."
     
     def battle_turn_log(self, active:BattleUnit, opponent:BattleUnit,
-                        active_status:Optional[Tuple[AttackStatus, int, bool]], 
-                        opponent_status:Optional[Tuple[AttackStatus, int, bool]],
+                        active_status:Optional[AttackResult], 
+                        opponent_status:Optional[AttackResult],
                         mode:BattleMode = BattleMode.HUNT):
         full_log:str = ""
-        status_icon:str = "⏳" if (active_status[0] == AttackStatus.NONE) else "🩸" if (active_status[0] == AttackStatus.DAMAGED) else "🛡"
-        opponent_damage_str:str = f"Получено: <code>{(f'🎯{active_status[1]}!') if (active_status[2]) else (f'💥{active_status[1]}') }</code>" if active_status[1] else ""
-        active_damage_str:str = f"Нанесено: <code>{(f'🎯{opponent_status[1]}!') if (opponent_status[1]) else (f'💥{opponent_status[1]}') }</code>" if opponent_status[1] else ""
+        status_icon:str = "⏳" if (active_status and active_status.status == AttackStatus.NONE) else "🩸" if (active_status and active_status.status == AttackStatus.DAMAGED) else "🛡"
+
+        opponent_damage_str:str = ""
+        active_damage_str:str = ""
+
+        if (active_status):
+            opponent_damage_str = f"Получено: <code>{(f'🎯{active_status.damage}!') if (active_status.attack_dice == 20) else (f'💥{active_status.damage}') }</code>" if active_status.damage else ""
+
+        if (opponent_status):
+            active_damage_str = f"Нанесено: <code>{(f'🎯{opponent_status.damage}!') if (opponent_status.damage) else (f'💥{opponent_status.damage}') }</code>" if opponent_status.damage else ""
 
         action_protect:str = tp.text_replacement(random.choice(self.battle_protect_description), 
                                                 {**self.get_part_cases(active.protected_parts),
@@ -939,20 +944,50 @@ class Dictionary():
             **self.random_member()
         })
 
-        if (active_status[0] in [AttackStatus.NONE, AttackStatus.DEFENDED]):
-            full_log += f"{active.short_battle_name} {action_none_attacked if (active_status[0] == AttackStatus.NONE) else action_protect}"    
+        if (active_status and active_status.status in [AttackStatus.NONE, AttackStatus.DEFENDED]):
+            full_log += f"{active.short_battle_name} {action_none_attacked if (active_status.status == AttackStatus.NONE) else action_protect}"    
 
-        if (active_status[0] == AttackStatus.DAMAGED):
+        if (active_status and active_status.status == AttackStatus.DAMAGED):
             full_log += f"{active.short_battle_name} {action_damaged}"    
         
         full_log += f'{active.short_battle_name if (not full_log) else ", затем"} {action_attack}'\
-              if (opponent_status[0] == AttackStatus.DAMAGED) else ''
+              if (opponent_status.status == AttackStatus.DAMAGED) else ''
 
         if (mode == BattleMode.HUNT):
             full_log += f"\n[{active_damage_str}{' | ' if (active_damage_str and opponent_damage_str) else ''}{opponent_damage_str}]" \
                 if (active_damage_str or opponent_damage_str) else ''
 
         return tp.text_replacement(status_icon + full_log, {**self.random_member()})
+
+    def battle_dice_turn_log(self, active:BattleUnit, opponent:BattleUnit,
+                            active_status:Optional[AttackResult], 
+                            opponent_status:Optional[AttackResult],
+                            mode:BattleMode = BattleMode.HUNT):
+
+        full_log:str = ""
+
+        if (opponent_status and opponent_status.status == AttackStatus.DAMAGED):
+            if (opponent_status.defense_dice > 0 and opponent_status.defense_dice <= opponent_status.attack_dice):
+                full_log += "\n" + opponent.short_battle_name + f" защищается (🎲{opponent_status.defense_dice}), " + \
+                                                        f"но {active.short_battle_name} пробивает (🎲{opponent_status.attack_dice})"
+
+        if (opponent_status and opponent_status.status == AttackStatus.DEFENDED and opponent_status.defense_dice > 0):
+            full_log += "\n" + opponent.short_battle_name + f" защищается (🎲{opponent_status.defense_dice}), и " + \
+                                                    f"{active.short_battle_name} не может пробить (🎲{opponent_status.attack_dice})\n"
+
+        if (active_status and active_status.status == AttackStatus.DAMAGED):
+            if (active_status.defense_dice > 0 and active_status.defense_dice <= active_status.attack_dice):
+                full_log += "\n" + active.short_battle_name + f" защищается (🎲{active_status.defense_dice}), " + \
+                                                       f"но {opponent.short_battle_name} пробивает (🎲{active_status.attack_dice})"
+
+        if (active_status and active_status.status == AttackStatus.DEFENDED and active_status.defense_dice > 0):
+            full_log += "\n" + active.short_battle_name + f"Защищается (🎲{active_status.defense_dice}), и " + \
+                                                    f"{opponent.short_battle_name} не может пробить (🎲{active_status.attack_dice})\n"
+
+        if (full_log):
+            full_log = "\n━━━━━━━━━━━━━" + full_log
+        
+        return full_log
     
     def hunt_loot(self, inventory:Optional[Tuple[List[BaseItem], int]]) -> str:
         if (not inventory): return ""
@@ -969,7 +1004,7 @@ class Dictionary():
         return item + money
 
 
-    def battle_end(self, dead:BattleUnit, winner:BattleUnit, mode:BattleMode, damage:Tuple[int, bool]) -> str:
+    def battle_end(self, dead:BattleUnit, winner:BattleUnit, mode:BattleMode, damage:AttackResult) -> str:
         icon_hunt:str = "☠️" if (mode == BattleMode.HUNT and type(dead.entity) is User) else "🎯"
         icon_gladiators:str = "💰" if (dead.bet_money == 0) else "🚽"
 
@@ -981,6 +1016,6 @@ class Dictionary():
                 **self.random_member(),
                 **self.get_part_cases(dead.protected_parts),
             }),
-            "opponent_hit" : f"<code>[{(f'🎯{damage[0]}!') if (damage[1]) else (f'💥{damage[0]}') }]</code>",
+            "opponent_hit" : f"<code>[{(f'🎯{damage.damage}!') if (damage.attack_dice == 20) else (f'💥{damage.damage}') }]</code>",
         })
     

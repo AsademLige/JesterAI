@@ -1,4 +1,4 @@
-from features.battles.battle_unit_entity import BattleUnit, BodyParts, MemberStrategy
+from features.battles.battle_unit_entity import BattleUnit, BodyParts, UnitStrategy
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.items.data.models.inventory_item_dto import InventoryItem
@@ -16,7 +16,6 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
-from core.utils.enums import MemberStatus
 from typing import List, Optional, Tuple
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
@@ -104,6 +103,7 @@ async def __hunt_init(message: Message, state: FSMContext,
     private_message = await bot.send_message(user.tg_id, battle[0],
                                     reply_markup=combat_kb.battle_keyboard(user, game_controller.get_battle(user)),
                                     parse_mode=ParseMode.HTML)
+    await state.update_data(private_message=private_message)
 
 @rt.message(Command("start"))
 async def hunt_deep_link(message: Message, state: FSMContext, 
@@ -124,7 +124,7 @@ async def save_temp_data(link_id, data, ttl=20):
     links_cache.pop(link_id, None)
 
 ###Начало боя
-@rt.callback_query(BattleCF.filter(F.action.in_([a.value for a in MemberStrategy])))
+@rt.callback_query(BattleCF.filter(F.action.in_([a.value for a in UnitStrategy])))
 async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF,
                          state: FSMContext, game_controller:GameController):
     if (await SafeEditMessage.is_locked(callback)): return
@@ -138,16 +138,26 @@ async def on_hunt_attack(callback: CallbackQuery, callback_data: BattleCF,
         return
     
     if (battle.phase == BattlePhases.PREPARE):
-        game_controller.start_battle(user, callback.message)
+        game_controller.start_battle(user, state_data["private_message"])
 
-    battle.active_member.choice_strategy(MemberStrategy(callback_data.action))
+    strategy = UnitStrategy(callback_data.action)
+    battle.active_member.choice_strategy(strategy)
+
+    if (strategy == UnitStrategy.DEFENSE):
+        battle.active_member.protect_all()
 
     status:Optional[Tuple[str, BattlePhases, BattleUnit]] = await game_controller.get_battle_status(user)
+
     if (status):
-        await callback.answer()
-        await bot.send_message(user.tg_id, status[0],
-                            reply_markup=combat_kb.battle_keyboard(user, battle),
-                            parse_mode=ParseMode.HTML)
+            await SafeEditMessage.safe_edit(callback, status[0],
+                                            reply_markup=combat_kb.battle_keyboard(user, battle) \
+                                            if (not status[1] == BattlePhases.BATTLE_END) else None,
+                                            parse_mode=ParseMode.HTML)
+    
+            if (status[1] == BattlePhases.BATTLE_END and callback.message.chat.type == "private"):
+                result = await bot.send_message(user.chat_id, status[0],
+                                    parse_mode=ParseMode.HTML)
+                await Utils.delete_old_message([result], 360)
 
 ###Действие атаки
 @rt.callback_query(BattleCF.filter(F.action == "attack"))
@@ -189,25 +199,14 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF,
 
     if (user.tg_id != callback_data.user_id):
         return
-    
-    battle.active_member.protect(list(BodyParts)[callback_data.part])
-
-    if (battle.active_member.status == MemberStatus.EXHAUSTED 
-        and battle.active_member.strategy == MemberStrategy.DEFENSE):
-        items = await  user_repo.get_user_heal_items(battle.active_member.entity)
-        await state.update_data(items=items)
 
     status:Optional[Tuple[str, BattlePhases, BattleUnit]] = await game_controller.get_battle_status(user)
-    if (status):
-        status_extended:str = status[0]
 
-        if (items and not battle.phase == BattlePhases.BATTLE_END):
-            status_extended += "\n\n<blockquote>🎒 В сумке охотника:</blockquote>\n"
-            for item in items:
-                status_extended += items_mg.effects_description(item) + "\n"
-                
-        await SafeEditMessage.safe_edit(callback, status_extended,
-                                        reply_markup=combat_kb.battle_keyboard(user, battle, items) \
+    print(f"cdlog {status}")
+
+    if (status):
+        await SafeEditMessage.safe_edit(callback, status[0],
+                                        reply_markup=combat_kb.battle_keyboard(user, battle) \
                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
                                         parse_mode=ParseMode.HTML)
         
@@ -215,6 +214,66 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF,
             result = await bot.send_message(user.chat_id, status[0],
                                 parse_mode=ParseMode.HTML)
             await Utils.delete_old_message([result], 360)
+
+##Способности
+@rt.callback_query(BattleCF.filter(F.action == "spells"))
+async def on_hunter_backpack_open(callback: CallbackQuery, callback_data: BattleCF,
+                          state: FSMContext, game_controller:GameController):
+    if (await SafeEditMessage.is_locked(callback)): return
+    state_data = await state.get_data()
+    if (not 'user' in state_data and not 'battle' in state_data): return
+    user: User = state_data["user"]
+    battle: BattleManager = state_data["battle"]
+
+    if (user.tg_id != callback_data.user_id):
+        return
+
+##Сумка охотника
+@rt.callback_query(BattleCF.filter(F.action == "items"))
+async def on_hunter_backpack_open(callback: CallbackQuery, callback_data: BattleCF,
+                          state: FSMContext, game_controller:GameController):
+    if (await SafeEditMessage.is_locked(callback)): return
+    state_data = await state.get_data()
+    if (not 'user' in state_data and not 'battle' in state_data): return
+    user: User = state_data["user"]
+    battle: BattleManager = state_data["battle"]
+
+    if (user.tg_id != callback_data.user_id):
+        return
+
+    items = await user_repo.get_user_heal_items(battle.active_member.entity)
+    await state.update_data(items=items)
+    status:str = "\n\n<blockquote>🎒 В сумке охотника:</blockquote>\n"
+
+    if (items):
+        for item in items:
+            status += items_mg.effects_description(item) + "\n"
+    else:
+        status += "<b>Пусто!</b>"
+
+    await SafeEditMessage.safe_edit(callback, status,
+        reply_markup=combat_kb.hunt_items(user, items) \
+        if (not status[1] == BattlePhases.BATTLE_END) else None,
+        parse_mode=ParseMode.HTML)
+
+##Закрытие сумки охотника
+@rt.callback_query(BattleCF.filter(F.action == "items_select_cancel"))
+async def on_hunter_backpack_open(callback: CallbackQuery, callback_data: BattleCF,
+                          state: FSMContext, game_controller:GameController):
+    if (await SafeEditMessage.is_locked(callback)): return
+    state_data = await state.get_data()
+    if (not 'user' in state_data and not 'battle' in state_data): return
+    user: User = state_data["user"]
+    battle: BattleManager = state_data["battle"]
+
+    if (user.tg_id != callback_data.user_id):
+        return
+
+    await SafeEditMessage.safe_edit(callback, battle.last_status,
+                                    reply_markup=combat_kb.battle_keyboard(user, battle),
+                                    parse_mode=ParseMode.HTML)
+
+
         
 ###Применение предмета лечения
 @rt.callback_query(BattleCF.filter(F.action == "heal"))
@@ -240,7 +299,7 @@ async def on_hunter_heal(callback: CallbackQuery, callback_data: BattleCF, state
     if (heal_status):
         await callback.answer()
         await bot.send_message(user.tg_id, message,
-                        reply_markup=combat_kb.battle_keyboard(user, battle, items),
+                        reply_markup=combat_kb.battle_keyboard(user, battle),
                         parse_mode=ParseMode.HTML)
 
 ###Побег от монстра
