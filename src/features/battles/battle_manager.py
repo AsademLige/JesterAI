@@ -1,3 +1,5 @@
+import urllib
+
 from core.utils.utils import Utils
 from features.battles.battle_unit_entity import AttackStatus, BattleUnit, MemberStand, AttackResult
 from features.battles.data.repository.monsters_repository import IMonstersRepository
@@ -92,7 +94,7 @@ class BattleManager():
             #TODO: Можно будет расширить возможности боя на несколько монстров
             self.__active_member = self.members[0]
             self.__simulate_mobs()
-            meeting:str = self.dict.hunt_monster_meeting(self.members[1].entity,
+            meeting:str = self.dict.hunt_monster_meeting_short(self.members[1].entity,
                                                          self.get_opponent().str_status,
                                                          self.members[1].fighting_style_visual())
             self.last_status = meeting
@@ -252,3 +254,21 @@ class BattleManager():
     
     def get_bet_gladiator(self) -> Optional[BattleUnit]:
         return next((gld for gld in self.members if gld.bet_money > 0), None)
+
+    def serialize_battle_info(self) -> str:
+        monster:BattleUnit = self.get_opponent()
+        user:User = self.active_member.entity
+        
+        battle_params:dict = {
+            "energy_left" : user.energy,
+            "monster_name" : monster.entity.name,
+            "monster_hp" : monster.entity.health,
+            "monster_id" : monster.entity.id,
+            "is_boss": monster.is_boss,
+            "money_drop": monster.inventory[1],
+            "items_drop" : [f"{item.utf8_icon} {str(item.title)}" for item in monster.inventory[0]]
+        }
+
+        raw_data = urllib.parse.urlencode(battle_params)
+
+        return raw_data

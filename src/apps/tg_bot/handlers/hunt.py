@@ -1,3 +1,6 @@
+import base64
+import json
+
 from features.battles.battle_unit_entity import BattleUnit, BodyParts, UnitStrategy
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.user.data.repository.gino_user_repository import GinoUserRepository
@@ -7,7 +10,7 @@ from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from features.game_engine.domain.game_engine import GameEngine
 from apps.tg_bot.keyboards.callback_fabrics import BattleCF
 from features.battles.game_controller import GameController
-from aiogram.utils.deep_linking import create_deep_link
+from apps.tg_bot.keyboards.hub_keyboard import hunt_button
 from features.items.data.models.item_orm import ItemORM
 from features.items.items_manager import ItemsManager
 from features.user.data.dtos.user_dto import User
@@ -22,12 +25,12 @@ from aiogram.enums import ParseMode
 from core.utils.utils import Utils
 from aiogram.types import Message
 from aiogram import Router, F
+from ssl import SSLContext
 from aiogram import Bot
-import secrets
 import asyncio
 
 prefs = Prefs()
-dict = Dictionary()
+dictionary = Dictionary()
 bot = Bot(token=prefs.bot_token)
 combat_kb = BattleKeyboard()
 user_repo:GinoUserRepository = GinoUserRepository()
@@ -38,7 +41,7 @@ rt = Router()
 ###Отправиться на охоту
 @rt.callback_query(StateFilter(None), F.data == "hub_hunt")
 async def hunt_init(callback_query: CallbackQuery, 
-                    state: FSMContext, game_controller:GameController, 
+                    state: SSLContext, game_controller:GameController, 
                     game_engine:GameEngine):
     message = callback_query.message
     
@@ -50,72 +53,34 @@ async def hunt_init(callback_query: CallbackQuery,
         game_engine.create_energy_restore_timer(user)
     else:
         answer = await bot.send_message(user.chat_id, 
-                                        dict.energy_drain(user), 
+                                        dictionary.energy_drain(user), 
                              parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([answer], 10)
         return
 
-    await callback_query.answer()
-
-    if (not message.chat.type == "private"):
-        bot_info = await bot.me()
-        try:
-            await message.delete()
-        except:
-            pass
-
-        payload = {
-            "action" : "hunt",
-            "user_id" : user.tg_id,
-            "chat_id" : user.chat_id
-        }
-
-        token = secrets.token_urlsafe(8)
-
-        asyncio.create_task(save_temp_data(token, payload))
-        
-        link = f"https://t.me/{bot_info.username}?start={token}"
-        link_message = await bot.send_message(user.chat_id, f'⚔️ <a href="{link}">Вперед, в бой, {user.tg_name}, удачной охоты!</a>', 
-                                            reply_markup=combat_kb.link_keyboard(link),
-                                            parse_mode=ParseMode.HTML)
-
-        await Utils.delete_old_message([link_message], 20)
-    else:
-        __hunt_init(message, state, message.chat.id, game_controller) 
-
-async def __hunt_init(message: Message, state: FSMContext, 
-                      chat_id:int, game_controller:GameController):
-    user:User = await user_repo.get_user(message.from_user.id, chat_id)
-    answer:Message
-
-    await message.delete()
-
     if (game_controller.get_battle(user)):
-        answer = await message.answer("⚔️ Ты уже в бою!")
-        await Utils.delete_old_message([answer], 5)
-        return
-
-    await state.update_data(user=user)
+            answer = await message.answer("⚔️ Ты уже в бою!")
+            await Utils.delete_old_message([answer], 5)
+            return
 
     battle:Tuple[str, BattleManager] = await game_controller.prepare_hunt(user)
-    await state.update_data(battle=battle[1])
 
-    private_message = await bot.send_message(user.tg_id, battle[0],
-                                    reply_markup=combat_kb.battle_keyboard(user, game_controller.get_battle(user)),
-                                    parse_mode=ParseMode.HTML)
-    await state.update_data(private_message=private_message)
+    link_message = await bot.send_message(callback_query.message.chat.id, battle[0], 
+                                            reply_markup=hunt_button(battle[1].serialize_battle_info()),
+                                            parse_mode=ParseMode.HTML)
 
-@rt.message(Command("start"))
-async def hunt_deep_link(message: Message, state: FSMContext, 
-                         game_controller:GameController):
-    if message.text and len(message.text.split()) > 1 \
-        and message.text.split()[1] in links_cache:
+@rt.message(F.web_app_data)
+async def handle_web_app_data(message: Message):
+    raw_data = message.web_app_data.data
+    data = json.loads(raw_data)
 
-        payload = links_cache[message.text.split()[1]]
-        if (payload["action"] == "hunt"):
-            await __hunt_init(message, state, payload["chat_id"], game_controller)
-            await Utils.delete_old_message([message], 0)
-            return
+    if (data["action"] == "hunt"):
+        if (data["message"] == "victory"):
+            print("cdlog ПОБЭДА")
+
+    if (data["action"] == "hunt"):
+            if (data["message"] == "lose"):
+                print("cdlog НЕ ПОБЭДА")
         
 async def save_temp_data(link_id, data, ttl=20):
     """Сохраняет данные и удаляет их через TTL секунд"""
@@ -201,8 +166,6 @@ async def on_turn_defense(callback: CallbackQuery, callback_data: BattleCF,
         return
 
     status:Optional[Tuple[str, BattlePhases, BattleUnit]] = await game_controller.get_battle_status(user)
-
-    print(f"cdlog {status}")
 
     if (status):
         await SafeEditMessage.safe_edit(callback, status[0],

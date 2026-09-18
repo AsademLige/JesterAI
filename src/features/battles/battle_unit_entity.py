@@ -167,7 +167,7 @@ class BattleUnit():
         self.__protected_parts = []
         self.__last_turn_result = None
         self.__crit_chance = entity.crit_chance if type(self.entity) is Monster else 0
-        self.__max_hp = entity.health if type(self.entity) is Monster else 35
+        self.__max_hp = (entity.health if type(self.entity) is Monster else 35) * 3
         self.__hp = self.__max_hp
         self.__max_mana = 5
         self.__mana = self.__max_mana

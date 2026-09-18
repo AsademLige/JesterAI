@@ -489,6 +489,16 @@ class Dictionary():
             "monster_name": monster.name,
             **self.random_member(),
         })
+
+    def hunt_monster_meeting_short(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
+            return tp.text_replacement(random.choice(self.__monster_meeting if (monster.tag == "mob") else self.__boss_meeting) + \
+                                       f"\n\n❤️ <b>Здоровье: {monster.health}</b>\n"\
+                                       f"🔪 <b>Атака: {monster.min_damage}-{monster.max_damage}</b>\n"\
+                                       f"🎯 <b>Крит. шанс: {monster.crit_chance}%</b>\n"\
+                                       f"\n<b>Описание:</b> <i>{monster.description}</i>" , {
+                "monster_name": monster.name,
+                **self.random_member(),
+            })
     
     def gladiators_introduce(self, members:List[BattleUnit], ui_data:Dict[str, str]) -> str:
         return tp.text_replacement(random.choice(self.__gladiators_introduce) + 

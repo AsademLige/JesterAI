@@ -13,7 +13,6 @@ from aiogram.types import Message
 from aiogram import Bot
 import asyncio
 
-
 class GameController():
     _instance = None
     prefs = Prefs()
@@ -37,11 +36,6 @@ class GameController():
 
     async def prepare_hunt(self, hunter:User) -> Tuple[str, BattleManager]:
         get_boss:bool = False
-        
-        ##TODO:Можно переделать на временные предметы внутри боя (отдельное поле в User)
-        heal_item:Optional[BaseItem] = await self.user_repo.get_item_by_id(10)
-        if (not await self.user_repo.get_user_heal_items(hunter) and heal_item):
-            await self.user_repo.user_item_transaction(hunter, heal_item)
 
         self.__started_battles[hunter.tg_id] = await BattleManager.hunt(hunter, self.monster_repo, boss=get_boss)
         return (self.__started_battles[hunter.tg_id].prepare_battle(), self.__started_battles[hunter.tg_id])
@@ -194,3 +188,4 @@ class GameController():
                         print(f"delete message error: {e}")
 
             del self.__started_battles[battle_key]
+    
