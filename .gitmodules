@@ -1,0 +1,3 @@
+[submodule "src/core/services/api"]
+	path = src/core/services/api
+	url = https://github.com/AsademLige/jester_api.git
