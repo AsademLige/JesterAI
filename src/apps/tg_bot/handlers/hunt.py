@@ -1,7 +1,8 @@
-import base64
+
 import json
 
 from features.battles.battle_unit_entity import BattleUnit, BodyParts, UnitStrategy
+from features.battles.data.repository.gino_battle_repository import GinoBattleRepository
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.items.data.models.inventory_item_dto import InventoryItem
@@ -34,6 +35,7 @@ dictionary = Dictionary()
 bot = Bot(token=prefs.bot_token)
 combat_kb = BattleKeyboard()
 user_repo:GinoUserRepository = GinoUserRepository()
+battle_repo:GinoBattleRepository = GinoBattleRepository()
 items_mg:ItemsManager = ItemsManager(user_repo)
 links_cache = {}
 rt = Router()
@@ -58,16 +60,19 @@ async def hunt_init(callback_query: CallbackQuery,
         await Utils.delete_old_message([answer], 10)
         return
 
-    if (game_controller.get_battle(user)):
+    if (await battle_repo.get_battle(user)):
             answer = await message.answer("⚔️ Ты уже в бою!")
             await Utils.delete_old_message([answer], 5)
             return
 
     battle:Tuple[str, BattleManager] = await game_controller.prepare_hunt(user)
 
-    link_message = await bot.send_message(callback_query.message.chat.id, battle[0], 
-                                            reply_markup=hunt_button(battle[1].serialize_battle_info()),
-                                            parse_mode=ParseMode.HTML)
+    battle_data = battle[1].serialize_battle_info()
+
+    if (await battle_repo.new_battle(user,battle[1].serialize_battle_info())):
+        link_message = await bot.send_message(callback_query.message.chat.id, battle[0], 
+                                                reply_markup=hunt_button(),
+                                                parse_mode=ParseMode.HTML)
 
 @rt.message(F.web_app_data)
 async def handle_web_app_data(message: Message):

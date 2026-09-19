@@ -33,9 +33,9 @@ import asyncio
 ###Ctrl+c - stop bot
 
 prefs = Prefs()
+dp = None
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=prefs.bot_token)
-dp = Dispatcher()
 dict = Dictionary()
 event_handler = SchedulerTelegramProvider(bot)
 monster_repository = GinoMonstersRepository()
@@ -48,6 +48,8 @@ game_engine = GameEngine(settings_repository,
                          TelegramNotificationProvider(bot))
 
 async def main():
+    dp = Dispatcher()
+
     dp.include_routers(create_sticker_set.rt,
                       edit_sticker_set.rt,
                       send_media.rt,

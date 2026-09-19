@@ -24,7 +24,7 @@ def fishing_button(params: str = "") -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="Рыбачить",
-            url=f"https://t.me/KristAIBot/fishing?startapp={params}"
+            url=f"https://t.me/KristAIBot/fishing"
         )
     )
 
@@ -36,7 +36,7 @@ def hunt_button(params: str = "") -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="На охоту",
-            url=f"https://t.me/KristAIBot/hunt?startapp={params}"
+            url=f"https://t.me/KristAIBot/hunt"
         )
     )
 

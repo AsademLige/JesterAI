@@ -1,3 +1,4 @@
+import json
 import urllib
 
 from core.utils.utils import Utils
@@ -260,15 +261,15 @@ class BattleManager():
         user:User = self.active_member.entity
         
         battle_params:dict = {
-            "energy_left" : user.energy,
             "monster_name" : monster.entity.name,
             "monster_hp" : monster.entity.health,
             "monster_id" : monster.entity.id,
             "is_boss": monster.is_boss,
             "money_drop": monster.inventory[1],
-            "items_drop" : [f"{item.utf8_icon} {str(item.title)}" for item in monster.inventory[0]]
+            "items_drop" : [f"{item.utf8_icon} {str(item.title)}" for item in monster.inventory[0]],
+            "items_serialize" : [item.model_dump_json() for item in monster.inventory[0]],
         }
 
-        raw_data = urllib.parse.urlencode(battle_params)
+        raw_data = json.dumps(battle_params)
 
         return raw_data

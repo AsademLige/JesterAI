@@ -13,7 +13,7 @@ import pytz
 
 class Scheduler():
     _instance = None
-    _lock = asyncio.Lock() 
+    _lock = None
 
     def __init__(self, scheduler:BaseScheduler, 
                  notification_handler,
@@ -99,6 +99,9 @@ class Scheduler():
         await self.game_core.warehouse_update(self.notifier)
 
     async def init(self, scheduler: BaseScheduler):
+        if Scheduler._lock is None:
+            Scheduler._lock = asyncio.Lock()
+            
         # Команда без автоматического выполнения (проще дергать из одного списка задач в случае необходимости)
         # scheduler.add_job(self.run_tech_work_compensation, 'date', run_date=datetime.now() + timedelta(days=1000), id='tech_work_compensation', 
         #                         replace_existing=True)
