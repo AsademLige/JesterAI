@@ -67,9 +67,9 @@ class GinoBattleRepository:
     async def update_battle(
         self,
         battle_id: int,
-        status: str | None = None,
-        data: dict | None = None,
-        log: list | None = None,
+        status: Optional[str] = None,
+        data: Optional[str] = None,
+        log: Optional[str] = None,
     ) -> bool:
         """Обновить любые поля битвы."""
         try:
