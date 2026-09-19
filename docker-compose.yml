@@ -1,16 +1,16 @@
 version: '3.8'
 
 services:
-  bot:
-    build: .
-    restart: always
-    env_file:
-      - .env
-    volumes:
-      - /usr/local/jester/JesterAI/media:/usr/local/jester/JesterAI/media
-    environment:
-      DB_HOST: 172.17.0.1
-      PYTHONUNBUFFERED: 1
+  # bot:
+  #   build: .
+  #   restart: always
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - /usr/local/jester/JesterAI/media:/usr/local/jester/JesterAI/media
+  #   environment:
+  #     DB_HOST: 172.17.0.1
+  #     PYTHONUNBUFFERED: 1
 
   api:
       build:
