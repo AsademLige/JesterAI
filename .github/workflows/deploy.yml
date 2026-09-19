@@ -1,13 +1,9 @@
 name: Deploy Telegram Bot
 
-# Пайплайн запускается только при создании тега, начинающегося с буквы "v" (например, v1.2)
-#on:
-#  push:
-#    tags:
-#      - 'v*'
-
 on:
-  push:
+ push:
+   tags:
+     - 'v*'
 
 permissions:
   contents: read
@@ -17,11 +13,9 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1. Скачиваем код репозитория в окружение GitHub Actions
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # 2. Логинимся в реестр GitHub Packages (он бесплатный)
+        
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -29,28 +23,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3. Собираем Docker-образ и отправляем его в реестр
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          # Называем образ именем вашего репозитория и ставим тег "latest"
           tags: ghcr.io/asademlige/jesterai:latest
 
-      # 4. Подключаемся к вашему Debian-серверу и обновляем контейнер
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}      # IP вашего сервера
-          username: ${{ secrets.SERVER_USER }}  # Пользователь (например, root или jester)
-          key: ${{ secrets.SSH_PRIVATE_KEY }}   # Ваш приватный SSH-ключ
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Переходим в папку, где лежит docker-compose.yml (если используете его)
             cd /usr/local/jester/JesterAI
-            # Авторизуем Docker на сервере для скачивания приватного образа
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            # Скачиваем обновленный образ
             docker compose pull
-            # Перезапускаем контейнеры в фоновом режиме (скачанный образ применится автоматически)
             docker compose up -d --remove-orphans
