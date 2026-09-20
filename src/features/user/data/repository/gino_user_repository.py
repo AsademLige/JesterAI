@@ -75,9 +75,17 @@ class GinoUserRepository(IUserRepository):
         
         if (not tg_id and not id): return None
         
-        cache_user = self._get_cache_user(tg_id, id, chat_id)
+        cache_user = None
 
-        if (cache_user): return cache_user
+        if id is not None:
+            cache_user = self._get_cache_user(id=id)
+        elif tg_id is not None:
+            cached_user_id = self._tg_id_map.get(tg_id)
+            if cached_user_id is not None:
+                cache_user = self._cache.get(cached_user_id)
+
+        if cache_user:
+            return cache_user
 
         try:
             query = (
