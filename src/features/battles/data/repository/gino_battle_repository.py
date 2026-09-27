@@ -42,7 +42,8 @@ class GinoBattleRepository:
             battle_db:Optional[BattleORM] = await BattleORM.query.where(
                 and_(
                    BattleORM.user_id == user.tg_id,
-                   BattleORM.status != "end"
+                   BattleORM.status != "end",
+                   BattleORM.status != "started",
                 )).gino.first()
             battle = Battle.model_validate(battle_db)
             return battle
