@@ -1,16 +1,9 @@
 version: '3.8'
 
 services:
-  # bot:
-  #   build: .
-  #   restart: always
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - /usr/local/jester/JesterAI/media:/usr/local/jester/JesterAI/media
-  #   environment:
-  #     DB_HOST: 172.17.0.1
-  #     PYTHONUNBUFFERED: 1
+  redis-broker:
+    image: redis:7-alpine
+    restart: always
 
   api:
       build:
@@ -23,3 +16,14 @@ services:
       extra_hosts:
         - "host.docker.internal:host-gateway"
       restart: always
+
+  bot:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - /usr/local/jester/JesterAI/media:/usr/local/jester/JesterAI/media
+    environment:
+      DB_HOST: 172.17.0.1
+      PYTHONUNBUFFERED: 1

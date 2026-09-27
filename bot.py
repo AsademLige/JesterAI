@@ -1,3 +1,4 @@
+from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from features.battles.data.repository.gino_monsters_repository import GinoMonstersRepository
 from apps.tg_bot.providers.notification_provider import TelegramNotificationProvider
@@ -37,6 +38,7 @@ dp = None
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=prefs.bot_token)
 dict = Dictionary()
+api_to_bot_notifier = ApiToBotNotifier()
 event_handler = SchedulerTelegramProvider(bot)
 monster_repository = GinoMonstersRepository()
 user_repository = GinoUserRepository()
@@ -72,6 +74,7 @@ async def main():
     dp['game_engine'] = game_engine 
     dp['game_controller'] = game_controller
     await dict.init()
+    asyncio.create_task(api_to_bot_notifier.redis_listener())
     await Scheduler.sql_alchemy(event_handler.handle_event,
                              user_repo=user_repository,
                              store_repo=store_repository,

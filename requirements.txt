@@ -13,6 +13,7 @@ aiohttp-socks
 cachetools
 freezegun
 py_trees
+redis
 gino
 tqdm
 pytz
