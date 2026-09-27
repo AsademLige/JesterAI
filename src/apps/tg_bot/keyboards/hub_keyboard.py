@@ -1,7 +1,9 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
 from features.user.data.dtos.user_dto import User
+from core.consts.config import Prefs
+
+prefs = Prefs()
 
 def get_hub_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -24,7 +26,7 @@ def fishing_button(params: str = "") -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="Рыбачить",
-            url=f"https://t.me/KristAIBot/fishing"
+            url="https://t.me/KristAIBot/fishing"
         )
     )
 
@@ -36,7 +38,7 @@ def hunt_button(params: str = "") -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="На охоту",
-            url=f"https://t.me/KristAIBot/hunt"
+            url="https://t.me/KristAIBot/hunt"
         )
     )
 

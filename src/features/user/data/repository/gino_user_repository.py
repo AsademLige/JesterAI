@@ -68,6 +68,10 @@ class GinoUserRepository(IUserRepository):
         self._chat_tg_map.clear()
         self._tg_id_map.clear()
 
+    def clear_user_cache(self, user:User):
+        del self._cache[user.id]
+        del self._tg_id_map[user.tg_id]
+
     async def get_user(self, tg_id: Optional[int] = None, 
                        chat_id: Optional[int] = None,
                        id: Optional[int] = None,
@@ -164,7 +168,13 @@ class GinoUserRepository(IUserRepository):
                 user_id = row[0]
                 tg_id = row[1]
 
-                cache_user = self._get_cache_user(id=user_id, tg_id=tg_id)
+                cache_user = None
+                if user_id is not None:
+                    cache_user = self._get_cache_user(id=user_id)
+                elif tg_id is not None:
+                    cached_user_id = self._tg_id_map.get(tg_id)
+                    if cached_user_id is not None:
+                        cache_user = self._cache.get(cached_user_id)
                 
                 if cache_user:
                     result.append(cache_user)

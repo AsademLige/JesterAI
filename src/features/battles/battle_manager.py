@@ -1,7 +1,3 @@
-import json
-import urllib
-
-from core.utils.utils import Utils
 from features.battles.battle_unit_entity import AttackStatus, BattleUnit, MemberStand, AttackResult
 from features.battles.data.repository.monsters_repository import IMonstersRepository
 from core.utils.enums import BattleMode, BattlePhases, MemberStatus
@@ -13,8 +9,10 @@ from core.consts.dictionary import Dictionary
 from core.utils.app_herald import AppHerald
 from datetime import datetime, timedelta
 from core.consts.config import Prefs
+from core.utils.utils import Utils
 import logging
 import random
+import json
 
 class BattleManager():
     dict = Dictionary()
@@ -92,7 +90,6 @@ class BattleManager():
     
     def prepare_battle(self):
         if (self.__mode == BattleMode.HUNT):
-            #TODO: Можно будет расширить возможности боя на несколько монстров
             self.__active_member = self.members[0]
             self.__simulate_mobs()
             meeting:str = self.dict.hunt_monster_meeting_short(self.members[1].entity,

@@ -15,10 +15,14 @@ class Settings(BaseSettings):
     ip: SecretStr
 
 class Prefs():
-    def __init__(self):
-        pass
+    _instance = None
+    __config:Settings = None
 
-    __config = Settings()
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.__config = Settings()
+        return cls._instance
 
     @property 
     def bot_token(self) -> str:
@@ -55,3 +59,7 @@ class Prefs():
     @property 
     def super_users(self) -> List:
         return self.__config.super_users.get_secret_value().split()
+
+    @property 
+    def debug(self) -> bool:
+        return self.__config.debug.get_secret_value() == "1"

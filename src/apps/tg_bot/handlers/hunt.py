@@ -1,6 +1,4 @@
 
-import json
-
 from features.battles.battle_unit_entity import BattleUnit, BodyParts, UnitStrategy
 from features.battles.data.repository.gino_battle_repository import GinoBattleRepository
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
@@ -73,19 +71,6 @@ async def hunt_init(callback_query: CallbackQuery,
         link_message = await bot.send_message(callback_query.message.chat.id, battle[0], 
                                                 reply_markup=hunt_button(),
                                                 parse_mode=ParseMode.HTML)
-
-@rt.message(F.web_app_data)
-async def handle_web_app_data(message: Message):
-    raw_data = message.web_app_data.data
-    data = json.loads(raw_data)
-
-    if (data["action"] == "hunt"):
-        if (data["message"] == "victory"):
-            print("cdlog ПОБЭДА")
-
-    if (data["action"] == "hunt"):
-            if (data["message"] == "lose"):
-                print("cdlog НЕ ПОБЭДА")
         
 async def save_temp_data(link_id, data, ttl=20):
     """Сохраняет данные и удаляет их через TTL секунд"""

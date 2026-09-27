@@ -23,20 +23,22 @@ class RegistrationMiddleware(BaseMiddleware):
         if isinstance(event, Message) or isinstance(event, CallbackQuery):
             if (event.chat.type == "private" and isinstance(event, Message) and not "start" in event.text):
                 return event.answer(Dictionary.private_messages_restriction)
-            
-            if (await self.user_mr.is_registered_in_chat(event.from_user.id, event.chat.id)):
+            register_status:int = await self.user_mr.is_registered_in_chat(event.from_user.id, event.chat.id)
+
+            if (register_status == 1):
                 return await handler(event, data)
-            else:
-                await event.answer(await self.register_user(event.from_user.id, event.chat), 
+            elif (register_status == 0):
+                await event.answer(await self.register_user(event.from_user, event.chat), 
                                    parse_mode=ParseMode.HTML)
+            else: event.answer("Пользователь уже зарегистрирован в другом чате", parse_mode=ParseMode.HTML)
         else:
             return await handler(event, data)
         
 
-    async def register_user(self, user: User, chat: Chat) -> str:
+    async def register_user(self, user:User, chat: Chat) -> str:
         length : int = Random().randint(10, 15)
         from bot import bot
-        member  = await bot.get_chat_member(chat.id, user.id)
+        member = await bot.get_chat_member(chat.id, user.id)
         custom_title : Optional[str] = None
 
         if (type(member) is ChatMemberAdministrator or type(member) is ChatMemberOwner):

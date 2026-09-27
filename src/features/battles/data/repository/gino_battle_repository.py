@@ -56,7 +56,7 @@ class GinoBattleRepository:
             battle = await BattleORM.get(battle_id)
             if not battle:
                 return False
-            await battle.update(log=json.dumps(log, ensure_ascii=False)).apply()
+            await battle.update(log=json.dumps(log, ensure_ascii=False), status="started").apply()
             return True
         except Exception as error:
             self.logger.send_log(

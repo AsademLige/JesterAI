@@ -1,3 +1,4 @@
+
 from features.game_engine.data.repository.bot_settings_repository import IBotSettingsRepository
 from features.user.data.repository.user_repository import IUserRepository
 from features.game_engine.data.models.bot_settings_dto import BotSettings
@@ -68,8 +69,9 @@ class UserManager:
     async def is_admin(self, tg_id:int) -> bool:
         return await self.repo.is_admin(tg_id)
     
-    async def is_registered_in_chat(self, tg_id:int, chat_id: int) -> bool:
-        return await self.repo.get_user(tg_id, chat_id) is not None or tg_id == chat_id
+    async def is_registered_in_chat(self, tg_id:int, chat_id: int) -> int:
+        user:Optional[User] = await self.repo.get_user(tg_id)
+        return -1 if (user is None) else 1 if (user is not None and user.chat_id == chat_id) else 0
     
     @staticmethod
     def check_pencil_ready(last_length_check:datetime) -> bool:
