@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from core.consts.config import Prefs
 from typing import List, Optional
 import asyncio
+import logging
 
 class GameEngine:
     def __init__(self, settings_repo: IBotSettingsRepository, 
@@ -16,6 +17,7 @@ class GameEngine:
         self._next_energy_restore: dict[int, datetime] = {}
         self.notification_provider = notification_provider
         self.settings_repo = settings_repo
+        self.logger = logging.getLogger("game_engine")
         self.user_repo = user_repo
         self._is_running = False
 
@@ -27,7 +29,7 @@ class GameEngine:
         for user in users:
             settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
             if (user.energy < settings.max_users_energy):
-                self.create_energy_restore_timer(user)
+                await self.create_energy_restore_timer(user)
         
         asyncio.create_task(self._main_loop())
 
@@ -43,19 +45,22 @@ class GameEngine:
         """Логика проверки и восстановления энергии"""
         for user_id in list(self._next_energy_restore.keys()):
             if datetime.now() >= self._next_energy_restore[user_id]:
+                del self._next_energy_restore[user_id]
                 user:User = await self.user_repo.get_user(id=user_id)
                 settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
 
                 await self.user_repo.update(user, energy=user.energy+1)
                 
                 if (user.energy < settings.max_users_energy):
-                    self._next_energy_restore[user_id] = datetime.now() + timedelta(minutes=2)
+                    self._next_energy_restore[user_id] = datetime.now() + timedelta(seconds=settings.energy_restore_time)
+                    self.logger.debug(f"_update_energy new timer: {user.tg_id}:{user.tg_name} {user.energy}")
                 else:
                     await self.notification_provider.notifivcate(user.tg_id, "⚡️ Бачок энергии заполнен до отказа!")
-                    del self._next_energy_restore[user_id]
 
     def get_energy_restore_time(self, user:User) -> Optional[datetime]:
         return self._next_energy_restore[user.id] if user.id in self._next_energy_restore else None
 
-    def create_energy_restore_timer(self, user:User):
-        self._next_energy_restore[user.id] = datetime.now() + timedelta(minutes=2)
+    async def create_energy_restore_timer(self, user:User):
+        settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
+        self._next_energy_restore[user.id] = datetime.now() + timedelta(seconds=settings.energy_restore_time)
+        self.logger.debug(f"create_energy_restore_timer: {user.tg_id}:{user.tg_name} {user.energy}")

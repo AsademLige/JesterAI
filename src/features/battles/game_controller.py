@@ -13,48 +13,66 @@ from aiogram.types import Message
 from aiogram import Bot
 import asyncio
 
-class GameController():
+class GameController:
     _instance = None
-    prefs = Prefs()
-    bot = Bot(token=prefs.bot_token)
-    __battle_timer:timedelta = timedelta(seconds=60)
-    __add_time_per_turn:timedelta = timedelta(seconds=15)
-    __started_battles:Dict[int, BattleManager] = {}
-    __battles_history:Dict[int, List[Message]] = {}
-    __battles_tasks:Dict[int, List[asyncio.Task]] = {}
     
-    def __new__(cls, user_repo:IUserRepository, monster_repo:IMonstersRepository):
+    def __new__(cls, user_repo: IUserRepository, monster_repo: IMonstersRepository):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, user_repo:IUserRepository, monster_repo:IMonstersRepository):
-        self.user_repo = user_repo
-        self.monster_repo = monster_repo
+    def __init__(self, user_repo: IUserRepository, monster_repo: IMonstersRepository):
         if not hasattr(self, 'initialized'):
             self.initialized = True
+            
+            self.user_repo = user_repo
+            self.monster_repo = monster_repo
+            
+            prefs = Prefs()
+            self.bot = Bot(token=prefs.bot_token)
+            self.battle_timer = timedelta(seconds=60)
+            self.add_time_per_turn = timedelta(seconds=15)
+            
+            self.started_battles: Dict[int, BattleManager] = {}
+            self.battles_history: Dict[int, List[Message]] = {}
+            self.battles_tasks: Dict[int, List[asyncio.Task]] = {}
 
     async def prepare_hunt(self, hunter:User) -> Tuple[str, BattleManager]:
         get_boss:bool = False
 
-        self.__started_battles[hunter.tg_id] = await BattleManager.hunt(hunter, self.monster_repo, boss=get_boss)
-        return (self.__started_battles[hunter.tg_id].prepare_battle(), self.__started_battles[hunter.tg_id])
+        self.started_battles[hunter.tg_id] = await BattleManager.hunt(hunter, self.monster_repo, boss=get_boss)
+        return (self.started_battles[hunter.tg_id].prepare_battle(), self.started_battles[hunter.tg_id])
     
     async def prepare_gladiators(self, started_by:User):
-        self.__started_battles[started_by.tg_id] = await BattleManager.gladiators(self.monster_repo)
-        return self.__started_battles[started_by.tg_id].prepare_battle()
+        self.started_battles[started_by.tg_id] = await BattleManager.gladiators(self.monster_repo)
+        return self.started_battles[started_by.tg_id].prepare_battle()
     
     def start_battle(self, started_by:User, init_message:Message):
-         if (started_by.tg_id in self.__started_battles):
+         if (started_by.tg_id in self.started_battles):
             self.__create_battle_timer(started_by.tg_id, self.__battle_timer)
-            self.__battles_history[started_by.tg_id] = [init_message]
-            battle:BattleManager = self.__started_battles[started_by.tg_id].start_battle(self.__battle_timer, 
-                                                                                            self.__add_time_per_turn)
+            self.started_battles[started_by.tg_id] = [init_message]
+            battle:BattleManager = self.started_battles[started_by.tg_id].start_battle(self.battle_timer, 
+                                                                                            self.add_time_per_turn)
             return battle
-    
+
+    def add_to_history(self, started_by:User, message:Message):
+        if (not started_by.tg_id in self.battles_history):
+            self.battles_history[started_by.tg_id] = []
+
+        self.battles_history[started_by.tg_id].append(message)
+
+    def get_history(self, started_by:User) -> List[Message]:
+        if (started_by.tg_id in self.battles_history):
+            return self.battles_history[started_by.tg_id]
+        else: return []
+
+    def clear_history(self, started_by:User):
+        if (started_by.tg_id in self.battles_history):
+            del self.battles_history[started_by.tg_id]
+            
     def get_battle(self, started_by:User) -> Optional[BattleManager]:
-        if (started_by.tg_id in self.__started_battles):
-            return self.__started_battles[started_by.tg_id]
+        if (started_by.tg_id in self.started_battles):
+            return self.started_battles[started_by.tg_id]
         else: 
             return None
         
@@ -63,8 +81,8 @@ class GameController():
            BattlePhases: статус боя (для кнопок)
            BattleMember: активный в данный момент боец
         """
-        if (started_by.tg_id in self.__started_battles):
-            battle = self.__started_battles[started_by.tg_id]
+        if (started_by.tg_id in self.started_battles):
+            battle = self.started_battles[started_by.tg_id]
             status:Optional[Tuple[str, BattlePhases, Optional[BattleUnit]]] = battle.get_status()
             battle_log:str = ""
             if (status):
@@ -123,9 +141,9 @@ class GameController():
         
         
     async def escape_battle(self, member:User) -> Optional[str]:
-        if (member.tg_id in self.__started_battles):
-            status:str = self.__started_battles[member.tg_id].escape()
-            monster:BattleUnit = self.__started_battles[member.tg_id].get_opponent()
+        if (member.tg_id in self.started_battles):
+            status:str = self.started_battles[member.tg_id].escape()
+            monster:BattleUnit = self.started_battles[member.tg_id].get_opponent()
             await self.user_repo.update(member, last_hunt=datetime.now())
             await self.delete_battle(member.tg_id, False)
             return status
@@ -133,8 +151,8 @@ class GameController():
 
     def __create_battle_timer(self, battle_key, delay:timedelta):
         """Создает таймер на удаление битвы"""
-        if battle_key in self.__battles_tasks:
-            old_tasks = self.__battles_tasks[battle_key]
+        if battle_key in self.battles_tasks:
+            old_tasks = self.battles_tasks[battle_key]
             for old_task in old_tasks:
                 if not old_task.done():
                     old_task.cancel()
@@ -143,49 +161,40 @@ class GameController():
             self.__create_task_delete_battle(battle_key, delay)
         )
         
-        self.__battles_tasks[battle_key] = [new_task]
+        self.battles_tasks[battle_key] = [new_task]
     
     async def __create_task_delete_battle(self, battle_key, delay:timedelta, additional:timedelta = None):
         """Управляет состоянием задачи на удаление битвы, продлевая таймер при необходимости"""
         await asyncio.sleep(additional.total_seconds() if (additional) else delay.total_seconds())
 
-        if battle_key not in self.__started_battles:
+        if battle_key not in self.started_battles:
             return
 
-        if (battle_key in self.__started_battles):
-            if (self.__started_battles[battle_key].battle_timer > delay):
-                await self.__create_task_delete_battle(battle_key, self.__started_battles[battle_key].battle_timer, 
-                                        self.__started_battles[battle_key].battle_timer - delay)
+        if (battle_key in self.started_battles):
+            if (self.started_battles[battle_key].battle_timer > delay):
+                await self.__create_task_delete_battle(battle_key, self.started_battles[battle_key].battle_timer, 
+                                        self.started_battles[battle_key].battle_timer - delay)
                 return
 
         await self.delete_battle(battle_key)
 
     async def delete_battle(self, battle_key:int, clear_history:bool = True):
         """Удаляет экземпляр битвы через указанный интервал"""
-        if battle_key in self.__started_battles:
-            if (battle_key in self.__battles_tasks):
-                for task in self.__battles_tasks[battle_key]:
+        if battle_key in self.started_battles:
+            if (battle_key in self.battles_tasks):
+                for task in self.battles_tasks[battle_key]:
                     task.cancel()
                     try:
                         await task
                     except:
                         pass
 
-            if (battle_key in self.__battles_history):
-                if (self.__battles_history[battle_key] and self.__started_battles[battle_key].mode == BattleMode.HUNT 
-                    and not self.__started_battles[battle_key].phase == BattlePhases.BATTLE_END):
-                    user:User = await self.user_repo.get_user(battle_key, 
-                                                            self.__battles_history[battle_key][0].chat.id)
-                    await self.user_repo.update(user, last_hunt=datetime.now())
-                    await self.bot.send_message(self.__battles_history[battle_key][0].chat.id, 
-                                                "💀 Время вышло, охотник пропал без вести!")
-
-            if (clear_history and battle_key in self.__battles_history):
-                for message in self.__battles_history[battle_key]:
+            if (clear_history and battle_key in self.battles_history):
+                for message in self.battles_history[battle_key]:
                     try:
                         await message.delete()
                     except  Exception as e:
                         print(f"delete message error: {e}")
 
-            del self.__started_battles[battle_key]
+            del self.started_battles[battle_key]
     

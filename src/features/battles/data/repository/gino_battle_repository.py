@@ -29,6 +29,7 @@ class GinoBattleRepository:
             battle = BattleORM(user_id = user.tg_id,
                              started_timestamp = int(time.time()),
                              status = "prepared",
+                             log = [],
                              data = battle_data_str)
             await battle.create()
 
@@ -37,13 +38,26 @@ class GinoBattleRepository:
             self.logger.send_log("battle_repo", logging.ERROR, f"battle start error: {error}")
             return False
 
-    async def get_battle(self, user:User) -> Optional[Battle]:
+    async def get_battle(self, user:User, started:bool = False) -> Optional[Battle]:
         try:
+            started_search = BattleORM.status != "none" if (started) else BattleORM.status != "started"
             battle_db:Optional[BattleORM] = await BattleORM.query.where(
                 and_(
                    BattleORM.user_id == user.tg_id,
                    BattleORM.status != "end",
-                   BattleORM.status != "started",
+                   started_search,
+                )).gino.first()
+            battle = Battle.model_validate(battle_db)
+            return battle
+        except Exception as error:
+            self.logger.send_log("battle_repo", logging.ERROR, f"battle get error: {error}")
+            return None
+
+    async def get_battle_by_id(self, battle_id:int) -> Optional[Battle]:
+        try:
+            battle_db:Optional[BattleORM] = await BattleORM.query.where(
+                and_(
+                    BattleORM.id == battle_id,
                 )).gino.first()
             battle = Battle.model_validate(battle_db)
             return battle
@@ -57,7 +71,7 @@ class GinoBattleRepository:
             battle = await BattleORM.get(battle_id)
             if not battle:
                 return False
-            await battle.update(log=json.dumps(log, ensure_ascii=False), status="started").apply()
+            await battle.update(log=log, status="started").apply()
             return True
         except Exception as error:
             self.logger.send_log(
@@ -69,10 +83,10 @@ class GinoBattleRepository:
         self,
         battle_id: int,
         status: Optional[str] = None,
-        data: Optional[str] = None,
-        log: Optional[str] = None,
+        data: Optional[dict] = None,
+        log: Optional[list] = None,
+        validation: Optional[dict] = None,
     ) -> bool:
-        """Обновить любые поля битвы."""
         try:
             battle = await BattleORM.get(battle_id)
             if not battle:
@@ -82,9 +96,11 @@ class GinoBattleRepository:
             if status is not None:
                 values["status"] = status
             if data is not None:
-                values["data"] = json.dumps(data, ensure_ascii=False)
+                values["data"] = data
             if log is not None:
-                values["log"] = json.dumps(log, ensure_ascii=False)
+                values["log"] = log
+            if validation is not None:
+                values["validation"] = validation
 
             if values:
                 await battle.update(**values).apply()

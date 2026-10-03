@@ -40,7 +40,7 @@ async def fishing_init(callback_query: CallbackQuery,
     await message.delete()
     if (user.energy > 0):
         await user_repo.update(user, energy=user.energy - 1)
-        game_engine.create_energy_restore_timer(user)
+        await game_engine.create_energy_restore_timer(user)
     else:
         answer = await bot.send_message(user.chat_id, 
                                         dict.energy_drain(user), 

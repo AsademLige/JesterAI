@@ -50,7 +50,7 @@ async def hunt_init(callback_query: CallbackQuery,
     await message.delete()
     if (user.energy > 0):
         await user_repo.update(user, energy=user.energy - 1)
-        game_engine.create_energy_restore_timer(user)
+        await game_engine.create_energy_restore_timer(user)
     else:
         answer = await bot.send_message(user.chat_id, 
                                         dictionary.energy_drain(user), 
@@ -58,8 +58,9 @@ async def hunt_init(callback_query: CallbackQuery,
         await Utils.delete_old_message([answer], 10)
         return
 
-    if (await battle_repo.get_battle(user)):
-            answer = await message.answer("⚔️ Ты уже в бою!")
+    if (await battle_repo.get_battle(user, True)):
+            answer = await message.answer("⚔️ Ты уже в бою!", 
+                                          reply_markup=hunt_button())
             await Utils.delete_old_message([answer], 5)
             return
 
@@ -67,10 +68,11 @@ async def hunt_init(callback_query: CallbackQuery,
 
     battle_data = battle[1].serialize_battle_info()
 
-    if (await battle_repo.new_battle(user,battle[1].serialize_battle_info())):
+    if (await battle_repo.new_battle(user, battle[1].serialize_battle_info())):
         link_message = await bot.send_message(callback_query.message.chat.id, battle[0], 
                                                 reply_markup=hunt_button(),
                                                 parse_mode=ParseMode.HTML)
+        game_controller.add_to_history(user, link_message)
         
 async def save_temp_data(link_id, data, ttl=20):
     """Сохраняет данные и удаляет их через TTL секунд"""

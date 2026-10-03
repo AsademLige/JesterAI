@@ -38,13 +38,13 @@ dp = None
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=prefs.bot_token)
 dict = Dictionary()
-api_to_bot_notifier = ApiToBotNotifier()
 event_handler = SchedulerTelegramProvider(bot)
 monster_repository = GinoMonstersRepository()
 user_repository = GinoUserRepository()
 store_repository = GinoStoreRepository()
 settings_repository = GinoBotSettingsRepository()
 game_controller = GameController(user_repository, monster_repository)
+api_to_bot_notifier = ApiToBotNotifier(game_controller)
 game_engine = GameEngine(settings_repository, 
                          user_repository, 
                          TelegramNotificationProvider(bot))

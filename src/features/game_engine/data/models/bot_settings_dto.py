@@ -11,6 +11,6 @@ class BotSettings(BaseModel):
     max_users_energy:int
 
     ###Время восстановления энергии в секундах
-    energy_restore_time:int = 10
+    energy_restore_time:int = 60
     events_enabled:bool = True
     alias: str

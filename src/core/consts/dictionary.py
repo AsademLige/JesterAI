@@ -327,7 +327,7 @@ class Dictionary():
 
     battle_dead_description:List[str] = [
         "сдох, обоссавшись и обосравшись!",
-        "прикрывает рукой  {{part_accu}}, затем падает без дыхания",
+        "прикрывает болт рукой, затем падает без дыхания",
         "становиться отрицательно живым",
         "Добыча сбежала, порвав на прощание твой туз"
     ]
@@ -999,9 +999,9 @@ class Dictionary():
         
         return full_log
     
-    def hunt_loot(self, inventory:Optional[Tuple[List[BaseItem], int]]) -> str:
+    def hunt_loot(self, inventory:Optional[Tuple[List[BaseItem], int]], bonus:int) -> str:
         if (not inventory): return ""
-        money:str = f" {'А так же монеты' if inventory[0] else 'Собрали с трупа горсть монет'} {self.money_wrapper(inventory[1])}" if (inventory[1]) else ""
+        money:str = f" {'А так же монеты' if inventory[0] else 'Собрали с трупа горсть монет'} {self.money_wrapper(inventory[1] + bonus)}" if (inventory[1]) else ""
 
         item:str = ""
         if (inventory[0]):
