@@ -114,16 +114,19 @@ class ApiToBotNotifier:
             validation = log_data.get('validation', {})
             is_valid = validation.get('valid', False)
             status = validation.get('status')
+
+            print(f"cdlog {log_data} : {is_valid} : {status}")
             
             if is_valid and status == "victory":
                 await self._handle_victory(user, validation)
-            elif is_valid and status == "death":
-                await self._handle_death(user)
+                await self.game_controller.delete_battle(user.tg_id)
+                self.user_repo.clear_user_cache(user)
+            elif not is_valid and status == "victory":
+                await self._send_message(user, f'⚠️ Ой, ошибочка вышла...')
+                await self.game_controller.delete_battle(user.tg_id)
             else:
-                logger.info(f"Battle end with invalid result: user={user.tg_id}, status={status}, valid={is_valid}")
-                await self._send_message(user, "⚠️ Битва завершена с ошибкой валидации")
-            
-            await self.game_controller.delete_battle(user.tg_id)
+                await self._handle_death(user)
+                ##Можно посылать notifi на удаление при закрытии окна
             
         except Exception as e:
             logger.error(f"Error in battle_end handler: {e}", exc_info=True)

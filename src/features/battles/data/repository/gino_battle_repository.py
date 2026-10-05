@@ -2,8 +2,8 @@ from features.battles.data.models.battle_orm import BattleORM
 from features.battles.data.models.battle_dto import Battle
 from features.user.data.dtos.user_dto import User
 from core.utils.app_herald import AppHerald
+from sqlalchemy import and_, desc, func
 from core.consts.config import Prefs
-from sqlalchemy import and_, func
 from typing import Optional
 import logging
 import json
@@ -24,13 +24,13 @@ class GinoBattleRepository:
         if not hasattr(self, 'initialized'):
             self.initialized = True
     
-    async def new_battle(self, user:User, battle_data_str:str) -> bool:
+    async def new_battle(self, user:User, battle_data:dict) -> bool:
         try:
             battle = BattleORM(user_id = user.tg_id,
                              started_timestamp = int(time.time()),
                              status = "prepared",
                              log = [],
-                             data = battle_data_str)
+                             data = battle_data)
             await battle.create()
 
             return True
@@ -46,7 +46,7 @@ class GinoBattleRepository:
                    BattleORM.user_id == user.tg_id,
                    BattleORM.status != "end",
                    started_search,
-                )).gino.first()
+                )).order_by(desc(BattleORM.id)).gino.first()
             battle = Battle.model_validate(battle_db)
             return battle
         except Exception as error:

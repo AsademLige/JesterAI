@@ -71,7 +71,7 @@ class UserManager:
     
     async def is_registered_in_chat(self, tg_id:int, chat_id: int) -> int:
         user:Optional[User] = await self.repo.get_user(tg_id)
-        return -1 if (user is None) else 1 if (user is not None and user.chat_id == chat_id) else 0
+        return -1 if (user is None) else 1 if (user) else 0
     
     @staticmethod
     def check_pencil_ready(last_length_check:datetime) -> bool:

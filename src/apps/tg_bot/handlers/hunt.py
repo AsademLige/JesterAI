@@ -58,7 +58,7 @@ async def hunt_init(callback_query: CallbackQuery,
         await Utils.delete_old_message([answer], 10)
         return
 
-    if (await battle_repo.get_battle(user, True)):
+    if (await battle_repo.get_battle(user)):
             answer = await message.answer("⚔️ Ты уже в бою!", 
                                           reply_markup=hunt_button())
             await Utils.delete_old_message([answer], 5)
@@ -66,7 +66,7 @@ async def hunt_init(callback_query: CallbackQuery,
 
     battle:Tuple[str, BattleManager] = await game_controller.prepare_hunt(user)
 
-    battle_data = battle[1].serialize_battle_info()
+    print(f"cdlog: active battles {len(game_controller.started_battles)}")
 
     if (await battle_repo.new_battle(user, battle[1].serialize_battle_info())):
         link_message = await bot.send_message(callback_query.message.chat.id, battle[0], 

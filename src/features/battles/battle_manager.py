@@ -259,6 +259,7 @@ class BattleManager():
         
         battle_params:dict = {
             "monster_name" : monster.entity.name,
+            "monster_desc" : monster.entity.description,
             "monster_hp" : monster.entity.health,
             "monster_id" : monster.entity.id,
             "is_boss": monster.is_boss,
