@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ОХОТА</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Handjet:wght,ELSH@100..900,2&family=Press+Start+2P&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: #10251d;
+      color: #f3e7bd;
+      font-family: "Press Start 2P", system-ui;
+      touch-action: none;
+      user-select: none;
+      position: fixed;
+      inset: 0;
+    }
+
+    .player-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: #7e879f;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .player-header .ph-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #9eaf86;
+    }
+
+    .player-header .ph-name::before {
+      content: '▸';
+      color: #63b85b;
+      font-size: 8px;
+    }
+
+    .player-header .ph-energy {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #d6c997;
+    }
+
+    .player-header .ph-energy::before {
+      content: '⚡';
+      font-size: 10px;
+    }
+
+    .pioneer-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 6px 8px 4px;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #31533f;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .pioneer-footer::before,
+    .pioneer-footer::after {
+      content: '☭';
+      font-size: 24px;
+      color: #31533f;
+    }
+
+    @media (max-width: 360px) {
+      .pioneer-footer {
+        font-size: 8px;
+        letter-spacing: 1.5px;
+        padding: 10px 12px 14px;
+        gap: 6px;
+      }
+
+      .pioneer-footer::before,
+      .pioneer-footer::after {
+        font-size: 12px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .player-header {
+        padding: 12px 16px;
+        font-size: 9px;
+      }
+
+      .pioneer-footer {
+        font-size: 8px;
+        letter-spacing: 1.5px;
+        padding: 10px 12px 14px;
+      }
+    }
+
+    #game {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      background: #10251d;
+      background-image: radial-gradient(#31533f 1px, transparent 1px);
+      background-size: 5px 5px;
+    }
+
+    #status {
+      height: 24dvh;
+      min-height: 145px;
+      padding: 16px 18px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 10;
+    }
+
+    #input-zone {
+      height: 76dvh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    #enemy-section {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    #enemy-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #enemy-label {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #f3e7bd;
+      text-transform: uppercase;
+    }
+
+    #enemy-core {
+      font-size: 10px;
+      color: #e95732;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    #enemy-hp-bar {
+      height: 10px;
+      background: #17221c;
+      border-radius: 0;
+      overflow: hidden;
+      border: 2px solid #f3e7bd;
+      box-shadow: 3px 3px 0 #07120d;
+    }
+
+    #enemy-hp-fill {
+      height: 100%;
+      width: 100%;
+      background: #e95732;
+      transition: width .22s steps(8, end);
+    }
+
+    #combo {
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: #d6c997;
+      min-height: 18px;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    #combo b {
+      color: #63b85b;
+    }
+
+    #hearts-section {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin: 10px auto;
+    }
+
+    .heart {
+      width: 50px;
+      height: 50px;
+      transition: transform .2s, opacity .2s;
+      shape-rendering: crispEdges;
+      filter:
+        drop-shadow(3px 0 0 #f3e7bd) drop-shadow(-3px 0 0 #f3e7bd) drop-shadow(0 3px 0 #f3e7bd) drop-shadow(0 -3px 0 #f3e7bd);
+    }
+
+    .heart.lost {
+      opacity: .15;
+    }
+
+    .heart.breaking {
+      animation: heartBreak .35s ease-out;
+    }
+
+    @keyframes heartBreak {
+      0% {
+        transform: scale(1);
+      }
+
+      40% {
+        transform: scale(1.5) rotate(-8deg);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    #slider-monster {
+      position: absolute;
+      left: 50%;
+      top: 10%;
+      width: min(58vw, 440px);
+      height: min(58vw, 440px);
+      transform: translate(-50%, -50%);
+      object-fit: contain;
+      pointer-events: none;
+      opacity: 0.7;
+      z-index: 1;
+    }
+
+    #slider-monster.hit {
+      animation: monsterHit .24s ease-out;
+    }
+
+    @keyframes monsterHit {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        filter: brightness(1);
+      }
+
+      25% {
+        transform: translate(-50%, -50%) scale(.96) translateX(-5px);
+        filter: brightness(1.7);
+      }
+
+      50% {
+        transform: translate(-50%, -50%) scale(1.03) translateX(5px);
+        filter: brightness(1.25);
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    #slider-game {
+      width: min(92vw, 760px);
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      padding: 0 6px;
+      position: relative;
+      z-index: 2;
+    }
+
+    #slider-game.visible {
+      display: flex;
+    }
+
+    #slider-title {
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 3px;
+      font-weight: 900;
+      color: #d6c997;
+    }
+
+    #slider-track {
+      position: relative;
+      width: 100%;
+      height: 54px;
+      background: #17221c;
+      border: 3px solid #f3e7bd;
+      box-shadow: 5px 5px 0 #07120d;
+      touch-action: none;
+      cursor: ew-resize;
+      overflow: hidden;
+    }
+
+    .slider-zone {
+      position: absolute;
+      top: 8px;
+      height: 32px;
+      border: 2px solid rgba(243, 231, 189, .9);
+      background: linear-gradient(90deg, #d7a52d 0%, #e6c448 28%, #98c94e 43%, #54b957 50%, #98c94e 57%, #e6c448 72%, #d7a52d 100%);
+      transition: opacity .12s, filter .12s;
+      pointer-events: none;
+    }
+
+    .slider-zone.hit {
+      opacity: 0;
+      filter: grayscale(1);
+    }
+
+    .slider-zone.critical {
+      background: #ffb000;
+    }
+
+    .slider-zone .zone-green {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 40%;
+      width: 20%;
+      background: #54b957;
+      pointer-events: none;
+    }
+
+    #slider-knob {
+      position: absolute;
+      top: 50%;
+      width: 15px;
+      height: 38px;
+      transform: translate(-50%, -50%);
+      background: #f3e7bd;
+      border: 3px solid #10251d;
+      box-shadow: 3px 3px 0 #07120d;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #slider-knob::after {
+      content: "";
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      top: 7px;
+      bottom: 7px;
+      background: #e95732;
+    }
+
+    #slider-timer {
+      position: relative;
+      height: 12px;
+      border: 2px solid #f3e7bd;
+      background: #17221c;
+      box-shadow: 3px 3px 0 #07120d;
+      overflow: hidden;
+    }
+
+    #slider-timer-fill {
+      height: 100%;
+      width: 100%;
+      transform-origin: left center;
+      background: #63b85b;
+      transition: width .05s linear, background .12s;
+    }
+
+    #slider-timer-fill.warn {
+      background: #e95732;
+    }
+
+    #slider-status {
+      min-height: 18px;
+      text-align: center;
+      color: #9eaf86;
+      font-size: 10px;
+      letter-spacing: 2px;
+      font-weight: 800;
+    }
+
+    #notification {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 29px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0;
+      pointer-events: none;
+      text-shadow: 3px 3px 0 #07120d;
+      white-space: nowrap;
+      z-index: 30;
+    }
+
+    #notification.show {
+      animation: notifyPulse .72s ease-out;
+    }
+
+    @keyframes notifyPulse {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(.55);
+      }
+
+      18% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.12);
+      }
+
+      75% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(.92);
+      }
+    }
+
+    #flash-overlay {
+      position: fixed;
+      inset: 0;
+      background: #63b85b;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #flash-overlay.flash {
+      animation: flashEffect .25s ease-out;
+    }
+
+    @keyframes flashEffect {
+      0% {
+        opacity: .42;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
+
+    #game.shake {
+      animation: shakeEffect .24s ease-out;
+    }
+
+    @keyframes shakeEffect {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-7px);
+      }
+
+      50% {
+        transform: translateX(7px);
+      }
+
+      75% {
+        transform: translateX(-4px);
+      }
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: #10251d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+
+    .overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .overlay h1 {
+      font-size: 42px;
+      letter-spacing: 7px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    #game-over h1 {
+      color: #e95732;
+      text-shadow: 4px 4px 0 #07120d;
+    }
+
+    #no-battle h1 {
+      font-size: 28px;
+      letter-spacing: 5px;
+      text-align: center;
+      color: #e95732;
+      text-shadow: 3px 3px 0 #07120d;
+      margin-bottom: 16px;
+    }
+
+    .no-battle-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    .no-battle-actions button {
+      min-width: 220px;
+    }
+
+    #victory h1 {
+      color: #63b85b;
+      text-shadow: 4px 4px 0 #07120d;
+      font-size: 28px;
+      letter-spacing: 5px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .reward-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .reward-item {
+      color: #f3e7bd;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      line-height: 1.4;
+    }
+
+    .reward-item.main {
+      color: #e7d79e;
+      font-size: 14px;
+      font-weight: 900;
+      text-shadow: 2px 2px 0 #07120d;
+    }
+
+    .reward-item.bonus {
+      color: #9eaf86;
+      font-size: 10px;
+      padding-left: 8px;
+      border-left: 2px solid #31533f;
+    }
+
+    .reward-item.empty {
+      color: #7e879f;
+      font-size: 10px;
+      font-style: italic;
+    }
+
+    .result {
+      color: #7e879f;
+      font-size: 12px;
+      letter-spacing: 2px;
+      line-height: 2;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .overlay button {
+      padding: 15px 34px;
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      background: #e7d79e;
+      border: 3px solid #f3e7bd;
+      color: #10251d;
+      border-radius: 0;
+      box-shadow: 5px 5px 0 #07120d;
+      font-weight: 900;
+    }
+
+    .game-over-actions {
+      display: grid;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .game-over-actions button {
+      min-width: 150px;
+    }
+
+    #game.battle-awaiting {
+      visibility: hidden;
+    }
+
+    #game.battle-ready {
+      visibility: visible;
+    }
+
+    #battle-loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #10251d;
+      color: #f3e7bd;
+      text-align: center;
+    }
+
+    .loading-header {
+      margin: 0 auto 30px auto;
+      text-align: justify;
+    }
+
+    .battle-loading-title {
+      display: block;
+      width: 100%;
+      font-size: 36px;
+      line-height: 1;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: #f3e7bd;
+      text-shadow: 4px 4px 0 #07120d;
+      text-align: justify;
+      text-align-last: justify;
+    }
+
+    .battle-loading-subtitle {
+      display: block;
+      width: 100%;
+      margin-top: 4px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1;
+      font-weight: 700;
+      text-transform: lowercase;
+      color: #9eaf86;
+      text-shadow: 2px 2px 0 #07120d;
+      text-align-last: center;
+      letter-spacing: 13.7px;
+    }
+
+    .battle-loading-progress {
+      position: relative;
+      width: min(78vw, 520px);
+      height: 56px;
+      background: #17221c;
+      border: 3px solid #f3e7bd;
+      box-shadow: 5px 5px 0 #07120d;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+
+    .battle-loading-progress-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: #e7d79e;
+    }
+
+    .battle-loading-progress-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 10px;
+      pointer-events: none;
+      background: linear-gradient(90deg,
+          #10251d 0%,
+          #10251d var(--progress, 0%),
+          #e7d79e var(--progress, 0%),
+          #e7d79e 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: none;
+    }
+
+    @media (max-width: 360px) {
+      .loading-header {
+        width: 85vw;
+      }
+
+      .battle-loading-title {
+        font-size: 34px;
+      }
+
+      .battle-loading-subtitle {
+        font-size: 14px;
+      }
+
+      .battle-loading-progress {
+        height: 50px;
+      }
+
+      .battle-loading-progress-text {
+        font-size: 18px;
+        letter-spacing: 4px;
+      }
+    }
+
+    #battle-loading-screen.hidden {
+      display: none;
+    }
+
+    @media (max-width: 360px) {
+      .loading-header {
+        width: 82vw;
+      }
+
+      .battle-loading-title {
+        font-size: 30px;
+      }
+
+      .battle-loading-subtitle {
+        font-size: 12px;
+      }
+
+      .battle-loading-progress {
+        width: 82vw;
+        height: 44px;
+      }
+
+      .battle-loading-progress-text {
+        font-size: 14px;
+        letter-spacing: 3px;
+      }
+    }
+
+    .monster-encounter {
+      position: relative;
+      color: #f3e7bd;
+      font-size: 11px;
+      letter-spacing: 1px;
+      line-height: 1.6;
+      text-align: left;
+      margin: 10px auto 0 auto;
+      padding: 28px 20px 20px 24px;
+      border: 2px solid #31533f;
+      background: #0d1f18;
+      box-shadow: 6px 6px 0 #07120d;
+      max-width: min(85vw, 360px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+
+      clip-path: polygon(34px 0, 100% 0,
+          100% 100%, 0 100%,
+          0 34px);
+    }
+
+    .dossier-pin {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 10px;
+      height: 10px;
+      margin-top: 12px;
+      background: #a83828;
+      box-shadow:
+        2px 2px 0 #07120d,
+        inset -2px -2px 0 #7a2818,
+        inset 2px 2px 0 #c84838;
+      z-index: 1;
+    }
+
+    .dossier-wrapper {
+      position: relative;
+      max-width: min(85vw, 360px);
+      margin: 10px auto 0 auto;
+    }
+
+    .encounter-content {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .dossier-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .dossier-label {
+      color: #e95732;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .m-name {
+      color: #f3e7bd;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #07120d;
+    }
+
+    .m-desc {
+      color: #9eaf86;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      line-height: 1.5;
+      text-transform: none;
+    }
+
+    .encounter-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px dashed #31533f;
+    }
+
+    .encounter-actions #start-battle-btn {
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+
+    @media (max-width: 360px) {
+      .monster-encounter {
+        padding: 24px 16px 16px 20px;
+      }
+
+      .m-name {
+        font-size: 14px;
+      }
+
+      .m-desc {
+        font-size: 10px;
+      }
+
+      .encounter-actions #start-battle-btn {
+        padding: 10px 20px;
+        font-size: 11px;
+      }
+    }
+
+    #retry-btn,
+    #exit-btn,
+    #no-battle-exit-btn {
+      background: #10251d;
+      color: #e7d79e;
+      border: 0;
+      box-shadow: none;
+      padding: 8px 34px;
+    }
+
+    #exit-btn {
+      margin-top: 8px;
+    }
+
+    /* =========================
+   BUTTON INTERACTIONS
+   ========================= */
+
+    .overlay button,
+    #retry-btn {
+      position: relative;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+
+      transition:
+        background-color .12s steps(2, end),
+        color .12s steps(2, end),
+        border-color .12s steps(2, end),
+        transform .08s steps(2, end),
+        box-shadow .08s steps(2, end),
+        filter .12s steps(2, end);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .overlay button:not(:disabled):hover {
+        background: #f3e7bd;
+        color: #10251d;
+        border-color: #fff5cf;
+        transform: translate(-2px, -2px);
+        box-shadow: 7px 7px 0 #07120d, 0 0 0 2px rgba(99, 184, 91, .15);
+        filter: brightness(1.04);
+      }
+
+      #retry-btn:not(:disabled):hover {
+        color: #fff5cf;
+        background: #173429;
+        transform: translate(-1px, -1px);
+        box-shadow: 4px 4px 0 #07120d;
+      }
+    }
+
+    .overlay button:not(:disabled):active {
+      transform: translate(3px, 3px);
+      box-shadow: 1px 1px 0 #07120d;
+      background: #d6c997;
+      border-color: #e7d79e;
+      filter: brightness(.94);
+    }
+
+    #retry-btn:not(:disabled):active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+      background: #0b1b14;
+      color: #f3e7bd;
+    }
+
+    .overlay button:focus-visible {
+      outline: 2px solid #63b85b;
+      outline-offset: 4px;
+    }
+
+    .overlay button:disabled {
+      opacity: .45;
+      cursor: default;
+      filter: grayscale(.5);
+      transform: none;
+      box-shadow: 3px 3px 0 #07120d;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .overlay button:not(:disabled) {
+        transition:
+          background-color .08s steps(2, end),
+          transform .08s steps(2, end),
+          box-shadow .08s steps(2, end),
+          filter .08s steps(2, end);
+      }
+
+      .overlay button:not(:disabled):active {
+        transform: translate(3px, 3px) scale(.98);
+        box-shadow: 1px 1px 0 #07120d;
+        background: #d6c997;
+        filter: brightness(.92);
+      }
+
+      #retry-btn:not(:disabled):active {
+        transform: translate(2px, 2px) scale(.98);
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="battle-loading-screen" class="overlay show">
+    <div class="loading-header">
+      <div class="battle-loading-title">ОХОТА</div>
+      <div class="battle-loading-subtitle">крепкая</div>
+    </div>
+
+    <div class="battle-loading-progress">
+      <div class="battle-loading-progress-fill"></div>
+      <div class="battle-loading-progress-text">ЗАГРУЗКА</div>
+    </div>
+
+    <div class="pioneer-footer">OOO «Пионерлагерь Ромашка»</div>
+  </div>
+
+  <div id="no-battle" class="overlay">
+    <div class="player-header">
+      <div class="ph-name" id="nobattle-player-name">—</div>
+      <div class="ph-energy" id="nobattle-player-energy">—</div>
+    </div>
+
+    <h1>НЕТ БИТВЫ</h1>
+    <div class="result">Активной битвы нет<br>Но ты можешь ее найти!</div>
+
+    <div class="no-battle-actions">
+      <button id="no-battle-reload-btn">В бой (-1⚡️)</button>
+      <button id="no-battle-exit-btn">Выйти</button>
+    </div>
+
+    <div class="pioneer-footer">OOO «Пионерлагерь Ромашка»</div>
+  </div>
+
+  <div id="game" class="battle-awaiting">
+    <div id="status">
+      <div id="enemy-section">
+        <div id="enemy-top">
+          <div id="enemy-label"></div>
+          <div id="enemy-core">Жив</div>
+        </div>
+        <div id="enemy-hp-bar">
+          <div id="enemy-hp-fill"></div>
+        </div>
+        <div id="combo">COMBO <b id="combo-value">×0</b></div>
+      </div>
+    </div>
+
+    <div id="input-zone">
+      <img id="slider-monster" alt="" />
+      <div id="slider-game">
+        <div id="slider-title"></div>
+        <div id="slider-track">
+          <div id="slider-knob"></div>
+        </div>
+        <div id="slider-timer">
+          <div id="slider-timer-fill"></div>
+        </div>
+        <div id="slider-status">НАЖМИТЕ ЧТОБЫ АТАКОВАТЬ</div>
+        <div id="hearts-section">
+          <div class="heart" data-heart="0"><svg viewBox="0 0 10 8" fill="#e95732">
+              <path
+                d="M1,0h2v1h-2Z M7,0h2v1h-2Z M0,1h4v1h-4Z M6,1h4v1h-4Z M0,2h10v1h-10Z M0,3h10v1h-10Z M1,4h8v1h-8Z M2,5h6v1h-6Z M3,6h4v1h-4Z M4,7h2v1h-2Z" />
+            </svg></div>
+          <div class="heart" data-heart="1"><svg viewBox="0 0 10 8" fill="#e95732">
+              <path
+                d="M1,0h2v1h-2Z M7,0h2v1h-2Z M0,1h4v1h-4Z M6,1h4v1h-4Z M0,2h10v1h-10Z M0,3h10v1h-10Z M1,4h8v1h-8Z M2,5h6v1h-6Z M3,6h4v1h-4Z M4,7h2v1h-2Z" />
+            </svg></div>
+          <div class="heart" data-heart="2"><svg viewBox="0 0 10 8" fill="#e95732">
+              <path
+                d="M1,0h2v1h-2Z M7,0h2v1h-2Z M0,1h4v1h-4Z M6,1h4v1h-4Z M0,2h10v1h-10Z M0,3h10v1h-10Z M1,4h8v1h-8Z M2,5h6v1h-6Z M3,6h4v1h-4Z M4,7h2v1h-2Z" />
+            </svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="notification"></div>
+    <div id="flash-overlay"></div>
+
+    <div id="battle-start" class="overlay show">
+      <div class="player-header">
+        <div class="ph-name" id="start-player-name">—</div>
+        <div class="ph-energy" id="start-player-energy">—</div>
+      </div>
+
+      <div class="loading-header">
+        <div class="battle-loading-title">ОХОТА</div>
+        <div class="battle-loading-subtitle">крепкая</div>
+      </div>
+
+      <div class="dossier-wrapper">
+        <div class="dossier-pin"></div>
+        <div id="monster-encounter-info" class="monster-encounter">
+          <div class="encounter-content">
+            <div class="dossier-row">
+              <span class="dossier-label">[ИМЯ]:</span>
+              <span class="m-name" id="dossier-name">ОЖИДАНИЕ ДАННЫХ...</span>
+            </div>
+            <div class="dossier-row">
+              <span class="dossier-label">[ОПИСАНИЕ]:</span>
+              <span class="m-desc" id="dossier-desc">Разведка уточняет параметры угрозы.</span>
+            </div>
+          </div>
+
+          <div class="encounter-actions">
+            <button id="start-battle-btn">НА ОХОТУ!</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pioneer-footer">OOO «Пионерлагерь Ромашка»</div>
+    </div>
+
+    <div id="game-over" class="overlay">
+      <div class="player-header">
+        <div class="ph-name" id="gameover-player-name">—</div>
+        <div class="ph-energy" id="gameover-player-energy">—</div>
+      </div>
+
+      <h1>ПОГИБ</h1>
+      <div class="result" id="gameover-result"></div>
+      <div class="game-over-actions">
+        <button id="end-btn">Выйти</button>
+        <button id="retry-btn">Заново (-1⚡️)</button>
+      </div>
+
+      <div class="pioneer-footer">OOO «Пионерлагерь Ромашка»</div>
+    </div>
+
+    <div id="victory" class="overlay">
+      <div class="player-header">
+        <div class="ph-name" id="victory-player-name">—</div>
+        <div class="ph-energy" id="victory-player-energy">—</div>
+      </div>
+
+      <h1>ПОБЕДА!</h1>
+
+      <div class="dossier-wrapper">
+        <div class="dossier-pin"></div>
+        <div class="monster-encounter reward-dossier">
+          <div class="encounter-content">
+            <div class="dossier-row">
+              <span class="dossier-label">[МОНЕТЫ]:</span>
+              <div id="reward-coins-list" class="reward-list"></div>
+            </div>
+            <div class="dossier-row">
+              <span class="dossier-label">[ПРЕДМЕТЫ]:</span>
+              <div id="reward-items-list" class="reward-list"></div>
+            </div>
+          </div>
+
+          <div class="encounter-actions" style="flex-direction: column; align-items: stretch;">
+            <button id="next-btn">Следующий бой (-1⚡️)</button>
+            <button id="exit-btn">Выйти</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pioneer-footer">OOO «Пионерлагерь Ромашка»</div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready(); tg.expand();
+
+    const BATTLE_API_URL = (window.BATTLE_API_URL || "https://jesterapi.ddns.net").replace(/\/$/, "");
+    const initData = tg.initData || "";
+    let battle = null, tg_data = {}, apiReady = false, battleSeed = 0, logFlushInFlight = false;
+
+    const loaderState = {
+      current: 0,
+      target: 0,
+      raf: null,
+      startTime: 0
+    };
+
+    function setPlayerInfo() {
+      const user_name = tg_data.user.user_name || "";
+      const user_custom_title = tg_data.user.user_custom_title || "ПИОНЕР";
+      const energy = tg_data.user.energy ?? "—";
+
+      const nameIds = [
+        "loading-player-name",
+        "nobattle-player-name",
+        "start-player-name",
+        "gameover-player-name",
+        "victory-player-name"
+      ];
+      const energyIds = [
+        "loading-player-energy",
+        "nobattle-player-energy",
+        "start-player-energy",
+        "gameover-player-energy",
+        "victory-player-energy"
+      ];
+
+      nameIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = user_name;
+      });
+
+      energyIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = energy;
+      });
+    }
+
+    function parseBattleData(data) {
+      if (data == null) return {};
+      if (typeof data === "object") return data;
+      try { return JSON.parse(data); } catch (_) { return {}; }
+    }
+
+    async function apiRequest(path, options = {}) {
+      if (!initData) throw new Error("Telegram initData is unavailable");
+      const response = await fetch(`${BATTLE_API_URL}${path}`, {
+        ...options,
+        headers: { "Content-Type": "application/json", "X-Init-Data": initData, ...(options.headers || {}) }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || `HTTP ${response.status}`);
+      return payload;
+    }
+
+    function setLoadingProgress(value) {
+      loaderState.target = Math.max(0, Math.min(100, value));
+      if (!loaderState.startTime) loaderState.startTime = performance.now();
+      if (!loaderState.raf) {
+        loaderState.raf = requestAnimationFrame(animateLoader);
+      }
+    }
+
+    function animateLoader(timestamp) {
+      const elapsed = timestamp - loaderState.startTime;
+      const minDuration = 1200;
+
+      let effectiveTarget = loaderState.target;
+      if (effectiveTarget === 100 && elapsed < minDuration) {
+        effectiveTarget = (elapsed / minDuration) * 100;
+      }
+
+      const diff = effectiveTarget - loaderState.current;
+      if (diff > 0.1) {
+        loaderState.current += diff * 0.15;
+      } else {
+        loaderState.current = effectiveTarget;
+      }
+
+      updateLoaderVisuals(loaderState.current);
+
+      if (loaderState.current >= 99.9 && loaderState.target === 100 && elapsed >= minDuration) {
+        loaderState.current = 100;
+        updateLoaderVisuals(100);
+        loaderState.raf = null;
+        return;
+      }
+
+      loaderState.raf = requestAnimationFrame(animateLoader);
+    }
+
+    function updateLoaderVisuals(value) {
+      const p = Math.max(0, Math.min(100, value));
+      const fill = document.querySelector(".battle-loading-progress-fill");
+      if (fill) fill.style.width = `${p}%`;
+
+      const text = document.querySelector(".battle-loading-progress-text");
+      if (text) {
+        text.style.background = `linear-gradient(90deg, #10251d 0%, #10251d ${p}%, #e7d79e ${p}%, #e7d79e 100%)`;
+        text.style.webkitBackgroundClip = "text";
+        text.style.backgroundClip = "text";
+        text.style.color = "transparent";
+        text.style.textShadow = "none";
+      }
+    }
+
+    function showNoBattleScreen() {
+      document.getElementById("game").classList.add("hidden");
+      document.getElementById("battle-start").classList.remove("show");
+      document.getElementById("no-battle").classList.add("show");
+      document.getElementById("battle-loading-screen").classList.add("hidden");
+    }
+
+    function showLoadedBattleScreen() {
+      setTimeout(() => {
+        document.getElementById("game").classList.remove("battle-awaiting");
+        document.getElementById("game").classList.add("battle-ready");
+        document.getElementById("battle-loading-screen").classList.add("hidden");
+      }, 1000);
+    }
+
+    async function loadBattle() {
+      try {
+        setLoadingProgress(8);
+        await new Promise(r => setTimeout(r, 50));
+
+        const payload = await apiRequest("/battle");
+        setLoadingProgress(42);
+
+        battle = payload.battle;
+        tg_data.user = payload.user;
+        setPlayerInfo()
+
+        if (!battle) {
+          setLoadingProgress(100);
+          showNoBattleScreen();
+          return false;
+        } else {
+          tg_data = parseBattleData(battle.data);
+        }
+
+        setLoadingProgress(58);
+
+        if (battle.slider_config) {
+          sliderConfig = { ...sliderConfig, ...battle.slider_config };
+        }
+
+        setLoadingProgress(68);
+        showLoadedBattleScreen();
+
+        setLoadingProgress(78);
+
+        if (!Number.isFinite(Number(tg_data.monster_hp)) || Number(tg_data.monster_hp) <= 0) {
+          throw new Error("Invalid battle data");
+        }
+
+        tg_data.money_drop = tg_data.money_drop ?? 0;
+        tg_data.items_drop = Array.isArray(tg_data.items_drop) ? tg_data.items_drop : [];
+
+        state.enemyMaxHP = Number(tg_data.monster_hp);
+        state.enemyHP = state.enemyMaxHP;
+
+        document.getElementById("enemy-label").innerText = tg_data.monster_name || "Противник";
+
+        document.getElementById("slider-monster").onerror = function () {
+          this.style.display = "none";
+        };
+
+        if (tg_data.monster_id != null) {
+          document.getElementById("slider-monster").src = `assets/${tg_data.monster_id}.png`;
+        }
+
+        setLoadingProgress(90);
+        battleSeed = Number(payload.battle.seed || 0) >>> 0;
+        apiReady = true;
+        setLoadingProgress(100);
+
+        return true;
+
+      } catch (error) {
+        console.error("[battle] load failed", error);
+        setLoadingProgress(100);
+        showNoBattleScreen();
+        return false;
+      }
+    }
+  </script>
+
+  <script>
+    const state = {
+      playerHearts: 3, enemyHP: 0, enemyMaxHP: 0,
+      isGameOver: false, isVictory: false,
+      difficulty: 1, combo: 0, bestCombo: 0, crit_damage: 0,
+      audio: null,
+      slider: {
+        zones: [], position: 0, active: false,
+        roundStart: 0, roundStartUnix: 0, rafId: null
+      },
+      log: [], logSent: 0, sessionStartedAt: 0,
+      finished: false, finishingPromise: null, nextSeq: 1, roundIndex: 0,
+    };
+
+    let sliderConfig = {
+      round_time_base_ms: 2600,
+      round_time_decay_per_diff: 550,
+      round_time_min_ms: 1350,
+      travel_time_base: 1450,
+      travel_time_min: 700,
+      min_zone_width: 0.13,
+      max_zone_width: 0.19,
+      min_zone_left: 0.03,
+      max_zone_left_bound: 0.94,
+      zone_gap: 0.035,
+      critical_zone_width: 0.035,
+      critical_min_left: 0.02,
+      critical_max_left_bound: 0.96,
+      critical_gap: 0.025,
+      max_zones: 4,
+      base_zones: 2,
+      difficulty_zone_multiplier: 8,
+      difficulty_zone_divisor: 3,
+      damageYellow: 7,
+      damageGreen: 24,
+      damageCritical: 45,
+      greenRatio: 0.20
+    };
+
+    const sliderGame = document.getElementById("slider-game");
+    const sliderTrack = document.getElementById("slider-track");
+    const sliderTimerFill = document.getElementById("slider-timer-fill");
+    const sliderStatus = document.getElementById("slider-status");
+    const sliderKnob = document.getElementById("slider-knob");
+    const sliderMonster = document.getElementById("slider-monster");
+    const enemyHPFill = document.getElementById("enemy-hp-fill");
+    const heartsSection = document.getElementById("hearts-section");
+    const notificationEl = document.getElementById("notification");
+    const flashOverlay = document.getElementById("flash-overlay");
+    const comboValue = document.getElementById("combo-value");
+    const gameOverOverlay = document.getElementById("game-over");
+    const victoryOverlay = document.getElementById("victory");
+    const battleStartOverlay = document.getElementById("battle-start");
+    const gameoverResult = document.getElementById("gameover-result");
+    const victoryResult = document.getElementById("victory-result");
+    const gameEl = document.getElementById("game");
+
+    // ==================== AUDIO / HAPTIC ====================
+    function initAudio() {
+      if (state.audio) return;
+      try { state.audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { }
+    }
+
+    function tone(freq, dur = .06, type = "sine", gain = .035) {
+      if (!state.audio) return;
+      const o = state.audio.createOscillator(), g = state.audio.createGain(), now = state.audio.currentTime;
+      o.type = type; o.frequency.setValueAtTime(freq, now);
+      g.gain.setValueAtTime(gain, now); g.gain.exponentialRampToValueAtTime(.001, now + dur);
+      o.connect(g); g.connect(state.audio.destination);
+      o.start(now); o.stop(now + dur + .02);
+    }
+
+    function haptic(ms = 12) {
+      if (navigator.vibrate) navigator.vibrate(ms);
+    }
+
+    function hitSound(perfect = false) {
+      tone(perfect ? 760 : 480, perfect ? .12 : .07, perfect ? "triangle" : "square", perfect ? .055 : .03);
+      if (perfect) { setTimeout(() => tone(1120, .1, "triangle", .035), 35); haptic([12, 28, 12]); }
+      else haptic(8);
+    }
+
+    const telemetry = {
+      queue: [], seq: 0, flushTimer: null, lastMoveAt: 0, lastMoveX: null, lastMoveY: null,
+      inInputZone: false, active: false, stopped: false, listenersBound: false, lastInput: null, flushInFlight: null,
+    };
+
+    function telemetryId() {
+      if (crypto?.randomUUID) return crypto.randomUUID();
+      return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    function telemetryRecord(kind, e = null, extra = {}) {
+      if (!telemetry.active || telemetry.stopped) return;
+      const now = Date.now();
+      const item = {
+        id: telemetryId(), seq: ++telemetry.seq, kind, client_ts: now, x: null, y: null,
+        pointer_type: null, pressure: null, buttons: null, key: null, extra,
+      };
+
+      if (e) {
+        item.pointer_type = e.pointerType || null;
+        item.pressure = typeof e.pressure === "number" ? e.pressure : null;
+        item.buttons = typeof e.buttons === "number" ? e.buttons : null;
+        item.key = e.code || null;
+        item.extra = { ...extra, trusted: e.isTrusted !== false };
+        const rect = e.currentTarget?.getBoundingClientRect?.() || document.getElementById("input-zone")?.getBoundingClientRect?.();
+        if (rect && typeof e.clientX === "number") {
+          item.x = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+          item.y = Math.max(0, Math.min(1, (e.clientY - rect.top) / Math.max(1, rect.height)));
+        }
+      }
+      telemetry.queue.push(item);
+      if (kind === "pointerdown" || kind === "keydown") {
+        telemetry.lastInput = { seq: item.seq, kind, ts: now, trusted: e ? e.isTrusted !== false : null, pointer_type: item.pointer_type };
+      }
+      if (telemetry.queue.length >= 20) void flushTelemetry(false);
+      return item.seq;
+    }
+
+    async function flushTelemetry(force = false) {
+      if (telemetry.flushInFlight) return telemetry.flushInFlight;
+      if (!apiReady || !battle || !telemetry.queue.length) return;
+      const batch = telemetry.queue.splice(0, 40);
+      telemetry.flushInFlight = (async () => {
+        try {
+          await apiRequest("/battle/telemetry", {
+            method: "POST",
+            body: JSON.stringify({ battle_id: battle.id, events: batch })
+          });
+        } catch (error) {
+          if (!telemetry.stopped) telemetry.queue.unshift(...batch.slice(-40));
+          if (force) console.warn("[telemetry] send failed", error);
+        } finally {
+          telemetry.flushInFlight = null;
+        }
+      })();
+      return telemetry.flushInFlight;
+    }
+
+    async function stopTelemetry() {
+      if (telemetry.stopped) return;
+      telemetry.stopped = true;
+      telemetry.active = false;
+      if (telemetry.flushTimer) { clearInterval(telemetry.flushTimer); telemetry.flushTimer = null; }
+      await flushTelemetry(true);
+      telemetry.queue.length = 0;
+    }
+
+    function startTelemetry() {
+      if (telemetry.active && telemetry.flushTimer) return;
+      telemetry.active = true;
+      telemetry.stopped = false;
+      if (telemetry.flushTimer) clearInterval(telemetry.flushTimer);
+      telemetry.flushTimer = setInterval(() => {
+        if (!telemetry.active || telemetry.stopped) return;
+        void flushTelemetry(false);
+      }, 300);
+
+      if (!telemetry.listenersBound) {
+        telemetry.listenersBound = true;
+        document.addEventListener("visibilitychange", () => telemetryRecord(document.hidden ? "visibility_hidden" : "visibility_visible"));
+        window.addEventListener("focus", () => telemetryRecord("focus"));
+        window.addEventListener("blur", () => telemetryRecord("blur"));
+        window.addEventListener("resize", () => telemetryRecord("resize", null, { w: window.innerWidth, h: window.innerHeight }));
+
+        const zone = document.getElementById("input-zone");
+        if (zone) {
+          zone.addEventListener("pointerdown", e => telemetryRecord("pointerdown", e));
+          zone.addEventListener("pointerup", e => telemetryRecord("pointerup", e));
+          zone.addEventListener("pointercancel", e => telemetryRecord("pointercancel", e));
+          zone.addEventListener("pointermove", e => {
+            const now = performance.now();
+            if (now - telemetry.lastMoveAt < 50) return;
+            telemetry.lastMoveAt = now;
+            telemetryRecord("pointermove", e);
+          });
+        }
+        document.addEventListener("keydown", e => {
+          if (e.code === "Space") telemetryRecord("keydown", e);
+        }, { passive: true });
+      }
+      telemetryRecord("telemetry_start", null, { ua: navigator.userAgent.slice(0, 120) });
+      telemetry.lastInput = null;
+    }
+
+    window.addEventListener("pagehide", () => { void stopTelemetry(); });
+
+    // ==================== LOGGING ====================
+    function gameLog(action, extra = {}) {
+      const entry = { seq: state.nextSeq++, ts: Date.now(), action, extra };
+      state.log.push(entry);
+      if (state.log.length - state.logSent >= 10 || action === "start") void flushLogs(false);
+    }
+
+    async function flushLogs(force = false) {
+      if (logFlushInFlight || !apiReady || !battle) return;
+      logFlushInFlight = true;
+      const start = state.logSent;
+      const batch = state.log.slice(start);
+      try {
+        await apiRequest("/battle/log", { method: "POST", body: JSON.stringify({ logs: batch }) });
+        state.logSent = Math.max(state.logSent, start + batch.length);
+      } catch (error) {
+        console.warn("[battle-log] send failed", error);
+      } finally {
+        logFlushInFlight = false;
+        if (force && state.logSent < state.log.length) void flushLogs(true);
+      }
+    }
+
+    async function finishBattle(result) {
+      if (state.finishingPromise) return state.finishingPromise;
+      if (state.finished || !apiReady || !battle) return false;
+      state.finished = true;
+      telemetryRecord("battle_end", null, { result });
+      await stopTelemetry();
+      gameLog(result === "death" ? "death" : "victory", { enemy_hp: state.enemyHP, max_hp: state.enemyMaxHP });
+      await flushLogs(true);
+      state.finishingPromise = (async () => {
+        try {
+          const payload = await apiRequest("/battle/finish", {
+            method: "POST",
+            body: JSON.stringify({ result, logs: state.log })
+          });
+          state.logSent = state.log.length;
+          console.info("[battle] server validation:", payload.validation);
+          return Boolean(payload.reward_allowed || payload.validation?.valid);
+        } catch (error) {
+          console.error("[battle] finish failed", error);
+          return false;
+        } finally {
+          state.finishingPromise = null;
+        }
+      })();
+      return state.finishingPromise;
+    }
+    window.addEventListener("pagehide", () => { flushLogs(true); });
+
+    // ==================== UI HELPERS ====================
+    function updateHeartsDisplay() {
+      heartsSection.querySelectorAll(".heart").forEach((h, i) => h.classList.toggle("lost", i >= state.playerHearts));
+    }
+    function updateEnemyHPDisplay() {
+      enemyHPFill.style.width = (state.enemyHP / state.enemyMaxHP * 100) + "%";
+    }
+    function updateCombo() { comboValue.textContent = "×" + state.combo; }
+
+    function showNotification(text, color) {
+      notificationEl.textContent = text; notificationEl.style.color = color;
+      notificationEl.classList.remove("show");
+      void notificationEl.offsetWidth;
+      notificationEl.classList.add("show");
+    }
+
+    function flashScreen() {
+      flashOverlay.classList.remove("flash"); void flashOverlay.offsetWidth;
+      flashOverlay.classList.add("flash");
+    }
+
+    function shakeScreen() {
+      gameEl.classList.remove("shake"); void gameEl.offsetWidth;
+      gameEl.classList.add("shake");
+    }
+
+    // ==================== GAMEPLAY ====================
+    function startGame() {
+      startTelemetry();
+      state.finished = false; state.finishingPromise = null;
+      state.log = []; state.logSent = 0; state.nextSeq = 1; state.roundIndex = 0;
+      logFlushInFlight = false;
+
+      if (tg_data) {
+        const mName = tg_data.monster_name || "[ДАННЫЕ УДАЛЕНЫ]";
+        const mDesc = tg_data.monster_desc || "[ДАННЫЕ УДАЛЕНЫ]";
+
+        const nameEl = document.getElementById("dossier-name");
+        const descEl = document.getElementById("dossier-desc");
+
+        if (nameEl) nameEl.textContent = mName;
+        if (descEl) descEl.innerHTML = mDesc;
+      }
+
+      state.playerHearts = 3;
+      state.enemyHP = state.enemyMaxHP;
+      state.combo = 0; state.bestCombo = 0;
+      state.isGameOver = false; state.isVictory = false;
+      state.slider.active = false; state.slider.zones = [];
+      updateHeartsDisplay(); updateEnemyHPDisplay(); updateCombo();
+      stopSliderRound();
+      gameOverOverlay.classList.remove("show");
+      victoryOverlay.classList.remove("show");
+      battleStartOverlay.classList.add("show");
+      sliderGame.classList.add("visible");
+    }
+
+    function beginBattle() {
+      if (!apiReady || !battle) return;
+      state.sessionStartedAt = Date.now();
+      gameLog("start", { battle_id: battle.id, game_mode: "slider", hp: state.enemyMaxHP });
+      initAudio(); state.audio?.resume();
+      battleStartOverlay.classList.remove("show");
+      setTimeout(() => {
+        if (state.isGameOver || state.isVictory) return;
+        startSliderRound();
+      }, 350);
+    }
+
+    function stopSliderRound() {
+      state.slider.active = false;
+      if (state.slider.rafId) cancelAnimationFrame(state.slider.rafId);
+      state.slider.rafId = null;
+      state.slider.zones = [];
+      state.slider.movementParams = null;
+      sliderTrack.querySelectorAll(".slider-zone").forEach(el => el.remove());
+      if (!sliderKnob.isConnected) sliderTrack.appendChild(sliderKnob);
+      sliderTimerFill.style.width = "100%";
+      sliderTimerFill.classList.remove("warn");
+      sliderStatus.textContent = "ТАП ДЛЯ АТАКИ";
+    }
+
+    function sliderDifficulty() {
+      const d = Math.max(0, state.difficulty - 1);
+      return {
+        time: Math.max(sliderConfig.round_time_min_ms, sliderConfig.round_time_base_ms - d * sliderConfig.round_time_decay_per_diff),
+        zones: Math.min(sliderConfig.max_zones, sliderConfig.base_zones + Math.floor(d * sliderConfig.difficulty_zone_multiplier / sliderConfig.difficulty_zone_divisor))
+      };
+    }
+
+    function seededRandom(seed) {
+      let x = seed >>> 0;
+      return function () {
+        x ^= (x << 13) >>> 0;
+        x ^= x >>> 17;
+        x ^= (x << 5) >>> 0;
+        x >>>= 0;
+        return x / 4294967296;
+      };
+    }
+
+    function makeSliderZones() {
+      const { zones: count } = sliderDifficulty();
+      const rng = seededRandom((battleSeed ^ Math.imul(state.roundIndex + 1, 0x9E3779B9)) >>> 0);
+      const zones = [];
+      let attempts = 0;
+
+      while (zones.length < count && attempts++ < 500) {
+        const width = sliderConfig.min_zone_width + rng() * (sliderConfig.max_zone_width - sliderConfig.min_zone_width);
+        const left = sliderConfig.min_zone_left + rng() * (sliderConfig.max_zone_left_bound - width);
+        const candidate = { left, right: left + width, width, hit: false, required: true, critical: false };
+        if (zones.every(z => candidate.right + sliderConfig.zone_gap < z.left || candidate.left - sliderConfig.zone_gap > z.right)) {
+          zones.push(candidate);
+        }
+      }
+
+      let critical = null;
+      for (let i = 0; i < 500 && !critical; i++) {
+        const width = sliderConfig.critical_zone_width;
+        const left = sliderConfig.critical_min_left + rng() * (sliderConfig.critical_max_left_bound - width);
+        const candidate = { left, right: left + width, width, hit: false, required: false, critical: true };
+        if (zones.every(z => candidate.right + sliderConfig.critical_gap < z.left || candidate.left - sliderConfig.critical_gap > z.right)) {
+          critical = candidate;
+        }
+      }
+      if (critical) zones.push(critical);
+      zones.sort((a, b) => a.left - b.left);
+      return zones;
+    }
+
+    function renderSliderZones() {
+      sliderTrack.querySelectorAll(".slider-zone").forEach(el => el.remove());
+      state.slider.zones.forEach((z, i) => {
+        const el = document.createElement("div");
+        el.className = "slider-zone" + (z.critical ? " critical" : "");
+        el.dataset.zone = i;
+        el.style.left = (z.left * 100) + "%";
+        el.style.width = (z.width * 100) + "%";
+        if (!z.critical) {
+          const green = document.createElement("div");
+          green.className = "zone-green";
+          el.appendChild(green);
+        }
+        sliderTrack.appendChild(el);
+        z.el = el;
+      });
+    }
+
+    function startSliderRound() {
+      if (state.isGameOver || state.isVictory) return;
+      state.roundIndex++;
+      state.slider.zones = makeSliderZones();
+      const roundStartUnix = Date.now();
+
+      gameLog("round", {
+        round: state.roundIndex,
+        zones: state.slider.zones.map(z => ({ left: z.left, right: z.right, critical: z.critical, required: z.required })),
+        difficulty: state.difficulty,
+        round_start: roundStartUnix,
+      });
+
+      state.slider.position = 0;
+      state.slider.roundStartUnix = roundStartUnix;
+      state.slider.roundStartPerf = performance.now();
+      state.slider.active = true;
+
+      renderSliderZones();
+      setSliderPosition(0);
+      const requiredCount = state.slider.zones.filter(z => z.required).length;
+      sliderStatus.textContent = `ПОПАДИ ${requiredCount} • РЫЖИЕ = КРИТ!`;
+      runSliderRound();
+    }
+
+    function runSliderRound() {
+      const roundStartPerf = state.slider.roundStartPerf;
+      const roundStartUnix = state.slider.roundStartUnix;
+      const total = sliderDifficulty().time;
+      const travelTime = Math.max(sliderConfig.travel_time_min, sliderConfig.travel_time_base / state.difficulty);
+
+      function frame(now) {
+        if (!state.slider.active || state.isGameOver || state.isVictory || roundStartPerf !== state.slider.roundStartPerf) return;
+
+        const elapsedPerf = now - roundStartPerf;
+        const left = Math.max(0, total - elapsedPerf);
+        const ratio = left / total;
+        const pos = (elapsedPerf % travelTime) / travelTime;
+        setSliderPosition(pos);
+
+        sliderTimerFill.style.width = (ratio * 100) + "%";
+        sliderTimerFill.classList.toggle("warn", ratio < .28);
+
+        state.slider.zones.forEach(z => {
+          const inside = !z.hit && state.slider.position >= z.left && state.slider.position <= z.right;
+          z.el?.classList.toggle("active", inside);
+        });
+
+        if (left <= 0) {
+          state.slider.active = false;
+          state.slider.rafId = null;
+          sliderTimerFill.style.width = "0%";
+          sliderStatus.textContent = "ОПОЗДАЛ";
+          gameLog("damage", { reason: "timeout" });
+          state.combo = 0; updateCombo();
+          showNotification("ОПОЗДАЛ!", "#ff3344");
+          damagePlayer();
+          hitSound(false);
+          if (!state.isGameOver && !state.isVictory) setTimeout(startSliderRound, 220);
+          return;
+        }
+        state.slider.rafId = requestAnimationFrame(frame);
+      }
+      state.slider.rafId = requestAnimationFrame(frame);
+    }
+
+    function setSliderPosition(pos) {
+      state.slider.position = Math.max(0, Math.min(1, pos));
+      sliderKnob.style.left = (state.slider.position * 100) + "%";
+    }
+
+    function resolveSliderHit(sourceEvent = null) {
+      if (!state.slider.active || state.isGameOver || state.isVictory) return;
+
+      const input = sourceEvent ? telemetry.lastInput : null;
+      const tapInputAge = input ? Math.max(0, Date.now() - input.ts) : null;
+      const inputSeq = input && tapInputAge <= 1500 ? input.seq : null;
+      const inputKind = input && tapInputAge <= 1500 ? input.kind : null;
+      const inputTrusted = input && tapInputAge <= 1500 ? input.trusted : null;
+
+      const nowUnix = Date.now();
+      const elapsedUnix = nowUnix - state.slider.roundStartUnix;
+      const travelTime = Math.max(sliderConfig.travel_time_min, sliderConfig.travel_time_base / state.difficulty);
+      const pos = (elapsedUnix % travelTime) / travelTime;
+
+      const zoneIndex = state.slider.zones.findIndex(z => !z.hit && pos >= z.left && pos <= z.right);
+
+      gameLog("tap", {
+        input_seq: inputSeq, input_kind: inputKind, input_age_ms: tapInputAge, input_trusted: inputTrusted,
+        source: sourceEvent ? (sourceEvent.code === "Space" ? "keyboard" : "pointer") : "programmatic"
+      });
+
+      if (zoneIndex < 0) {
+        state.slider.active = false;
+        state.combo = 0; updateCombo();
+        showNotification("ПРОМАХ!", "#ff3344");
+        gameLog("damage", { reason: "miss" });
+        damagePlayer();
+        hitSound(false);
+        if (!state.isGameOver && !state.isVictory) setTimeout(startSliderRound, 220);
+        return;
+      }
+
+      const z = state.slider.zones[zoneIndex];
+      z.hit = true;
+      sliderTrack.querySelector(`[data-zone="${zoneIndex}"]`)?.classList.add("hit");
+
+      if (z.critical) {
+        state.combo++; state.bestCombo = Math.max(state.bestCombo, state.combo);
+        updateCombo();
+        damageEnemy(sliderConfig.damageCritical);
+        showNotification(`-${sliderConfig.damageCritical} КРИТ!`, "#ff7a00");
+        flashScreen();
+        sliderMonster.classList.remove("hit"); void sliderMonster.offsetWidth; sliderMonster.classList.add("hit");
+        tone(980, .11, "sawtooth", .05);
+        setTimeout(() => tone(1480, .12, "triangle", .04), 35);
+        haptic([18, 35, 18]);
+
+        const newRoundStartUnix = Date.now();
+        state.slider.roundStartPerf = performance.now();
+        state.slider.roundStartUnix = newRoundStartUnix;
+
+        gameLog("round", {
+          round: state.roundIndex,
+          zones: state.slider.zones.map(z => ({ left: z.left, right: z.right, critical: z.critical, required: z.required, hit: z.hit })),
+          difficulty: state.difficulty,
+          round_start: newRoundStartUnix,
+          timer_reset: true,
+        });
+
+        const requiredLeft = state.slider.zones.filter(zz => zz.required && !zz.hit).length;
+        if (requiredLeft === 0) {
+          state.slider.active = false;
+          if (state.slider.rafId) cancelAnimationFrame(state.slider.rafId);
+          state.slider.rafId = null;
+          if (!state.isGameOver && !state.isVictory) setTimeout(startSliderRound, 220);
+        } else {
+          if (state.slider.rafId) cancelAnimationFrame(state.slider.rafId);
+          state.slider.rafId = null;
+          sliderTimerFill.style.width = "100%";
+          sliderTimerFill.classList.remove("warn");
+          sliderStatus.textContent = `Осталось: ${requiredLeft}`;
+          runSliderRound();
+        }
+        return;
+      }
+
+      const center = (z.left + z.right) / 2;
+      const half = z.width / 2;
+      const accuracy = Math.max(0, 1 - Math.abs(pos - center) / half);
+
+      const amount = Math.round(sliderConfig.damageYellow + (sliderConfig.damageGreen - sliderConfig.damageYellow) * accuracy);
+      const inGreen = Math.abs(pos - center) <= (z.width * sliderConfig.greenRatio) / 2;
+
+      state.combo++; state.bestCombo = Math.max(state.bestCombo, state.combo);
+      updateCombo();
+      damageEnemy(amount);
+      showNotification(`-${amount}`, inGreen ? "#63b85b" : "#e5c448");
+      sliderMonster.classList.remove("hit"); void sliderMonster.offsetWidth; sliderMonster.classList.add("hit");
+      hitSound(inGreen);
+
+      const requiredLeft = state.slider.zones.filter(zz => zz.required && !zz.hit).length;
+      if (requiredLeft === 0) {
+        state.slider.active = false;
+        if (state.slider.rafId) cancelAnimationFrame(state.slider.rafId);
+        state.slider.rafId = null;
+        if (!state.isGameOver && !state.isVictory) setTimeout(startSliderRound, 220);
+      } else {
+        sliderStatus.textContent = `Осталось: ${requiredLeft}`;
+      }
+    }
+
+    function damageEnemy(amount) {
+      state.enemyHP = Math.max(0, state.enemyHP - amount);
+      updateEnemyHPDisplay();
+      if (state.enemyHP <= 0) victory();
+    }
+
+    function damagePlayer() {
+      state.playerHearts--;
+      const heart = heartsSection.querySelector(`[data-heart="${state.playerHearts}"]`);
+      if (heart) { heart.classList.add("breaking"); setTimeout(() => heart.classList.remove("breaking"), 400); }
+      updateHeartsDisplay(); shakeScreen();
+      if (state.playerHearts <= 0) gameOver();
+    }
+
+    async function victory() {
+      state.isVictory = true; state.slider.active = false;
+      if (state.slider.rafId) cancelAnimationFrame(state.slider.rafId);
+      await finishBattle("victory");
+
+      const coinsList = document.getElementById("reward-coins-list");
+      const itemsList = document.getElementById("reward-items-list");
+
+      if (coinsList && tg_data) {
+        const mainMoney = Number(tg_data.money_drop) || 0;
+        const comboBonus = Math.trunc(state.bestCombo / 10);
+        const critBonus = state.crit_damage;
+
+        let coinsHTML = `<div class="reward-item main">+💰 ${mainMoney}</div>`;
+        if (comboBonus > 0) {
+          coinsHTML += `<div class="reward-item bonus">+💰 ${comboBonus} (комбо ×${state.bestCombo})</div>`;
+        }
+        if (critBonus > 0) {
+          coinsHTML += `<div class="reward-item bonus">+💰 ${critBonus} (критические удары)</div>`;
+        }
+        coinsList.innerHTML = coinsHTML;
+      }
+
+      if (itemsList && tg_data) {
+        const items = Array.isArray(tg_data.items_drop) ? tg_data.items_drop : [];
+        if (items.length > 0) {
+          itemsList.innerHTML = items.map(item => `<div class="reward-item">${item}</div>`).join('');
+        } else {
+          itemsList.innerHTML = `<div class="reward-item empty">добыча не найдена</div>`;
+        }
+      }
+
+      setTimeout(() => victoryOverlay.classList.add("show"), 450);
+    }
+
+    async function gameOver() {
+      state.isGameOver = true; state.slider.active = false;
+      if (state.slider.rafId) cancelAnimationFrame(state.slider.rafId);
+      await finishBattle("death");
+      gameoverResult.innerHTML = `ПОДРАНОК СБЕЖАЛ`;
+      setTimeout(() => gameOverOverlay.classList.add("show"), 450);
+    }
+
+    async function restartBattle() {
+      const retryBtn = document.getElementById("retry-btn");
+      if (retryBtn.disabled || !battle) return;
+      retryBtn.disabled = true;
+      try {
+        const payload = await apiRequest("/battle/restart", {
+          method: "POST", body: JSON.stringify({ battle_id: battle.id })
+        });
+        if (!payload.battle) throw new Error("Battle restart returned no battle");
+        battle = payload.battle;
+        if (battle && "data" in battle) {
+          tg_data = parseBattleData(battle.data);
+        }
+        tg_data.user = payload.user;
+        setPlayerInfo();
+        state.enemyMaxHP = Number(tg_data.monster_hp);
+        state.enemyHP = state.enemyMaxHP;
+        battleSeed = Number(battle.seed || 0) >>> 0;
+        apiReady = true;
+        document.getElementById("enemy-label").innerText = tg_data.monster_name || "Противник";
+        if (tg_data.monster_id != null) sliderMonster.src = `assets/${tg_data.monster_id}.png`;
+        gameOverOverlay.classList.remove("show");
+        startGame();
+        beginBattle();
+      } catch (error) {
+        console.error("[battle] restart failed:", error);
+        showNotification("НЕ УДАЛОСЬ НАЧАТЬ", "#ff3344");
+      } finally {
+        retryBtn.disabled = false;
+      }
+    }
+
+    // ==================== EVENTS ====================
+    function setupEventListeners() {
+      const zone = document.getElementById("input-zone");
+      zone.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        resolveSliderHit(e);
+      });
+      document.addEventListener("keydown", e => {
+        if (e.code !== "Space") return;
+        if (battleStartOverlay.classList.contains("show")) return;
+        e.preventDefault();
+        if (e.repeat || !state.slider.active) return;
+        resolveSliderHit(e);
+      }, { passive: false });
+      document.getElementById("start-battle-btn").addEventListener("click", beginBattle);
+      document.getElementById("end-btn").addEventListener("click", () => tg.close());
+      document.getElementById("retry-btn").addEventListener("click", () => void restartBattle());
+      document.getElementById("next-btn").addEventListener("click", () => tg.close());
+      document.getElementById("exit-btn").addEventListener("click", () => tg.close());
+      document.getElementById("no-battle-exit-btn").addEventListener("click", () => tg.close());
+    }
+
+    setupEventListeners();
+    startTelemetry();
+    (async () => { const loaded = await loadBattle(); if (loaded) startGame(); })();
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        window.location.reload();
+      }
+    });
+  </script>
+</body>
+
+</html>
