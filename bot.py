@@ -43,8 +43,7 @@ monster_repository = GinoMonstersRepository()
 user_repository = GinoUserRepository()
 store_repository = GinoStoreRepository()
 settings_repository = GinoBotSettingsRepository()
-game_controller = GameController(user_repository, monster_repository)
-api_to_bot_notifier = ApiToBotNotifier(game_controller)
+api_to_bot_notifier = ApiToBotNotifier()
 game_engine = GameEngine(settings_repository, 
                          user_repository, 
                          TelegramNotificationProvider(bot))
@@ -71,8 +70,7 @@ async def main():
     dp.message.outer_middleware(CaptchaMiddleware())
     await on_startup(dp)
     await game_engine.start()
-    dp['game_engine'] = game_engine 
-    dp['game_controller'] = game_controller
+    dp['game_engine'] = game_engine
     await dict.init()
     asyncio.create_task(api_to_bot_notifier.redis_listener())
     await Scheduler.sql_alchemy(event_handler.handle_event,

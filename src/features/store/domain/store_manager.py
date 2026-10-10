@@ -8,8 +8,6 @@ from core.consts.consts import Consts
 from typing import List
 import os
 
-
-
 class StoreManager:
     products:List[StoreItem] = []
     selected_product:StoreItem

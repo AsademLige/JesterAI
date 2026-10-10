@@ -69,7 +69,7 @@ class UserManager:
     async def is_admin(self, tg_id:int) -> bool:
         return await self.repo.is_admin(tg_id)
     
-    async def is_registered_in_chat(self, tg_id:int, chat_id: int) -> int:
+    async def is_registered(self, tg_id:int, chat_id: int) -> int:
         user:Optional[User] = await self.repo.get_user(tg_id)
         return -1 if (user is None) else 1 if (user) else 0
     

@@ -2,17 +2,18 @@ from aiogram.enums import ParseMode
 
 from apps.tg_bot.keyboards.hub_keyboard import get_hub_keyboard, fishing_button
 from aiogram.filters import Command, StateFilter
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, FSInputFile
 from ssl import SSLContext
 from aiogram import F, Bot, Router
 
 from core.consts.config import Prefs
 from core.consts.dictionary import Dictionary
 from core.utils.utils import Utils
-from features.battles.game_controller import GameController
 from features.game_engine.domain.game_engine import GameEngine
 from features.user.data.dtos.user_dto import User
 from features.user.data.repository.gino_user_repository import GinoUserRepository
+from core.consts.consts import Consts
+import os
 
 rt = Router()
 dict = Dictionary()
@@ -22,15 +23,16 @@ user_repo:GinoUserRepository = GinoUserRepository()
 
 @rt.message(StateFilter(None), Command("hub"))
 async def show_hub(message: Message, state: SSLContext):
-    await message.answer(
-        "На перепутье я стою, болт задумчиво чешу...",
-        reply_markup=get_hub_keyboard()
-    )
+    await message.delete()
+    photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"hub.webp"))
+
+    await bot.send_photo(message.chat.id, photo, caption="🌳 На перепутье я стою, болт задумчиво чешу...",  
+                         reply_markup = get_hub_keyboard(),
+                                      parse_mode=ParseMode.HTML)
 
 ###Отправиться на Рыбалку
 @rt.callback_query(StateFilter(None), F.data == "hub_fishing")
-async def fishing_init(callback_query: CallbackQuery, 
-                    state: SSLContext, game_controller:GameController, 
+async def fishing_init(callback_query: CallbackQuery, state: SSLContext, 
                     game_engine:GameEngine):
 
     message = callback_query.message

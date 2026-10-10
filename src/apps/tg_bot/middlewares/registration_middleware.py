@@ -23,7 +23,7 @@ class RegistrationMiddleware(BaseMiddleware):
         if isinstance(event, Message) or isinstance(event, CallbackQuery):
             if (event.chat.type == "private" and isinstance(event, Message) and not "start" in event.text):
                 return event.answer(Dictionary.private_messages_restriction)
-            register_status:int = await self.user_mr.is_registered_in_chat(event.from_user.id, event.chat.id)
+            register_status:int = await self.user_mr.is_registered(event.from_user.id, event.chat.id)
 
             if (register_status == 1):
                 return await handler(event, data)

@@ -1,4 +1,6 @@
-from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, GladiatorsCF, TrashLotoCF
+from typing import List
+
+from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, TrashLotoCF
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.gamba_house.domain.trash_loto_manager import TrashLotoManager
 from apps.tg_bot.keyboards.gamba_house_keyboard import GambaHouseKeyboard
@@ -7,18 +9,12 @@ from features.gamba_house.domain.dice_manager import DiceGameManager
 from domain.controllers.rights_controller import RightsController
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from aiogram.types import FSInputFile, Message, CallbackQuery
-from features.battles.game_controller import GameController
-from features.battles.battle_unit_entity import BattleUnit
-from features.battles.battle_manager import BattleManager
 from features.user.data.dtos.user_dto import User
 from aiogram.filters import Command, StateFilter
-from core.utils.safe_edit import SafeEditMessage
 from apps.tg_bot.commands import Commands as cn
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
-from core.utils.enums import BattlePhases
 from core.data.data_base import DataBase
-from typing import List, Optional, Tuple
 from core.consts.consts import Consts
 from core.consts.config import Prefs
 from core.utils.utils import Utils
@@ -28,7 +24,6 @@ from datetime import timedelta
 from aiogram import Router, F
 from aiogram import Bot
 import asyncio
-import math
 import os
 
 prefs = Prefs()
@@ -155,95 +150,95 @@ async def trash_loto(callback: CallbackQuery, callback_data: DiceGameCF, state: 
         await Utils.delete_old_message([] if (result["is_major_win"] or result["is_jackpot"]) 
                                        else [result["slot_msg"], msg], 5)
         
-###Гладиаторы!
-@rt.callback_query(GladiatorsCF.filter(F.action == "gladiators"))
-async def gladiators(callback: CallbackQuery, callback_data: GladiatorsCF, 
-                     state: FSMContext, game_controller:GameController):
+# ###Гладиаторы!
+# @rt.callback_query(GladiatorsCF.filter(F.action == "gladiators"))
+# async def gladiators(callback: CallbackQuery, callback_data: GladiatorsCF, 
+#                      state: FSMContext, game_controller:GameController):
     
-    state_data = await state.get_data()
-    if (not 'user' in state_data): return
-    user: User = state_data["user"]
+#     state_data = await state.get_data()
+#     if (not 'user' in state_data): return
+#     user: User = state_data["user"]
 
-    if (user.tg_id != callback_data.user_id):
-        return
-    await callback.message.delete()
+#     if (user.tg_id != callback_data.user_id):
+#         return
+#     await callback.message.delete()
 
-    delta:timedelta = Utils.get_time_delta(user.last_gladiators_bet, 1)
-    if (math.floor(delta.total_seconds() / 3600) < 0):
-        answer = await bot.send_message(user.chat_id, 
-                                        dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
-                             parse_mode=ParseMode.HTML)
-        await Utils.delete_old_message([answer], 10)
-        return
+#     delta:timedelta = Utils.get_time_delta(user.last_gladiators_bet, 1)
+#     if (math.floor(delta.total_seconds() / 3600) < 0):
+#         answer = await bot.send_message(user.chat_id, 
+#                                         dict.timer_message(user, Utils.timedelta_to_hhmm(delta)), 
+#                              parse_mode=ParseMode.HTML)
+#         await Utils.delete_old_message([answer], 10)
+#         return
     
-    if (game_controller.get_battle(user)):
-        answer = await callback.message.answer("⚔️ Ставка уже сделана!")
-        await Utils.delete_old_message([answer], 5)
-        return
+#     if (game_controller.get_battle(user)):
+#         answer = await callback.message.answer("⚔️ Ставка уже сделана!")
+#         await Utils.delete_old_message([answer], 5)
+#         return
     
-    await state.update_data(user=user)
+#     await state.update_data(user=user)
 
-    answer = await bot.send_message(user.chat_id, await game_controller.prepare_gladiators(user),
-                                    reply_markup=combat_kb.battle_keyboard(user, game_controller.get_battle(user)),
-                                    parse_mode=ParseMode.HTML)
+#     answer = await bot.send_message(user.chat_id, await game_controller.prepare_gladiators(user),
+#                                     reply_markup=combat_kb.battle_keyboard(user, game_controller.get_battle(user)),
+#                                     parse_mode=ParseMode.HTML)
     
-###Ставка на гладиатора
-@rt.callback_query(GladiatorsCF.filter(F.action == "bet"))
-async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, 
-                         state: FSMContext, game_controller:GameController):
-    state_data = await state.get_data()
-    if (not 'user' in state_data): return
-    user: User = state_data["user"]
+# ###Ставка на гладиатора
+# @rt.callback_query(GladiatorsCF.filter(F.action == "bet"))
+# async def gladiators_bet(callback: CallbackQuery, callback_data: GladiatorsCF, 
+#                          state: FSMContext, game_controller:GameController):
+#     state_data = await state.get_data()
+#     if (not 'user' in state_data): return
+#     user: User = state_data["user"]
 
-    if (user.tg_id != callback_data.user_id or not callback_data.bet):
-        return
+#     if (user.tg_id != callback_data.user_id or not callback_data.bet):
+#         return
 
-    if (user.money < callback_data.bet):
-        await game_controller.delete_battle(user.tg_id)
-        await callback.message.delete()
-        answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
-                            parse_mode=ParseMode.HTML)
-        await Utils.delete_old_message([callback.message, answer])
-        return
+#     if (user.money < callback_data.bet):
+#         await game_controller.delete_battle(user.tg_id)
+#         await callback.message.delete()
+#         answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
+#                             parse_mode=ParseMode.HTML)
+#         await Utils.delete_old_message([callback.message, answer])
+#         return
     
-    if (not await user_repo.update(user, money=user.money - callback_data.bet, 
-                                   gladiators_bet=user.gladiators_bet + callback_data.bet)):
+#     if (not await user_repo.update(user, money=user.money - callback_data.bet, 
+#                                    gladiators_bet=user.gladiators_bet + callback_data.bet)):
     
-        await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
-        return
+#         await bot.send_message(user.chat_id, dict.trash_loto_error, parse_mode=ParseMode.HTML)
+#         return
     
-    battle:BattleManager = game_controller.get_battle(user)
+#     battle:BattleManager = game_controller.get_battle(user)
 
-    if (battle.phase == BattlePhases.PREPARE):
-        game_controller.start_battle(user, callback.message)
+#     if (battle.phase == BattlePhases.PREPARE):
+#         game_controller.start_battle(user, callback.message)
 
-    if (type(callback_data.gladiator_id) is int):
-        battle.members[callback_data.gladiator_id].bet(callback_data.bet)
+#     if (type(callback_data.gladiator_id) is int):
+#         battle.members[callback_data.gladiator_id].bet(callback_data.bet)
     
-    status:Optional[Tuple[str, BattlePhases, BattleUnit]] = await game_controller.get_battle_status(user)
-    if (status):
-        await callback.message.edit_text(status[0],
-                                        reply_markup=combat_kb.battle_keyboard(user, battle) \
-                                        if (not status[1] == BattlePhases.BATTLE_END) else None,
-                                        parse_mode=ParseMode.HTML)
+#     status:Optional[Tuple[str, BattlePhases, BattleUnit]] = await game_controller.get_battle_status(user)
+#     if (status):
+#         await callback.message.edit_text(status[0],
+#                                         reply_markup=combat_kb.battle_keyboard(user, battle) \
+#                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
+#                                         parse_mode=ParseMode.HTML)
     
-###Бой гладиаторов
-@rt.callback_query(GladiatorsCF.filter(F.action == "gladiators_fight"))
-async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF, 
-                           state: FSMContext, game_controller:GameController):
-    if (await SafeEditMessage.is_locked(callback)): return
-    state_data = await state.get_data()
-    if (not 'user' in state_data): return
-    user: User = state_data["user"]
+# ###Бой гладиаторов
+# @rt.callback_query(GladiatorsCF.filter(F.action == "gladiators_fight"))
+# async def gladiators_fight(callback: CallbackQuery, callback_data: GladiatorsCF, 
+#                            state: FSMContext, game_controller:GameController):
+#     if (await SafeEditMessage.is_locked(callback)): return
+#     state_data = await state.get_data()
+#     if (not 'user' in state_data): return
+#     user: User = state_data["user"]
 
-    if (user.tg_id != callback_data.user_id):
-        return
+#     if (user.tg_id != callback_data.user_id):
+#         return
     
-    battle:BattleManager = game_controller.get_battle(user)
-    status:Optional[Tuple[str, BattlePhases, Optional[BattleUnit]]] = await game_controller.get_battle_status(user)
+#     battle:BattleManager = game_controller.get_battle(user)
+#     status:Optional[Tuple[str, BattlePhases, Optional[BattleUnit]]] = await game_controller.get_battle_status(user)
 
-    if (status):
-        await SafeEditMessage.safe_edit(callback,status[0],
-                                        reply_markup=combat_kb.battle_keyboard(user, battle) \
-                                        if (not status[1] == BattlePhases.BATTLE_END) else None,
-                                        parse_mode=ParseMode.HTML)
+#     if (status):
+#         await SafeEditMessage.safe_edit(callback,status[0],
+#                                         reply_markup=combat_kb.battle_keyboard(user, battle) \
+#                                         if (not status[1] == BattlePhases.BATTLE_END) else None,
+#                                         parse_mode=ParseMode.HTML)

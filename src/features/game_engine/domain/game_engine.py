@@ -49,13 +49,14 @@ class GameEngine:
                 user:User = await self.user_repo.get_user(id=user_id)
                 settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
 
-                await self.user_repo.update(user, energy=user.energy+1)
+                new_energy = user.energy + 1
+                await self.user_repo.update(user, energy=new_energy)
                 
-                if (user.energy < settings.max_users_energy):
+                if new_energy < settings.max_users_energy:
                     self._next_energy_restore[user_id] = datetime.now() + timedelta(seconds=settings.energy_restore_time)
-                    self.logger.debug(f"_update_energy new timer: {user.tg_id}:{user.tg_name} {user.energy}")
+                    self.logger.debug(f"_update_energy new timer: {user.tg_id}:{user.tg_name} {new_energy}")
                 else:
-                    await self.notification_provider.notifivcate(user.tg_id, "⚡️ Бачок энергии заполнен до отказа!")
+                    await self.notification_provider.notifivcate(user.tg_id, "⚡️ Бачок энергии заполнен до отказа!", 60)
 
     def get_energy_restore_time(self, user:User) -> Optional[datetime]:
         return self._next_energy_restore[user.id] if user.id in self._next_energy_restore else None

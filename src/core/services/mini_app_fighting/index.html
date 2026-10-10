@@ -1840,7 +1840,9 @@
       sliderTrack.querySelector(`[data-zone="${zoneIndex}"]`)?.classList.add("hit");
 
       if (z.critical) {
-        state.combo++; state.bestCombo = Math.max(state.bestCombo, state.combo);
+        state.combo++;
+        state.bestCombo = Math.max(state.bestCombo, state.combo);
+        state.crit_damage++;
         updateCombo();
         damageEnemy(sliderConfig.damageCritical);
         showNotification(`-${sliderConfig.damageCritical} КРИТ!`, "#ff7a00");
@@ -1961,6 +1963,90 @@
       setTimeout(() => gameOverOverlay.classList.add("show"), 450);
     }
 
+    async function startNewBattle(sourceBtn = null) {
+      if (sourceBtn) sourceBtn.disabled = true;
+
+      try {
+        document.getElementById("no-battle").classList.remove("show");
+        document.getElementById("victory").classList.remove("show");
+        document.getElementById("game-over").classList.remove("show");
+
+        const loadingScreen = document.getElementById("battle-loading-screen");
+        loadingScreen.classList.add("show");
+        loaderState.current = 0;
+        loaderState.target = 0;
+        setLoadingProgress(10);
+
+        const payload = await apiRequest("/battle/new", { method: "POST" });
+        if (!payload.battle) throw new Error("No battle returned from API");
+
+        setLoadingProgress(40);
+
+        battle = payload.battle;
+
+        if (battle && "data" in battle) {
+          tg_data = parseBattleData(battle.data);
+        }
+
+        tg_data.user = payload.user;
+        setPlayerInfo();
+
+        setLoadingProgress(60);
+
+        if (!Number.isFinite(Number(tg_data.monster_hp)) || Number(tg_data.monster_hp) <= 0) {
+          throw new Error("Invalid battle data: monster_hp");
+        }
+
+        tg_data.money_drop = tg_data.money_drop ?? 0;
+        tg_data.items_drop = Array.isArray(tg_data.items_drop) ? tg_data.items_drop : [];
+
+        state.enemyMaxHP = Number(tg_data.monster_hp);
+        state.enemyHP = state.enemyMaxHP;
+        battleSeed = Number(battle.seed || 0) >>> 0;
+        apiReady = true;
+
+        document.getElementById("enemy-label").innerText = tg_data.monster_name || "Противник";
+        document.getElementById("slider-monster").onerror = function () {
+          this.style.display = "none";
+        };
+        if (tg_data.monster_id != null) {
+          document.getElementById("slider-monster").src = `assets/${tg_data.monster_id}.png`;
+        }
+
+        if (battle.slider_config) {
+          sliderConfig = { ...sliderConfig, ...battle.slider_config };
+        }
+
+        setLoadingProgress(85);
+
+        document.getElementById("game").classList.remove("hidden");
+        document.getElementById("game").classList.remove("battle-awaiting");
+        document.getElementById("game").classList.add("battle-ready");
+
+        setTimeout(() => {
+          loadingScreen.classList.remove("show");
+        }, 500);
+
+        setLoadingProgress(100);
+        startGame();
+
+      } catch (error) {
+        console.error("[battle] start new battle failed:", error);
+        showNotification("НЕ УДАЛОСЬ НАЧАТЬ", "#ff3344");
+
+        const loadingScreen = document.getElementById("battle-loading-screen");
+        loadingScreen.classList.remove("show");
+
+        if (battle && !state.isVictory && !state.isGameOver) {
+          document.getElementById("victory").classList.add("show");
+        } else if (!battle) {
+          document.getElementById("no-battle").classList.add("show");
+        }
+      } finally {
+        if (sourceBtn) sourceBtn.disabled = false;
+      }
+    }
+
     async function restartBattle() {
       const retryBtn = document.getElementById("retry-btn");
       if (retryBtn.disabled || !battle) return;
@@ -2010,9 +2096,14 @@
       document.getElementById("start-battle-btn").addEventListener("click", beginBattle);
       document.getElementById("end-btn").addEventListener("click", () => tg.close());
       document.getElementById("retry-btn").addEventListener("click", () => void restartBattle());
-      document.getElementById("next-btn").addEventListener("click", () => tg.close());
+      document.getElementById("next-btn").addEventListener("click", function () {
+        void startNewBattle(this);
+      });
       document.getElementById("exit-btn").addEventListener("click", () => tg.close());
       document.getElementById("no-battle-exit-btn").addEventListener("click", () => tg.close());
+      document.getElementById("no-battle-reload-btn").addEventListener("click", function () {
+        void startNewBattle(this);
+      });
     }
 
     setupEventListeners();
