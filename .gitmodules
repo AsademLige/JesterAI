@@ -3,4 +3,4 @@
 	url = https://github.com/AsademLige/jester_api.git
 [submodule "src/core/services/mini_app_fighting"]
 	path = src/core/services/mini_app_fighting
-	url = https://github.com/AsademLige/telegram-apps-fighting.git
+	url = https://AsademLige@github.com/AsademLige/telegram-apps-fighting.git
