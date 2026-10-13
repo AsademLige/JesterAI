@@ -69,9 +69,10 @@ class GinoUserRepository(IUserRepository):
         self._tg_id_map.clear()
 
     def clear_user_cache(self, user:User):
-        del self._cache[user.id]
-        del self._tg_id_map[user.tg_id]
-        del self._chat_tg_map[(user.chat_id, user.tg_id)]
+        print(f"cdlog clear_user_cache {user.tg_id}")
+        self._cache.pop(user.id, None)
+        self._tg_id_map.pop(user.tg_id, None)
+        self._chat_tg_map.pop((user.chat_id, user.tg_id), None)
 
     async def get_user(self, tg_id: Optional[int] = None, 
                        chat_id: Optional[int] = None,

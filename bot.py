@@ -1,17 +1,14 @@
-from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from features.battles.data.repository.gino_monsters_repository import GinoMonstersRepository
-from apps.tg_bot.providers.notification_provider import TelegramNotificationProvider
 from features.store.data.repository.gino_store_repository import GinoStoreRepository
 from apps.tg_bot.middlewares.registration_middleware import RegistrationMiddleware
+from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.providers.scheduler_provider import SchedulerTelegramProvider
 from apps.tg_bot.middlewares.captcha_middleware import CaptchaMiddleware
 import apps.tg_bot.handlers.create_sticker_set as create_sticker_set
 import apps.tg_bot.handlers.edit_sticker_set as edit_sticker_set
 from core.services.apscheduler.scheduler_main import Scheduler
-from features.game_engine.domain.game_engine import GameEngine
-from features.battles.game_controller import GameController
 from core.services.data_base.db_model import on_startup
 import apps.tg_bot.handlers.interactive as interactive
 import apps.tg_bot.handlers.gamba_house as gamba_house
@@ -44,9 +41,6 @@ user_repository = GinoUserRepository()
 store_repository = GinoStoreRepository()
 settings_repository = GinoBotSettingsRepository()
 api_to_bot_notifier = ApiToBotNotifier()
-game_engine = GameEngine(settings_repository, 
-                         user_repository, 
-                         TelegramNotificationProvider(bot))
 
 async def main():
     dp = Dispatcher()
@@ -69,8 +63,7 @@ async def main():
     dp.message.outer_middleware(RegistrationMiddleware())
     dp.message.outer_middleware(CaptchaMiddleware())
     await on_startup(dp)
-    await game_engine.start()
-    dp['game_engine'] = game_engine
+    dp['api_to_bot_notifier'] = api_to_bot_notifier
     await dict.init()
     asyncio.create_task(api_to_bot_notifier.redis_listener())
     await Scheduler.sql_alchemy(event_handler.handle_event,

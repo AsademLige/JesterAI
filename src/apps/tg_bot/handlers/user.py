@@ -1,5 +1,5 @@
+from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
-from features.game_engine.domain.game_engine import GameEngine
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from features.items.data.models.inventory_item_dto import InventoryItem
@@ -17,8 +17,8 @@ from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
 from aiogram.types import Message
+from datetime import datetime
 from aiogram import Router, F
-from curses import has_key
 from typing import List
 from aiogram import Bot
 
@@ -50,12 +50,15 @@ async def pencil_change(message: Message, state: FSMContext):
 ###Получение информации о пользователе
 @rt.message(StateFilter(None), Command(cn.me))
 async def user_information(message: Message, 
-                           state: FSMContext, game_engine:GameEngine):
+                           state: FSMContext, api_to_bot_notifier:ApiToBotNotifier):
     await message.delete()
     user: User = await repository.get_user(message.from_user.id, message.chat.id)
     await state.update_data(user=user)
 
-    result = await user_mr.get_menu(user, game_engine.get_energy_restore_time(user))
+    timer = await api_to_bot_notifier.get_timer_from_api(user.tg_id)
+
+
+    result = await user_mr.get_menu(user, datetime.fromtimestamp(timer["restore_at"]) if timer["restore_at"] else None)
 
     answer = await bot.send_message(user.chat_id, result["msg"],
                          reply_markup=interactive_kb.user_information_buttons(user),

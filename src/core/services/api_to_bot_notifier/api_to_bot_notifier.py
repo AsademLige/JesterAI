@@ -7,6 +7,7 @@ from aiogram.enums import ParseMode
 from redis.asyncio import Redis
 from typing import Optional
 from aiogram import Bot
+from uuid import uuid4
 import asyncio
 import logging
 import json
@@ -28,9 +29,28 @@ class ApiToBotNotifier:
             self.bot = Bot(token=self.prefs.bot_token)
             self.battle_repo = GinoBattleRepository()
             self.user_repo = GinoUserRepository()
+            self.pending_messages = {}
+            self._pending_requests = {}
             # Формат: { user_tg_id: {"message_id": int, "chat_id": int} }
             self.pending_messages = {}
             self._initialized = True
+
+    async def get_timer_from_api(self, tg_id: int):
+        redis_client = Redis(host='redis-broker', port=6379, decode_responses=True)
+        request_id = uuid4().hex 
+    
+        future = asyncio.get_running_loop().create_future()
+        self._pending_requests[request_id] = future 
+        
+        # Отправляем вопрос в API
+        await redis_client.publish("api_commands", json.dumps({
+            "action": "get_energy_timer",
+            "tg_id": tg_id,
+            "request_id": request_id
+        }))
+        
+        result = await future 
+        return result
 
     async def redis_listener(self):
         redis_client = Redis(host='redis-broker', port=6379, decode_responses=True)
@@ -69,6 +89,13 @@ class ApiToBotNotifier:
         except json.JSONDecodeError as e:
             logger.error(f"JSON parse error: {e}, raw data: {raw_data}")
             return
+
+        request_id = log_data.get("request_id")
+        if request_id and request_id in self._pending_requests:
+            future = self._pending_requests.pop(request_id)
+            if not future.done():
+                future.set_result(log_data)
+            return
         
         action = log_data.get("action")
         user_tg_id = log_data.get("user_tg_id")
@@ -84,6 +111,8 @@ class ApiToBotNotifier:
         
         if action == "battle_start":
             await self._handle_battle_start(user)
+        elif action == "battle_restart":    
+            await self._handle_battle_restart_message(user)
         elif action == "battle_end_message":
             await self._handle_battle_end_message(user, log_data)
         elif action == "notification":
@@ -94,6 +123,7 @@ class ApiToBotNotifier:
     async def _handle_battle_start(self, user: User):
         """Удаляем отслеживаемое сообщение при старте боя"""
         try:
+            self.user_repo.clear_user_cache(user)
             tracked = self.pending_messages.pop(user.tg_id, None)
             
             if tracked:
@@ -111,19 +141,24 @@ class ApiToBotNotifier:
         except Exception as e:
             logger.error(f"Error in battle_start handler: {e}", exc_info=True)
 
+    async def _handle_battle_restart_message(self, user: User, log_data: dict):
+        """Просто отправляет готовое сообщение, сформированное в API"""
+        self.user_repo.clear_user_cache(user)
+
     async def _handle_battle_end_message(self, user: User, log_data: dict):
         """Просто отправляет готовое сообщение, сформированное в API"""
         text = log_data.get("text", "Бой завершен!")
+        self.user_repo.clear_user_cache(user)
         await self._send_message(user, text, delete_after=30)
 
     async def _handle_notification(self, user: User, log_data: dict):
         if (log_data.get("text")):
-            await self._send_message(user, log_data["text"], delete_after=log_data["delete_delay"])
+            await self._send_message(user, log_data["text"], delete_after=log_data["delete_delay"], private = True)
 
-    async def _send_message(self, user: User, text: str, delete_after: Optional[int] = None):
+    async def _send_message(self, user: User, text: str, delete_after: Optional[int] = None, private:bool = False):
         try:
             message = await self.bot.send_message(
-                user.chat_id,
+                user.chat_id if (not private) else user.tg_id,
                 text,
                 parse_mode=ParseMode.HTML
             )
@@ -142,3 +177,30 @@ class ApiToBotNotifier:
             await message.delete()
         except Exception as e:
             logger.debug(f"Could not delete message: {e}")
+
+    async def engine_call(self, action: str, payload: dict, timeout: float = 3.0) -> Optional[dict]:
+        """
+        Отправляет запрос в API через Redis-канал 'api_commands'
+        и ждёт ответа в канале 'bot_notifications'.
+        """
+        request_id = uuid4().hex
+        future = asyncio.get_running_loop().create_future()
+        self._pending_requests[request_id] = future
+
+        try:
+            await self._redis.publish("api_commands", json.dumps({
+                "action": action,
+                "request_id": request_id,
+                **payload
+            }, ensure_ascii=False))
+
+            return await asyncio.wait_for(future, timeout)
+
+        except asyncio.TimeoutError:
+            logger.warning(f"engine_call timeout: action={action}, payload={payload}")
+            return None
+        except Exception as e:
+            logger.error(f"engine_call error: {e}", exc_info=True)
+            return None
+        finally:
+            self._pending_requests.pop(request_id, None)

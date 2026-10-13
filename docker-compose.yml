@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   redis-broker:
     image: redis:7-alpine
@@ -20,9 +18,8 @@ services:
   bot:
     build: .
     restart: always
-    env_file:
-      - .env
+    env_file: .env
     volumes:
-      - /usr/local/jester/JesterAI/media:/usr/local/jester/JesterAI/media
+      - ./media:/usr/local/jester/JesterAI/media
     environment:
       PYTHONUNBUFFERED: 1

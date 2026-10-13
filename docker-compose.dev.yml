@@ -1,0 +1,36 @@
+services:
+  api:
+    volumes:
+      - ./src:/app/src
+    environment:
+      - DEBUG=1
+      - ENVIRONMENT=development
+
+  bot:
+    volumes:
+      - ./media:/usr/local/jester/JesterAI/media
+
+  frontend:
+    image: python:3.11-alpine
+    working_dir: /app
+    volumes:
+      - ./src/core/services/mini_app_fighting:/app
+    ports:
+      - "5173:5173"
+    command: python3 -m http.server 5173
+    restart: unless-stopped
+
+  cloudflared-api:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://api:8000
+    depends_on:
+      - api
+
+  cloudflared-frontend:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://frontend:5173
+    depends_on:
+      - frontend
+      - api

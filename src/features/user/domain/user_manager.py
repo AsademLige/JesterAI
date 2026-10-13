@@ -35,7 +35,7 @@ class UserManager:
         else:
             return {"error": "что-то пошло не по плану..."}
         
-    async def get_menu(self, user:User, energy_restore_time:Optional[datetime]):
+    async def get_menu(self, user:User, energy_restore_time:Optional[datetime] = None):
         place_in_top:int = await self.repo.get_place_in_top_by_member(user.tg_id, user.chat_id)
         settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
         

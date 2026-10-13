@@ -1,12 +1,11 @@
-from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
-from core.data.data_base import DataBase
-from aiogram.fsm.context import FSMContext
-from core.consts.dictionary import Dictionary
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
-from core.utils.utils import Utils
+from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
+from core.consts.dictionary import Dictionary
+from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
 from aiogram.types import CallbackQuery
 from core.consts.config import Prefs
+from core.utils.utils import Utils
 
 from aiogram import Router, F
 from aiogram import Bot

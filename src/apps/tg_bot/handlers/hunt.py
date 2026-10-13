@@ -54,7 +54,11 @@ async def hunt_init(callback_query: CallbackQuery):
         "user_tg_id": user.tg_id
     }, ensure_ascii=False))
 
-    await message.delete()
+    try:
+        await message.delete()
+    except:
+        pass
+    
     
     link_message = await bot.send_message(
         callback_query.message.chat.id, 
