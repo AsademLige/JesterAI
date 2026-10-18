@@ -3,10 +3,11 @@ from features.user.data.repository.gino_user_repository import GinoUserRepositor
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from apps.tg_bot.keyboards.hub_keyboard import hunt_button
 from features.items.items_manager import ItemsManager
+from aiogram.types import CallbackQuery, FSInputFile
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from aiogram.filters import StateFilter
-from aiogram.types import CallbackQuery
+from core.consts.consts import Consts
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
@@ -15,6 +16,7 @@ from aiogram import Router, F
 from typing import Optional
 from aiogram import Bot
 import json
+import os
 
 prefs = Prefs()
 dictionary = Dictionary()
@@ -58,11 +60,13 @@ async def hunt_init(callback_query: CallbackQuery):
         await message.delete()
     except:
         pass
-    
-    
-    link_message = await bot.send_message(
-        callback_query.message.chat.id, 
-        "🏹 В воздухе витает чей-то запах...", 
+
+    photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"hunt.webp"))
+
+    link_message = await bot.send_photo(
+        callback_query.message.chat.id,
+        photo,
+        caption="<blockquote>🏹 В воздухе витает чей-то запах...</blockquote>", 
         reply_markup=hunt_button(),
         parse_mode=ParseMode.HTML
     )

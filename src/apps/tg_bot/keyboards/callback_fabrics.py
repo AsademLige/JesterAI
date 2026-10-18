@@ -23,6 +23,7 @@ class GladiatorsCF(CallbackData, prefix="fab_gladiators"):
 
 class TrashLotoCF(CallbackData, prefix="fab_trash_loto"):
     action: str
+    bet:int = 5
     user_id: Optional[int] = None
 
 class GambaChoiceCF(CallbackData, prefix="fab_gamba_choice"):

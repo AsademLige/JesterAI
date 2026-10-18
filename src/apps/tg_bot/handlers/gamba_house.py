@@ -1,5 +1,3 @@
-from typing import List
-
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, TrashLotoCF
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.gamba_house.domain.trash_loto_manager import TrashLotoManager
@@ -17,11 +15,11 @@ from aiogram.fsm.context import FSMContext
 from core.data.data_base import DataBase
 from core.consts.consts import Consts
 from core.consts.config import Prefs
-from core.utils.utils import Utils
 from aiogram.enums import ParseMode
+from core.utils.utils import Utils
 from aiogram.types import Message
-from datetime import timedelta
 from aiogram import Router, F
+from typing import List
 from aiogram import Bot
 import asyncio
 import os
@@ -93,12 +91,12 @@ async def dice_game(callback: CallbackQuery, callback_data: DiceGameCF, state: F
                                         parse_mode=ParseMode.HTML)
         return await Utils.delete_old_message([answer], 10)
 
-    await callback.message.edit_caption( dict.dice_game_start, 
+    photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"dices.webp"))
+    await bot.send_photo(callback.message.chat.id, photo, caption=dict.dice_game_start, 
                      reply_markup = gamba_house_kb.dice_choice(user),
                      parse_mode=ParseMode.HTML)
+    await callback.message.delete()
     await state.update_data(user = user)
-
-    await Utils.delete_old_message([callback.message], 15)
 
 ###Дайсы крутятся, монетки мутятся
 @rt.callback_query(DiceGameCF.filter(F.action))
@@ -107,15 +105,33 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
     if (not 'user' in state_data): return
     user:User = state_data["user"]
 
+    await callback.message.delete()
+
     result = await dice_manager.play(user, callback_data.action, rp)
 
     msg = await bot.send_message(user.chat_id, result["msg"], parse_mode=ParseMode.HTML)    
     messages_to_delete = result["roll_result"] + [msg]
     await Utils.delete_old_message(messages_to_delete, 10)
 
+###Меню треш лото
+@rt.callback_query(TrashLotoCF.filter(F.action == "trash_loto_menu"))
+async def trash_loto_menu(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):
+    state_data = await state.get_data()
+    if (not 'user' in state_data): return
+    user: User = state_data["user"]
+
+    if (user.tg_id != callback_data.user_id):
+        return
+    
+    photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"trash_loto.webp"))
+    await bot.send_photo(callback.message.chat.id, photo, caption=dict.trash_loto_game_start(user),
+                         reply_markup = gamba_house_kb.trash_loto_menu(user),
+                         parse_mode=ParseMode.HTML)
+    await callback.message.delete()
+
 ###Бесполезная трата денег
 @rt.callback_query(TrashLotoCF.filter(F.action == "trash_loto"))
-async def trash_loto(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):
+async def trash_loto(callback: CallbackQuery, callback_data: TrashLotoCF, state: FSMContext):
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user:User = state_data["user"]
@@ -127,7 +143,7 @@ async def trash_loto(callback: CallbackQuery, callback_data: DiceGameCF, state: 
         await RightsController.check_delete_messages_rights(callback.message.chat.id))
     await callback.message.delete()
     
-    loto_cost:int = 5
+    loto_cost:int = callback_data.bet
 
     if (user.money < loto_cost):
         answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
@@ -136,19 +152,19 @@ async def trash_loto(callback: CallbackQuery, callback_data: DiceGameCF, state: 
         return
     
     result = await trash_loto_manager.play(user, loto_cost, rp)
-        
+    
     await asyncio.sleep(3) 
 
     if (result["error"]):
         msg = await bot.send_message(user.chat_id, dict.trash_loto_error, 
                                         parse_mode=ParseMode.HTML)
     else:
-        msg = await bot.send_message(user.chat_id, result["slot_result_msg"],
+        msg = await bot.send_message(user.chat_id, result["slot_result_msg"] + f"\n<code>Кошель: {dict.money_wrapper(user.money, False)}</code>",
+                                        reply_markup=gamba_house_kb.trash_loto_again(user, loto_cost),
                                         parse_mode=ParseMode.HTML)
     
     if (have_delete_rights):
-        await Utils.delete_old_message([] if (result["is_major_win"] or result["is_jackpot"]) 
-                                       else [result["slot_msg"], msg], 5)
+        await Utils.delete_old_message([result["slot_msg"], msg], 15)
         
 # ###Гладиаторы!
 # @rt.callback_query(GladiatorsCF.filter(F.action == "gladiators"))

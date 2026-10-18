@@ -35,55 +35,47 @@ class TrashLotoManager:
 
         # 777
         if is_jackpot:
-            award =  random.randrange(20, 30)
-            if (await self.user_repo.update(user, money=user.money + award - bet)):
-                slot_result_msg = self.dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award)
-                await self.db.add_win_log(user.id, event_type=0, money=award)
-            else: error = self.dict.trash_loto_error
+            award =  random.randrange(4*bet, 6*bet)
+            slot_result_msg = self.dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award)
+            await self.db.add_win_log(user.id, event_type=0, money=award)
         #тройная комбинаций
         elif is_major_win:
+            multiplier:int = bet // 5 + 1
             action = random.choices([1, 2])
             if (action[0] == 1):
-                length = random.randrange(2, 3)
-                if (await self.user_repo.update(user, length=user.length + length, money=user.money - bet)):
-                    slot_result_msg = self.dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length)
-                    await self.db.add_win_log(user.id, event_type=2, length=length)
-                else: error = self.dict.trash_loto_error
+                length = random.randrange(1 * multiplier, 2 * multiplier)
+                slot_result_msg = self.dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length)
+                await self.db.add_win_log(user.id, event_type=2, length=length)
             else:
-                award =  random.randrange(10, 15)
-                if (await self.user_repo.update(user, money=user.money + award - bet)):
-                    slot_result_msg = self.dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award)
-                    await self.db.add_win_log(user.id, event_type=2, money=award)
-                else: error = self.dict.trash_loto_error
+                award =  random.randrange(2 * bet, 3 * bet)
+                slot_result_msg = self.dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award)
+                await self.db.add_win_log(user.id, event_type=2, money=award)
 
         # Проверка на одинаковые крайние
         elif is_consolation:
-            award = random.randrange(1, 5)
-            if (await self.user_repo.update(user, money=user.money + award - bet)):
-                slot_result_msg = self.dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award)
-                await self.db.add_win_log(user.id, event_type=3, money=award)
-            else: error = self.dict.trash_loto_error
+            multiplier:int = bet // 5 + 1
+            award = random.randrange(1*multiplier, 5*multiplier)
+            slot_result_msg = self.dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award)
+            await self.db.add_win_log(user.id, event_type=3, money=award)
 
         # Проверка на любые две одинаковые подряд
         elif is_minor_win:
             action = random.choices([1, 2])
+            multiplier:int = bet // 5 + 1
             if (action[0] == 1):
-                length = 1
-                if (await self.user_repo.update(user, length=user.length + length, money=user.money - bet)):
-                    slot_result_msg = self.dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length)
-                    await self.db.add_win_log(user.id, event_type=1, length=length)
-                else: error = self.dict.trash_loto_error
+                length = 1 * multiplier
+                slot_result_msg = self.dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length)
+                await self.db.add_win_log(user.id, event_type=1, length=length)
             else:
-                award =  random.randrange(5, 10)
-                if (await self.user_repo.update(user, money=user.money + award - bet)):
-                    slot_result_msg = self.dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award)
-                    await self.db.add_win_log(user.id, event_type=1, money=award)
-                else: error = self.dict.trash_loto_error
+                award =  random.randrange(bet + 1, bet * 2)
+                slot_result_msg = self.dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award)
+                await self.db.add_win_log(user.id, event_type=1, money=award)
         else:
             slot_result_msg = self.dict.trash_loto_lose(user.tg_name, user.tg_id)
         
-        #TODO:объединить в один запрос
-        await self.user_repo.update(user, 
+        await self.user_repo.update(user,
+                                length=user.length + length,
+                                money=user.money + award - bet,
                                 trash_loto_spins= user.trash_loto_spins + 1,
                                 trash_loto_money_wins=user.trash_loto_money_wins + award,
                                 trash_loto_length_wins=user.trash_loto_length_wins + length,

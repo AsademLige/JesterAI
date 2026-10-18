@@ -5,7 +5,7 @@ import sqlalchemy as sa
 class BattleORM(BaseModel):
     __tablename__ = "battles"
     id = sa.Column(sa.Integer, primary_key=True)
-    user_id = sa.Column(sa.Integer) 
+    user_id = sa.Column(sa.BigInteger) 
     started_timestamp = sa.Column(sa.Integer)
     
 

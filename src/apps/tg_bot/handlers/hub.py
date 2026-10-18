@@ -32,7 +32,6 @@ async def show_hub(message: Message, state: SSLContext):
 ###Отправиться на Рыбалку
 @rt.callback_query(StateFilter(None), F.data == "hub_fishing")
 async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
-
     message = callback_query.message
         
     user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
@@ -50,3 +49,8 @@ async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
     link_message = await bot.send_message(callback_query.message.chat.id, f"🎣 <a href='tg://user?id={user.tg_id}'> Вперед, на рыбалку!</a>", 
                                             reply_markup=fishing_button(""),
                                             parse_mode=ParseMode.HTML)
+
+###Выход
+@rt.callback_query(StateFilter(None), F.data == "hub_fishing")
+async def exit(callback_query: CallbackQuery, state: SSLContext):
+    await callback_query.message.delete()

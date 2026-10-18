@@ -17,16 +17,16 @@ class GambaHouseKeyboard():
         builder = InlineKeyboardBuilder()
 
         builder.add(InlineKeyboardButton(text="🎰 Треш-лото",
-                callback_data=TrashLotoCF(action="trash_loto",
+                callback_data=TrashLotoCF(action="trash_loto_menu",
                                          user_id=user.tg_id).pack()))
         
         builder.add(InlineKeyboardButton(text="🎲 Кубики",
                 callback_data=DiceGameCF(action="dice_game",
                                          user_id=user.tg_id).pack()))
         
-        builder.add(InlineKeyboardButton(text="🏟️ Арена",
-                callback_data=GladiatorsCF(action="gladiators",
-                                         user_id=user.tg_id).pack()))
+        # builder.add(InlineKeyboardButton(text="🏟️ Арена",
+        #         callback_data=GladiatorsCF(action="gladiators",
+        #                                  user_id=user.tg_id).pack()))
         
         builder.add(InlineKeyboardButton(text=dict.exit,
                 callback_data=GambaChoiceCF(action="exit",
@@ -57,6 +57,41 @@ class GambaHouseKeyboard():
         builder.add(InlineKeyboardButton(text=dict.exit,
             callback_data=DiceGameCF(action="exit",
                                      user_id=user.tg_id).pack()))
+        
+        builder.adjust(3, 2) 
+        return builder.as_markup()
+
+    def trash_loto_menu(self, user:User) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+
+        builder.add(InlineKeyboardButton(text=f"5💰",
+                                        callback_data=TrashLotoCF(action="trash_loto",
+                                                                    user_id=user.tg_id).pack()))
+
+        builder.add(InlineKeyboardButton(text=f"10💰",
+                                callback_data=TrashLotoCF(action="trash_loto",
+                                                        bet=10,
+                                                        user_id=user.tg_id).pack()))
+        
+        builder.add(InlineKeyboardButton(text=f"20💰",
+                                callback_data=TrashLotoCF(action="trash_loto",
+                                                        bet=20,
+                                                        user_id=user.tg_id).pack()))
+
+        builder.add(InlineKeyboardButton(text=dict.exit,
+                    callback_data=DiceGameCF(action="exit",
+                                             user_id=user.tg_id).pack()))
+
+        builder.adjust(3, 2) 
+        return builder.as_markup()
+
+    def trash_loto_again(self, user:User, bet:int) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        
+        builder.add(InlineKeyboardButton(text=f"Еще! (-{bet}💰)",
+                        callback_data=TrashLotoCF(action="trash_loto",
+                                                  bet=bet,
+                                                  user_id=user.tg_id).pack()))
         
         builder.adjust(3, 2) 
         return builder.as_markup()

@@ -209,6 +209,8 @@ class Dictionary():
     
     dice_game_start:str = "<blockquote>🎲 Кубики!</blockquote>\n Сделай свой прогноз:"
 
+    __trash_loto_game_start:str = "<blockquote>🎰 Гамба! Кошель: {{money}}</blockquote>\n Сделай ставку:"
+
     dice_game_rules:str = "<b>🎲 Выше или ниже семи</b>\n"\
                           "Игрок перед броском делает «ставку»: будет ли сумма двух кубиков меньше 7, больше 7 или ровно 7\n"\
                           "<b>Выигрыш:</b> \n"\
@@ -477,6 +479,11 @@ class Dictionary():
         return tp.text_replacement(self.__gamba_house_description, {
             "total":self.money_wrapper(total_gamba_house_win, False),
             "user":self.get_user_link(user.tg_name, user.tg_id),
+        })
+    
+    def trash_loto_game_start(self, user:User) -> str:
+        return tp.text_replacement(self.__trash_loto_game_start, {
+            "money":self.money_wrapper(user.money, False),
         })
     
     def hunt_monster_meeting(self, monster:Monster, strategy:str, fighting_style_visual:str) -> str:
