@@ -69,7 +69,6 @@ class GinoUserRepository(IUserRepository):
         self._tg_id_map.clear()
 
     def clear_user_cache(self, user:User):
-        print(f"cdlog clear_user_cache {user.tg_id}")
         self._cache.pop(user.id, None)
         self._tg_id_map.pop(user.tg_id, None)
         self._chat_tg_map.pop((user.chat_id, user.tg_id), None)
@@ -330,6 +329,45 @@ class GinoUserRepository(IUserRepository):
             return True
         except Exception as error:
             self.logger.send_log("user_repo", logging.ERROR, f"item transaction error: {error}")
+            return False
+
+    async def user_sell_item_transaction(self, user: User, item_id: int, refund_price: int, quantity: int = 1) -> bool:
+        if quantity <= 0:
+            return False
+
+        try:
+            existed_item: UserInventoryLinkORM = await UserInventoryLinkORM.\
+                query.where(and_(UserInventoryLinkORM.product_id == item_id,
+                                 UserInventoryLinkORM.user_id == user.id)).gino.first()
+            
+            if not existed_item or existed_item.quantity < quantity:
+                return False
+
+            new_quantity = existed_item.quantity - quantity
+
+            if new_quantity > 0:
+                await UserInventoryLinkORM.update.where(
+                    and_(UserInventoryLinkORM.product_id == item_id, UserInventoryLinkORM.user_id == user.id)
+                ).values(quantity=new_quantity).gino.status()
+            else:
+                await UserInventoryLinkORM.delete.where(
+                    and_(UserInventoryLinkORM.product_id == item_id, UserInventoryLinkORM.user_id == user.id)
+                ).gino.status()
+
+            inventory_item = next((i for i in user.inventory if i.id == item_id), None)
+            if inventory_item:
+                if new_quantity > 0:
+                    inventory_item.quantity = new_quantity
+                else:
+                    user.inventory.remove(inventory_item)
+
+            total_refund = refund_price
+            user.money += total_refund
+            await self.update(user, money=user.money)
+
+            return True
+        except Exception as error:
+            self.logger.send_log("user_repo", logging.ERROR, f"item sell transaction error: {error}")
             return False
         
     async def update_users_money_by_chat(self, chat_id: int, money:int) -> bool:

@@ -2,7 +2,7 @@ from features.game_engine.data.repository.bot_settings_repository import IBotSet
 from features.game_engine.data.models.bot_settings_orm import BotSettingsORM
 from features.game_engine.data.models.bot_settings_dto import BotSettings
 from core.utils.app_herald import AppHerald
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from cachetools import TTLCache
 from sqlalchemy import select
 import logging
@@ -28,6 +28,44 @@ class GinoBotSettingsRepository(IBotSettingsRepository):
         if chat_id in self._cache:
             return self._cache[chat_id]
         return None
+
+    async def get_all(self) -> List[BotSettings]:
+        try:
+            query = select([BotSettingsORM.chat_id]).select_from(BotSettingsORM)
+                
+            rows = await query.gino.all()
+            if not rows:
+                return []
+
+            result: List[BotSettings] = []
+            ids_to_fetch_from_db: List[int] = []
+
+            for row in rows:
+                settings_chat_id = row[0]
+
+                cache_settings = self._get_cache_settings(settings_chat_id)
+                
+                if cache_settings:
+                    result.append(cache_settings)
+                else:
+                    ids_to_fetch_from_db.append(settings_chat_id)
+
+            if ids_to_fetch_from_db:
+                db_query = (
+                    select([BotSettingsORM])
+                    .where(BotSettingsORM.chat_id.in_(ids_to_fetch_from_db))
+                )
+                db_rows = await db_query.gino.load((BotSettingsORM)).all()
+                
+                for db_chat_settings in db_rows:
+                    chat_settings = BotSettings.model_validate(db_chat_settings)
+                    self._add_to_cache(chat_settings)
+                    result.append(chat_settings)
+
+            return result
+        except Exception as error:
+            self.logger.send_log("settings_repo", logging.ERROR, f"settings get error: {error}")
+            return None
     
     async def get_settings(self, chat_id:int, chat_full_name:str = "Unnamed") -> BotSettings:
         try:

@@ -40,27 +40,31 @@ trash_loto_manager = TrashLotoManager(db, dict)
 ###Открываем меню гамбы
 @rt.message(StateFilter(None), Command(cn.gamba_house))
 async def gamba_house(message: Message, state: FSMContext):
-    user:User = await user_repo.get_user(message.from_user.id, message.chat.id)
-    
+    await process_gamba_house(message.from_user.id, message, state)
+
+async def process_gamba_house(user_tg_id: int, message: Message, state: FSMContext):
+    user:User = await user_repo.get_user(user_tg_id)
+        
     await state.update_data(user=user)
     answer:Message
     await message.delete()
 
     total:int = 0
 
-    users_in_chat: List[User] = await user_repo.get_users(message.chat.id)
+    users: List[User] = await user_repo.get_users()
 
-    for chat_user in users_in_chat:
+    for chat_user in users:
         total += chat_user.trash_loto_spins * 5 - chat_user.trash_loto_money_wins
         total += chat_user.gladiators_bet - chat_user.gladiators_bet_win
 
     photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"gamba_house.webp"))
 
-    answer = await bot.send_photo(user.chat_id, photo, caption=dict.gamba_house_description(total, user),
+    answer = await bot.send_photo(message.chat.id, photo, caption=dict.gamba_house_description(total, user),
                                     reply_markup=gamba_house_kb.gamba_choice(user),
                                     parse_mode=ParseMode.HTML)
     
     await Utils.delete_old_message([answer], 15)
+
 
 @rt.callback_query(GambaChoiceCF.filter(F.action == "exit"))
 async def gamba_house_exit(callback: CallbackQuery, callback_data: DiceGameCF, state: FSMContext):

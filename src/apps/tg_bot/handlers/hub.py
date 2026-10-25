@@ -1,5 +1,6 @@
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.hub_keyboard import get_hub_keyboard, fishing_button
+from apps.tg_bot.handlers.gamba_house import process_gamba_house
 from aiogram.types import CallbackQuery, Message, FSInputFile
 from features.user.data.dtos.user_dto import User
 from aiogram.filters import Command, StateFilter
@@ -29,6 +30,11 @@ async def show_hub(message: Message, state: SSLContext):
 
     await Utils.delete_old_message([message], 30)
 
+@rt.callback_query(StateFilter(None), F.data == "gamba_house")
+async def gamba_house_callback(callback: CallbackQuery, state: SSLContext):
+    await process_gamba_house(user_tg_id=callback.from_user.id, message=callback.message, state=state)
+    await callback.answer()
+
 ###Отправиться на Рыбалку
 @rt.callback_query(StateFilter(None), F.data == "hub_fishing")
 async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
@@ -51,6 +57,6 @@ async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
                                             parse_mode=ParseMode.HTML)
 
 ###Выход
-@rt.callback_query(StateFilter(None), F.data == "hub_fishing")
+@rt.callback_query(StateFilter(None), F.data == "exit")
 async def exit(callback_query: CallbackQuery, state: SSLContext):
     await callback_query.message.delete()

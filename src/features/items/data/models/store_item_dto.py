@@ -5,7 +5,11 @@ from features.items.data.models.item_orm import ItemORM
 from typing import Optional
 
 class StoreItem(BaseItem):
+    #Наличие на складе, используется для симулирования ситуации,
+    #когда в наличии в какой-то день отсутствует товар
     warehouse_quantity: Optional[int] = None
+
+    #Максимальное количество, используется при обновлении
     max_capacity: Optional[int] = None
     
     discount_percent: int = 0

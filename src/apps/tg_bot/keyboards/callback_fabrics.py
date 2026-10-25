@@ -32,6 +32,7 @@ class GambaChoiceCF(CallbackData, prefix="fab_gamba_choice"):
 
 class InventoryCF(CallbackData, prefix="fab_inventory"):
     action: str
+    quantity:int = 1
     item_id: Optional[int] = None
     user_id: Optional[int] = None
 
@@ -46,4 +47,6 @@ class HelpCF(CallbackData, prefix="fab_help"):
 
 class StoreCF(CallbackData, prefix="fab_store"):
     action: str
+    quantity:int = 1
+    user_id: Optional[int] = None
     id: Optional[int] = None

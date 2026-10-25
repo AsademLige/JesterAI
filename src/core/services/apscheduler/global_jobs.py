@@ -78,23 +78,14 @@ class GlobalJobs():
         """
         Общий метод выдачи монеток всем игрокам
         """
-        users: List[User] = await self.user_repo.get_users()
-        indexed_users: Dict[int, List[User]] = {}
+        chat_settings:List[BotSettings] = await self.settings_repo.get_all()
 
-        for user in users:
-            if (user.chat_id is not None):
-                if (user.chat_id not in indexed_users):
-                    indexed_users[user.chat_id] = []
-                indexed_users[user.chat_id].append(user)
-
-        for chat_id in indexed_users:
+        for settings in chat_settings:
             try:
-                settings:BotSettings = await self.settings_repo.get_settings(chat_id)
                 if (not settings.events_enabled): continue
-
-                await self.user_repo.update_users_money_by_chat(chat_id, money)
-                
-                await notifier_func(chat_id, event, {"money": money})
+                await self.user_repo.update_users_money_by_chat(settings.chat_id, money)
+            
+                await notifier_func(settings.chat_id, event, {"money": money})
             except Exception as e:
                     self.logger.send_log("apscheduler", logging.WARNING, f"day_salary - {e}")
     
@@ -104,24 +95,15 @@ class GlobalJobs():
         Каждая группа получает своего победителя
         """
         users: List[User] = await self.user_repo.get_users(last_daily_draw_winner=False)
-        indexed_users: Dict[int, List[User]] = {}
-
-        for user in users:
-            if (user.chat_id is not None):
-                if (user.chat_id not in indexed_users):
-                    indexed_users[user.chat_id] = []
-                indexed_users[user.chat_id].append(user)
-
-        for chat_id in indexed_users:
+        chat_settings:List[BotSettings] = await self.settings_repo.get_all()
+                       
+        for settings in chat_settings:
             try:
-                settings:BotSettings = await self.settings_repo.get_settings(chat_id)
                 if (not settings.events_enabled): continue
 
-                if (not indexed_users[chat_id]): continue
-
-                sorted_users: List[User] = sorted(indexed_users[chat_id], 
-                                                    key=lambda u: u.length,
-                                                    reverse=True)
+                sorted_users: List[User] = sorted(users, 
+                                                key=lambda u: u.length,
+                                                reverse=True)
                 
                 draw_winner_index:int = 0
                 
@@ -130,7 +112,7 @@ class GlobalJobs():
                 else:
                     draw_winner_index = random.randrange(2, len(sorted_users))
                 
-                last_winner:Optional[User] = await self.user_repo.get_user(chat_id=chat_id, last_daily_draw_winner=True)
+                last_winner:Optional[User] = await self.user_repo.get_user(last_daily_draw_winner=True)
 
                 length_change:int = random.randrange(1, 3)
                 
@@ -141,7 +123,7 @@ class GlobalJobs():
                 if (last_winner is not None):
                     await self.user_repo.update(last_winner, last_daily_draw_winner = False)
                 
-                await notifier_func(chat_id, "day_draw", {"winner": sorted_users[draw_winner_index], "length_change": length_change})
+                await notifier_func(settings.chat_id, "day_draw", {"winner": sorted_users[draw_winner_index], "length_change": length_change})
             except Exception as e:
                 self.logger.send_log("apscheduler", logging.WARNING, f"day_draw - {e}")
 
@@ -150,24 +132,17 @@ class GlobalJobs():
         Ежедневное пополнение остатков магазина
         """
         try:
-            if (await self.store_repo.update_warehouse()):
+            out_of_stock = await self.store_repo.update_warehouse(out_of_stock_count=2)
+            if (out_of_stock):
                 await self.store_repo.deactivate_discounts()
                 items_discounts:List[StoreItem] = await self.store_repo.create_random_discount(2)
 
-                users: List[User] = await self.user_repo.get_users()
-                indexed_users: Dict[int, List[User]] = {}
-
-                for user in users:
-                    if (user.chat_id is not None):
-                        if (user.chat_id not in indexed_users):
-                            indexed_users[user.chat_id] = []
-                        indexed_users[user.chat_id].append(user)
-
-                for chat_id in indexed_users:
-                    settings = await self.settings_repo.get_settings(chat_id, "")
+                chat_settings:List[BotSettings] = await self.settings_repo.get_all()
+               
+                for settings in chat_settings:
                     if (not settings.events_enabled): continue
                     
-                    await notifier_func(chat_id, "warehouse_update", {"discounts": items_discounts})
+                    await notifier_func(settings.chat_id, "warehouse_update", {"discounts": items_discounts, "out_of_stock" : out_of_stock})
 
         except Exception as e:
             self.logger.send_log("apscheduler", logging.WARNING, f"warehouse_update - {e}")

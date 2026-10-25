@@ -8,7 +8,6 @@ from apps.tg_bot.keyboards.callback_fabrics import StoreCF
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
-from core.data.data_base import DataBase
 from aiogram.filters import StateFilter
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
@@ -25,17 +24,17 @@ interactive_kb = InteractiveKeyboard()
 user_repo:GinoUserRepository = GinoUserRepository()
 store_repo:GinoStoreRepository = GinoStoreRepository()
 store_kb = StoreKeyboard()
-db = DataBase()
 rt = Router()
-
-store_mr = StoreManager(db, dict, user_repo, store_repo)
 
 @rt.callback_query(StateFilter(None), F.data == "hub_store")
 async def store(callback_query: CallbackQuery, state: FSMContext):
     message = callback_query.message 
-    
+
+    store_mr = StoreManager(dict, user_repo, store_repo)
     user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
     result = await store_mr.openStore(user)
+
+    await state.update_data(store_mr=store_mr)
 
     if (result["error"]):
         answer = await message.answer(result["error"])
@@ -60,14 +59,17 @@ async def store(callback_query: CallbackQuery, state: FSMContext):
 @rt.callback_query(StoreCF.filter(F.action == "choice"))
 async def choice_product(callback: CallbackQuery, callback_data: StoreCF, state: FSMContext):
     answer:Message = None
+    state_data = await state.get_data()
+    if (not 'store_mr' in state_data): return
+    store_mr: StoreManager = state_data["store_mr"]
 
-    if (store_mr.customer.tg_id != callback.from_user.id):
+    if (store_mr.customer.tg_id != callback_data.user_id):
         return
     
     store_mr.select_product(callback_data.id)
 
     await callback.message.edit_caption(caption=dict.product_description(store_mr.selected_product),
-        reply_markup = store_kb.product_buying(store_mr.selected_product, store_mr.customer),
+        reply_markup = store_kb.product_buying(store_mr.selected_product, store_mr.customer, callback_data.quantity),
         parse_mode=ParseMode.HTML
     )
         
@@ -79,14 +81,19 @@ async def choice_product(callback: CallbackQuery, callback_data: StoreCF, state:
 async def buy_product(callback: CallbackQuery, callback_data: StoreCF, state: FSMContext):
     answer:Message = None
 
+    state_data = await state.get_data()
+    if (not 'store_mr' in state_data): return
+    store_mr: StoreManager = state_data["store_mr"]
+
     if (store_mr.customer.tg_id != callback.from_user.id):
         return
 
     await callback.message.delete()
 
-    result = await store_mr.buy_product()
+    result = await store_mr.buy_product(callback_data.quantity)
 
     answer = await bot.send_message(store_mr.customer.chat_id, result["msg"],
+                                        reply_markup= store_kb.buy_more(),
                                         parse_mode=ParseMode.HTML)
     store_mr.closeStore()
 
@@ -95,6 +102,10 @@ async def buy_product(callback: CallbackQuery, callback_data: StoreCF, state: FS
 
 @rt.callback_query(StoreCF.filter(F.action == "cancel"))
 async def cancel_choice_product(callback: CallbackQuery, callback_data: StoreCF, state: FSMContext):
+    state_data = await state.get_data()
+    if (not 'store_mr' in state_data): return
+    store_mr: StoreManager = state_data["store_mr"]
+    
     if (store_mr.customer.tg_id != callback.from_user.id):
         return
 
@@ -105,14 +116,21 @@ async def cancel_choice_product(callback: CallbackQuery, callback_data: StoreCF,
 
 @rt.callback_query(StoreCF.filter(F.action == "exit"))
 async def exit_store(callback: CallbackQuery, callback_data: StoreCF, state: FSMContext):
-    user:Optional[User] = await user_repo.get_user(store_mr.customer.tg_id, 
-                                           callback.message.chat.id)
-    answer:Message = None
+    state_data = await state.get_data()
+    if (not 'store_mr' in state_data): return
+    store_mr: StoreManager = state_data["store_mr"]
 
-    await callback.message.delete()
-    answer = await bot.send_message(user.chat_id, dict.store_exit(user),
-                                    parse_mode=ParseMode.HTML)
-    store_mr.closeStore()
+    try:
+        user:Optional[User] = await user_repo.get_user(store_mr.customer.tg_id, 
+                                            callback.message.chat.id)
+        answer:Message = None
 
-    if (answer):
-        await Utils.delete_old_message([answer], 5)
+        await callback.message.delete()
+        answer = await bot.send_message(user.chat_id, dict.store_exit(user),
+                                        parse_mode=ParseMode.HTML)
+        store_mr.closeStore()
+
+        if (answer):
+            await Utils.delete_old_message([answer], 5)
+    except:
+        await callback.message.delete()

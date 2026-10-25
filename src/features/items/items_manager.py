@@ -23,6 +23,7 @@ class ItemActions(Enum):
     add_length = "add_length"
     mark_user = "mark_user"
     effects = "effects"
+    energy = "energy"
     heal = "heal"
 
 class ItemsManager():
@@ -36,33 +37,42 @@ class ItemsManager():
         self.prefs = Prefs()
 
     async def use_item(self, user: User, item: InventoryItem, 
-                       target:Optional[User] = None) -> Optional[str]:
+                       target:Optional[User] = None, quantity:int = 1) -> Optional[str]:
         action = json.loads(item.action)
         effects = action[ItemActions.effects.name]
         user_link:str = self.dict.get_user_link(user.tg_name, user.tg_id)
         target_link:str = self.dict.get_user_link(target.tg_name, target.tg_id) if target else ""
         usage_result:str = ""
 
-        if (ItemActions.subtract_length.name in effects and
-            await self.length_change_effect(user, 
-                                                       target if target else user, item, 
-                                                       Utils.try_parse_int(effects[ItemActions.subtract_length.name]))):
+        if (ItemActions.subtract_length.name in effects):
+                length:int = Utils.try_parse_int(effects[ItemActions.subtract_length.name]) * quantity
+                await self.length_change_effect(user, target if target else user, item, length, quantity)
                 args = {"user_link1":user_link,
                         "user_link2":target_link,
                         "item_title":f"<code>{item.title}</code>",
-                        "length": self.dict.length_wrapper(Utils.try_parse_int(effects[ItemActions.subtract_length.name])),
+                        "length": self.dict.length_wrapper(length),
                         **self.dict.random_member()}
                 message = self.dict.length_decresc_target if target else self.dict.length_decresc
-                usage_result += f"{tp.text_replacement(message,args, recursive_parse_args=True)}\n"
+                usage_result += f"{tp.text_replacement(message, args, recursive_parse_args=True)}\n"
+
+        if (ItemActions.energy.name in effects):
+            energy:int = Utils.try_parse_int(effects[ItemActions.energy.name]) * quantity
+            await self.energy_change_effect(user, target if target else user, item, energy, quantity)
+            args = {"user_link1":user_link, 
+                    "user_link2":target_link,
+                    "item_title":f"<code>{item.title}</code>",
+                    "energy": energy,
+                    **self.dict.random_member()}
+            message = self.dict.energy_add_target if target else self.dict.energy_add
+            usage_result += f"{tp.text_replacement(message,args, recursive_parse_args=True)}\n"
             
-        if (ItemActions.add_length.name in effects and
-            await self.length_change_effect(user, 
-                                            target if target else user, item, 
-                                            Utils.try_parse_int(effects[ItemActions.add_length.name]))):
+        if (ItemActions.add_length.name in effects):
+            length:int = Utils.try_parse_int(effects[ItemActions.add_length.name]) * quantity
+            await self.length_change_effect(user, target if target else user, item, length, quantity)
             args = {"user_link1":user_link,
                     "user_link2":target_link,
                     "item_title":f"<code>{item.title}</code>",
-                    "length": self.dict.length_wrapper(Utils.try_parse_int(effects[ItemActions.add_length.name])),
+                    "length": self.dict.length_wrapper(length),
                     **self.dict.random_member()}
             message = self.dict.length_add_target if target else self.dict.length_add
             usage_result += f"{tp.text_replacement(message,args, recursive_parse_args=True)}\n"
@@ -96,8 +106,8 @@ class ItemsManager():
                 usage_result += f"🐀 Попытка кражи не удалась, {user_link} оказался нищуком!\n"
 
         if (ItemActions.steal_money.name in effects):
-            steal_count = Utils.try_parse_int(effects[ItemActions.steal_money.name])
-            if (await self.steal_money(user, target, item,steal_count)):
+            steal_count = Utils.try_parse_int(effects[ItemActions.steal_money.name]) * quantity
+            if (await self.steal_money(user, target, item, steal_count)):
                 args = {"user_link1":user_link,
                     "user_link2":target_link,
                     "item_title":f"<code>{item.title}</code>",
@@ -113,35 +123,21 @@ class ItemsManager():
             usage_result += f"🦠 {user_link} вешает метку на {target_link if target_link else user_link}"
         
         return usage_result
-        
-    
-    def is_heal_item(self, item:InventoryItem) -> bool:
-        #TODO:Перенести в модель
-        action = json.loads(item.action)
-        effects = action[ItemActions.effects.name]
-        return ItemActions.heal.name in effects
-    
-    def is_steal_item(self, item:InventoryItem) -> bool:
-        #TODO:Перенести в модель
-        action = json.loads(item.action)
-        effects = action[ItemActions.effects.name]
-        return ItemActions.steal_item.name in effects or\
-                ItemActions.steal_money.name in effects
 
-    async def use_heal_item(self, user: User, item: InventoryItem, 
-                       target:BattleUnit) -> Optional[Tuple[str, int]]:
-        action = json.loads(item.action)
-        effects = action[ItemActions.effects.name]
-        usage_result:str = ""
+    # async def use_heal_item(self, user: User, item: InventoryItem, 
+    #                    target:BattleUnit) -> Optional[Tuple[str, int]]:
+    #     action = json.loads(item.action)
+    #     effects = action[ItemActions.effects.name]
+    #     usage_result:str = ""
 
-        if (item.quantity > 0 and ItemActions.heal.name in effects and
-            await self.heal_effect(user, target, item, effects[ItemActions.heal.name])):
-            usage_result += f'💊 Предмет <code>"{item.title}"</code> восстановил вам <b>{effects[ItemActions.heal.name]}HP</b>'
+    #     if (item.quantity > 0 and ItemActions.heal.name in effects and
+    #         await self.heal_effect(user, target, item, effects[ItemActions.heal.name])):
+    #         usage_result += f'💊 Предмет <code>"{item.title}"</code> восстановил вам <b>{effects[ItemActions.heal.name]}HP</b>'
 
-        if (usage_result):
-            return (usage_result, effects[ItemActions.heal.name])
-        else:
-            return None
+    #     if (usage_result):
+    #         return (usage_result, effects[ItemActions.heal.name])
+    #     else:
+    #         return None
         
     def effects_description(self, item:InventoryItem) -> str: 
         #TODO:Перенести в модель
@@ -154,10 +150,15 @@ class ItemsManager():
         return description
 
     
-    async def length_change_effect(self, user: User, target:User, item:InventoryItem, length_change:int) -> bool:
+    async def length_change_effect(self, user: User, target:User, item:InventoryItem, length_change:int, quantity:int = 1) -> bool:
         if (await self.user_repo.update(target, length=user.length + length_change) 
-            and await self.user_repo.user_item_transaction(user, item, -1)):
+            and await self.user_repo.user_item_transaction(user, item, -quantity)):
             return True
+
+    async def energy_change_effect(self, user: User, target:User, item:InventoryItem, energy:int, quantity:int = 1) -> bool:
+            if (await self.user_repo.update(target, energy=user.energy + energy) 
+                and await self.user_repo.user_item_transaction(user, item, -quantity)):
+                return True
     
     async def reset_dice_game_timer(self, user: User, target:User, item:InventoryItem) -> bool:
         if (await self.user_repo.update(target, last_dice_play=datetime.now() - timedelta(hours=1)) 
@@ -184,11 +185,11 @@ class ItemsManager():
         else:
             return None
         
-    async def steal_money(self, user: User, target:User, item:InventoryItem, count:int) -> bool:
+    async def steal_money(self, user: User, target:User, item:InventoryItem, count:int, quantity:int = 1) -> bool:
         if (target.money >= count):
             if (await self.user_repo.update(target, money=target.money - count) and
                 await self.user_repo.update(user, money=user.money + count)  and 
-                await self.user_repo.user_item_transaction(user, item, -1)):
+                await self.user_repo.user_item_transaction(user, item, - quantity)):
                 return True
         else:
             return False

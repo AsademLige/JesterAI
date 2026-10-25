@@ -30,12 +30,35 @@ class StoreKeyboard():
         
         return builder.as_markup()
     
-    def product_buying(self, product:StoreItem, user:User) -> InlineKeyboardMarkup:
+    def product_buying(self, product:StoreItem, user:User, quantity:int = 1) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
+        minus:int = quantity - 1 if (quantity - 1 >= 1) else quantity
+        plus:int = quantity + 1 if (quantity + 1 <= product.warehouse_quantity) else quantity
+
+        full_price = product.price * quantity        
+        if (product.is_discount_active):
+            full_price:int = round(full_price - (full_price * (product.discount_percent / 100)))
+
+        builder.button(text="➖ меньше",
+                    callback_data=StoreCF(action="choice",
+                                            quantity=minus,
+                                            id=product.id,
+                                            user_id=user.tg_id))
+
+        builder.button(text=f"{quantity}",
+                            callback_data=StoreCF(action = "", user_id=user.tg_id))
+
+        builder.button(text="➕ больше",
+                            callback_data=StoreCF(action="choice",
+                                                    quantity=plus,
+                                                    id=product.id,
+                                                    user_id=user.tg_id))
+
         if (product.warehouse_quantity > 0):
-            builder.button(text="💰 Беру!",
+            builder.button(text=f"💰 Беру! (-{full_price})",
                 callback_data=StoreCF(action="buy", 
+                                      quantity=quantity,
                                       id=product.id,
                                       user_id=user.tg_id))
         
@@ -43,6 +66,16 @@ class StoreKeyboard():
             callback_data=StoreCF(action="cancel",
                                   user_id=user.tg_id))
         
-        builder.adjust(2)
+        builder.adjust(3)
         
         return builder.as_markup()
+
+    def buy_more(self) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+
+        builder.button(text="🛒 Купить еще", 
+                        callback_data="hub_store")
+
+        builder.adjust(1)
+        return builder.as_markup()
+        

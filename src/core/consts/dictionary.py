@@ -116,10 +116,15 @@ class Dictionary():
 
     __inventory_item_info:str = "<blockquote>{{title}}</blockquote>\n<i>{{description}}</i>"
 
+    __inventory_sell:list[str] = ["💰 Ты бы еще консервных банок насобирал! Держи копейки: {{money}}", 
+                                  "💰 Не пользованные, надеюсь? Ладно, держи копейки: {{money}}",
+                                  "💰 Вот так бы всегда? Держи копейки: {{money}}"]
+
     select_target:str = "🎁 Кто получит твой подарок?"
 
-    use_myself:str = "📤 Использовать на себя"
-    select_target:str = "🎯 Выбрать цель"
+    use_myself:str = "📤 На себя"
+    select_target:str = "🎯 На цель"
+    sell_item:str = "💰 Продать"
 
     pencil_timer_decresc_target:str = "⏰ {{user_link1}} использовал {{item_title}} на {{user_link2}} и сбросил его таймер на проверку {{pencil_gen}}"
     pencil_timer_decresc:str = "⏰ {{user_link1}} использовал {{item_title}} на себя и сбросил таймер на проверку {{pencil_gen}}"
@@ -132,6 +137,9 @@ class Dictionary():
 
     length_decresc_target:str = "🔪 {{user_link1}} взял <code>{{item_title}}</code> и отрезал у {{user_link2}} {{length}} {{pencil_gen}}!"
     length_decresc:str = "🔪 {{user_link1}} взял {{item_title}} и отрезал у себя {{length}} {{pencil_gen}}, ненормальный..."
+
+    energy_add_target:str = "⚡️ {{user_link1}} взял <code>{{item_title}}</code> и восстановил у {{user_link2}} {{energy}} энергии!"
+    energy_add:str = "⚡️ {{user_link1}} взял {{item_title}} и восстановил {{energy}} энергии"
 
     length_add_target:str = "💊 {{user_link1}} взял {{item_title}} и увеличил у {{user_link2}} {{pencil_accu}} на {{length}}!"
     length_add:str = "💊 {{user_link1}} взял {{item_title}} и увеличил {{pencil_accu}} на {{length}}!"
@@ -379,6 +387,8 @@ class Dictionary():
     
     __buttons_types:List[str] = ['🈶','🈚️','🈸','🈺', '🈷️']
 
+    __buttons_types_disabled:List[str] = ['🈴','🈵','🈹','🈲']
+
     __store_exit:List[str] = [
         "🚪 {{user_link}}, не задерживайте очередь, там за вами бабушка с 30 мешками сахара в руках уже сознание теряет!",
         "🚪 Ты бы еще консервных банок насобирал! Как проветришься, заходи...",
@@ -390,10 +400,12 @@ class Dictionary():
                                          "💳 Не желаете гречку по акции, корм для голубей, передние стойки стабилизатора на гранту? Спасибо за покупку, {{user_link}}, приходите еще!",
                                          "💳 За покупку вам бонус в виде наклейки! Наклеите 999 штук на свой {{pencil}}, и он увеличится на <b>1cm</b>"]
     
-    __warehouse_update:str = "<blockquote>🏪 Обновление остатков магазина, бегом за покупками!</blockquote>\n" \
+    __warehouse_update:str = "<blockquote>🏪 В магазине привоз, бегом за покупками!</blockquote>\n" \
                                                     "<i>Специальные предложения:\n</i>"\
                                                     "{{discounts_description}}"\
-                                                    "<i>Поторопись опередить бабок в гонке за просрочкой!\n</i>"
+                                                    "<i>Этого сегодня нет, погрызли мыши:\n</i>"\
+                                                    "{{out_of_stock_today}}"\
+                                                    "<code>Поторопись опередить бабок в гонке за просрочкой!\n</code>"
 
     ###------------------------------------------------------------
     ###Описания розыгрышей
@@ -539,10 +551,13 @@ class Dictionary():
         index:int = 1
         for product in products:
             price_formatted:str = f"{self.price_wrapper(product.price, False)}"
+            button_icon:str = random.choice(self.__buttons_types) if (product.warehouse_quantity > 0) \
+                else random.choice(self.__buttons_types_disabled)
+
             if (product.is_discount_active):
                 discount_price:int = round(product.price - (product.price * (product.discount_percent / 100)))
                 price_formatted = f"{self.price_wrapper(discount_price)} <s>{price_formatted}</s>💰"
-            icon:str = f"<b>({index})</b> {random.choice(self.__buttons_types)}{product.utf8_icon}"
+            icon:str = f"<b>({index})</b> {button_icon}{product.utf8_icon}"
             body:str = icon + f"{hcode(product.title)}<b>({product.warehouse_quantity}/{product.max_capacity})</b> - {price_formatted}"
 
             products_str += f"{body}\n"
@@ -576,14 +591,20 @@ class Dictionary():
             **self.random_member(),
         })
     
-    def warehouse_update(self, discounts:List[StoreItem]) -> str:
+    def warehouse_update(self, discounts:List[StoreItem], out_of_stock_today:List[StoreItem]) -> str:
         discounts_description:str = ""
+        out_of_stock_today_description:str = ""
         for i, discount in enumerate(discounts):
             discounts_description += f"<blockquote>{discount.utf8_icon} {discount.title} "\
                 f"<b>-{discount.discount_percent}%</b>!</blockquote>\n"
             
+        for i, out_of_stock_today_item in enumerate(out_of_stock_today):
+            out_of_stock_today_description += f"<blockquote>{out_of_stock_today_item.utf8_icon} {out_of_stock_today_item.title} "\
+                f"🚧</blockquote>\n"
+            
         return tp.text_replacement(self.__warehouse_update, {
             "discounts_description": discounts_description,
+            "out_of_stock_today":out_of_stock_today_description,
             **self.random_member(),
         }, recursive_parse_args = True)
     
@@ -740,6 +761,11 @@ class Dictionary():
             "description": item.description,
             **self.random_member(),
         }, recursive_parse_args = True)
+    
+    def inventory_sell(self, sell_price:int) -> str:
+        return tp.text_replacement(random.choice(self.__inventory_sell), {
+            "money": self.money_wrapper(sell_price),
+        })
     
     def day_salary(self, money:int) -> str:
         return tp.text_replacement(self.__day_salary, {"money" : self.money_wrapper(money)})

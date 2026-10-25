@@ -1,5 +1,6 @@
-from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.store.data.repository.gino_store_repository import GinoStoreRepository
+from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from features.items.data.models.inventory_item_dto import InventoryItem
@@ -28,6 +29,7 @@ bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
 repository:GinoUserRepository = GinoUserRepository()
 settings_repo = GinoBotSettingsRepository()
+store_repo:GinoStoreRepository = GinoStoreRepository()
 user_mr:UserManager = UserManager(repo=repository, settings_repo=settings_repo)
 items_mg:ItemsManager = ItemsManager(repository)
 db = DataBase()
@@ -83,6 +85,28 @@ async def on_inventory_open(callback: CallbackQuery, callback_data: InventoryCF,
 ###Выбор предмета в инвентаре
 @rt.callback_query(InventoryCF.filter(F.action == "inventory_choice"))
 async def on_inventory_item_select(callback: CallbackQuery, callback_data: InventoryCF, state: FSMContext):
+    try:
+        state_data = await state.get_data()
+        if (not 'user' in state_data): return
+        user: User = state_data["user"]
+    
+        if (user.tg_id != callback_data.user_id):
+            return
+
+        await callback.answer()
+        
+        item:InventoryItem = next((p for p in user.inventory if p.id == callback_data.item_id), None)
+    
+        await state.update_data(item=item)
+        await callback.message.edit_text(dict.inventory_item_info(item),
+                                            reply_markup=interactive_kb.item_keyboard(user, item, callback_data.quantity),
+                                            parse_mode=ParseMode.HTML)  
+    except:
+        pass
+
+###Продажа предмета
+@rt.callback_query(InventoryCF.filter(F.action == "sell_item"))
+async def on_item_sell(callback: CallbackQuery, callback_data: InventoryCF, state: FSMContext):
     state_data = await state.get_data()
     if (not 'user' in state_data): return
     user: User = state_data["user"]
@@ -90,12 +114,17 @@ async def on_inventory_item_select(callback: CallbackQuery, callback_data: Inven
     if (user.tg_id != callback_data.user_id):
         return
 
-    item:InventoryItem = next((p for p in user.inventory if p.id == callback_data.item_id), None)
+    item:InventoryItem = state_data["item"]
+    sell_price = callback_data.quantity * (item.price // 2)
+    sell_status:bool = await repository.user_sell_item_transaction(user, item.id, sell_price, callback_data.quantity)
 
-    await state.update_data(item=item)
-    await callback.message.edit_text(dict.inventory_item_info(item),
-                                        reply_markup=interactive_kb.item_keyboard(user, item),
-                                        parse_mode=ParseMode.HTML)  
+    sell_message = None
+    if (sell_status):
+        await callback.message.delete()
+        sell_message = await bot.send_message(user.chat_id, dict.inventory_sell(sell_price), parse_mode=ParseMode.HTML)
+    
+
+    await Utils.delete_old_message([callback.message, sell_message],10)
     
 ###Применение предмета на себя
 @rt.callback_query(InventoryCF.filter(F.action == "use_myself"))
@@ -108,7 +137,7 @@ async def on_item_use_myself(callback: CallbackQuery, callback_data: InventoryCF
         return
 
     item:InventoryItem = state_data["item"]
-    use_status:str = await items_mg.use_item(user, item)
+    use_status:str = await items_mg.use_item(user, item, quantity=callback_data.quantity)
     
     if (use_status):
         await callback.message.delete()
@@ -128,7 +157,7 @@ async def on_item_target_select(callback: CallbackQuery, callback_data: Inventor
     
     users: List[User] = await repository.get_users(user.chat_id)
     await callback.message.edit_text(dict.select_target,
-                                        reply_markup=interactive_kb.select_target(users, user),
+                                        reply_markup=interactive_kb.select_target(users, user, quantity=callback_data.quantity),
                                         parse_mode=ParseMode.HTML)
 
 ###Цель выбрана, применяем на нее предмет
@@ -143,7 +172,7 @@ async def on_item_target_selected(callback: CallbackQuery, callback_data: Invent
     
     target: User = await repository.get_user(id=callback_data.item_id)
     item:InventoryItem = state_data["item"]
-    use_status:str = await items_mg.use_item(user, item, target)
+    use_status:str = await items_mg.use_item(user, item, target, quantity=callback_data.quantity)
 
     if (use_status):
         await callback.message.delete()

@@ -41,6 +41,11 @@ class IUserRepository(ABC):
         pass
 
     @abstractmethod
+    async def user_sell_item_transaction(self, user: User, item_id: int, refund_price: int, quantity: int = 1) -> bool:
+        """Продажа предмета пользователем"""
+        pass
+
+    @abstractmethod
     async def get_user_heal_items(self, user:User) -> List[InventoryItem]:
         """Получить лечебные предметы пользователя"""
         pass

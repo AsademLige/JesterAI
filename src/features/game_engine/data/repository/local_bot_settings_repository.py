@@ -44,3 +44,7 @@ class LocalBotSettingsRepository(IBotSettingsRepository):
         
     async def update_settings_by_chat_id(self, chat_id:int, args:Dict[str, Any] = {}) -> bool:
         pass
+
+    async def get_all() -> BotSettings:
+        """Получить глобальные настройки всех чатов"""
+        pass

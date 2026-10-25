@@ -34,7 +34,7 @@ class SchedulerTelegramProvider:
                 await self.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
                 
             elif event_type == "warehouse_update":
-                text = self.dict.warehouse_update(data["discounts"])
+                text = self.dict.warehouse_update(data["discounts"], data["out_of_stock"])
                 await self.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
 
         except Exception as e:

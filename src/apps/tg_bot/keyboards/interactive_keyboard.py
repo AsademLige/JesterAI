@@ -47,28 +47,52 @@ class InteractiveKeyboard():
         builder.adjust(2)
         return builder.as_markup()
     
-    def item_keyboard(self, user:User, item:InventoryItem) -> InlineKeyboardMarkup:
+    def item_keyboard(self, user:User, item:InventoryItem, quantity:int) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
-        if (not self.items_mg.is_steal_item(item) and 
-            not self.items_mg.is_heal_item(item)):
+        minus:int = quantity - 1 if (quantity - 1 >= 1) else quantity
+        plus:int = quantity + 1 if (quantity + 1 <= item.quantity) else quantity
+
+        builder.button(text="➖ меньше",
+                    callback_data=InventoryCF(action="inventory_choice",
+                                            quantity=minus,
+                                            item_id=item.id,
+                                            user_id=user.tg_id))
+
+        builder.button(text=f"{quantity}",
+                            callback_data=InventoryCF(action = "", user_id=user.tg_id))
+
+        builder.button(text="➕ больше",
+                            callback_data=InventoryCF(action="inventory_choice",
+                                                    quantity=plus,
+                                                    item_id=item.id,
+                                                    user_id=user.tg_id))
+
+        if (item.usable):
             builder.button(text=dict.use_myself,
             callback_data=InventoryCF(action="use_myself",
+                                    quantity=quantity,
                                     user_id=user.tg_id))
         
-        if (not self.items_mg.is_heal_item(item)):
+        if (item.usable):
             builder.button(text=dict.select_target,
             callback_data=InventoryCF(action="select_target",
+                                    quantity=quantity,
                                     user_id=user.tg_id))
+
+        builder.button(text=f"{dict.sell_item} (+{quantity * (item.price // 2)}💰)",
+        callback_data=InventoryCF(action="sell_item",
+                                quantity=quantity,
+                                user_id=user.tg_id))
 
         builder.button(text=dict.back,
         callback_data=InventoryCF(action="inventory",
                                   user_id=user.tg_id))
         
-        builder.adjust(2)
+        builder.adjust(3, 2, 2)
         return builder.as_markup()
     
-    def select_target(self, users:List[User], except_user:User) -> InlineKeyboardMarkup:
+    def select_target(self, users:List[User], except_user:User, quantity:int = 1) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         
         for user in users:
@@ -76,10 +100,12 @@ class InteractiveKeyboard():
                 builder.button(text=f"{user.tg_name}-{user.length}см",
                     callback_data=InventoryCF(action="inventory_target_selected",
                                               item_id=user.id,
+                                              quantity=quantity,
                                               user_id=except_user.tg_id))
             
         builder.button(text=dict.back,
         callback_data=InventoryCF(action="target_select_cancel",
+                                  quantity=quantity,
                                   user_id=except_user.tg_id))
 
         builder.adjust(2)

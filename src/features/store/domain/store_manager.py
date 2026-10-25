@@ -3,7 +3,6 @@ from features.user.data.repository.user_repository import IUserRepository
 from features.items.data.models.store_item_dto import StoreItem
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
-from core.data.data_base import DataBase
 from core.consts.consts import Consts
 from typing import List
 import os
@@ -13,21 +12,16 @@ class StoreManager:
     selected_product:StoreItem
     customer:User
     
-    def __init__(self, db:DataBase, 
-                 dictionary:Dictionary, 
+    def __init__(self, dictionary:Dictionary, 
                  user_repo: IUserRepository,
                  store_repo: IStoreRepository):
         
         self.user_repo = user_repo
         self.store_repo = store_repo
-        self.db = db
         self.dict = dictionary
 
     async def openStore(self, user:User) -> dict:
-        if (self.products):
-            return {"error" : "⛔️ Встань в очередь!"}
-        
-        self.products = await self.store_repo.get_store_items_with_quantity()
+        self.products = await self.store_repo.get_store_items_with_quantity(user)
         self.customer = user
 
         return {
@@ -39,18 +33,20 @@ class StoreManager:
         self.selected_product = next((p for p in self.products if p.id == product_id), None)
         return self.selected_product
     
-    async def buy_product(self) -> dict:
+    async def buy_product(self, quantity:int = 1) -> dict:
         msg:str
         final_price:int = self.selected_product.price
         if (self.selected_product.is_discount_active):
             final_price = round(final_price - (final_price * (self.selected_product.discount_percent / 100)))
 
+        final_price = final_price * quantity
+
         if (self.customer.money < final_price):
             self.closeStore()
             return {"msg":self.dict.not_enough_money(self.customer)}
 
-        if (await self.store_repo.update_item_quantity_at_warehouse(self.selected_product) and 
-            await self.user_repo.user_item_transaction(self.customer, self.selected_product) and
+        if (await self.store_repo.create_purchase_transaction(self.selected_product, self.customer, quantity) and
+            await self.user_repo.user_item_transaction(self.customer, self.selected_product, quantity) and
             await self.user_repo.update(self.customer, money=self.customer.money - final_price)):
             msg = self.dict.product_buying_thanks(self.customer)
         else:
@@ -59,6 +55,9 @@ class StoreManager:
         return {
             "msg" : msg
         }
+
+    async def sell_item(self) -> bool:
+        pass
     
     def closeStore(self):
         self.products.clear()

@@ -141,7 +141,7 @@ class ApiToBotNotifier:
         except Exception as e:
             logger.error(f"Error in battle_start handler: {e}", exc_info=True)
 
-    async def _handle_battle_restart_message(self, user: User, log_data: dict):
+    async def _handle_battle_restart_message(self, user: User):
         """Просто отправляет готовое сообщение, сформированное в API"""
         self.user_repo.clear_user_cache(user)
 

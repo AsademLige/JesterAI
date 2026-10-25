@@ -28,7 +28,7 @@ class DiceGameManager:
         is_minor_win = (result > 7 and action == "bigger") or (result < 7 and action == "smaller")
         is_major_win = result == 7 and action == "equal"
         
-        award = 5 if is_minor_win else (15 if is_major_win else 0)
+        award = 15 if is_minor_win else (35 if is_major_win else 0)
         
         if award > 0:
             await self.user_repo.update(user, money=user.money + award,

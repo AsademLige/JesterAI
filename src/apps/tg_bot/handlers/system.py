@@ -51,7 +51,7 @@ async def get_all_jobs(message: Message, state: FSMContext):
     
 ### Выбор действия
 @rt.callback_query(EditJob.edit_job, JobsCF.filter())
-async def edit_sticker_set_handler(callback: CallbackQuery, callback_data: JobsCF, state: FSMContext):
+async def evaluate_job(callback: CallbackQuery, callback_data: JobsCF, state: FSMContext):
     if (callback_data.action == "choice"):
         await state.update_data(job_id = callback_data.job_id)
         await callback.message.edit_text(f"📅 <b>Задача</b> - <code>{callback_data.job_id}</code>", 
@@ -61,15 +61,22 @@ async def edit_sticker_set_handler(callback: CallbackQuery, callback_data: JobsC
         state_data = await state.get_data()
         
         scheduler = Scheduler.get_current_instance()
-        job:Job = scheduler.core.get_job(state_data["job_id"])
-        scheduler.core.add_job(job.func, 'date', 
-                                    run_date=datetime.now(), 
-                                    misfire_grace_time=15)
+        job: Job = scheduler.core.get_job(state_data["job_id"])
         
-        await callback.message.edit_text("🟢 Запускаем задачу...")
-        await state.clear()
-    elif (callback_data.action == "exit"):
-        await callback.message.delete()
+        if job:
+            # Проверяем, является ли функция асинхронной
+            import asyncio
+            if asyncio.iscoroutinefunction(job.func):
+                # Запускаем асинхронную функцию с её оригинальными аргументами
+                await job.func(*job.args, **job.kwargs)
+            else:
+                # Запускаем обычную синхронную функцию
+                job.func(*job.args, **job.kwargs)
+                
+            await callback.message.edit_text("🟢 Задача успешно выполнена напрямую!")
+        else:
+            await callback.message.edit_text("❌ Задача не найдена.")
+            
         await state.clear()
 
             

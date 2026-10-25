@@ -79,7 +79,7 @@ class GambaHouseKeyboard():
                                                         user_id=user.tg_id).pack()))
 
         builder.add(InlineKeyboardButton(text=dict.exit,
-                    callback_data=DiceGameCF(action="exit",
+                    callback_data=GambaChoiceCF(action="exit",
                                              user_id=user.tg_id).pack()))
 
         builder.adjust(3, 2) 

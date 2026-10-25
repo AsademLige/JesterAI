@@ -205,6 +205,10 @@ class LocalUserRepository(IUserRepository):
     async def user_item_transaction(self, user:User, item:ItemORM, quantity:int = 1) -> bool:
         """Перемещение предмета в инвентарь пользователя/бота"""
         pass
+
+    async def user_sell_item_transaction(self, user: User, item_id: int, refund_price: int, quantity: int = 1) -> bool:
+        """Продажа предмета пользователем"""
+        pass
     
     async def change_reputation(self, source_id: str, target_id: str, delta: int) -> None:
         """Изменить репутацию (например, уменьшить при пакости)"""

@@ -1,5 +1,6 @@
 from features.store.data.repository.store_repository import IStoreRepository
 from features.items.data.models.store_item_dto import StoreItem
+from features.user.data.dtos.user_dto import User
 from typing import List, Optional
 from pathlib import Path
 
@@ -33,4 +34,10 @@ class LocalStoreRepository(IStoreRepository):
         pass
     
     async def deactivate_discounts(self) -> bool:
+        pass
+
+    async def create_purchase_transaction(self, item:StoreItem, user:User, quantity:int = 1) -> bool:
+        pass
+
+    async def check_product_quantity_by_user(self, item:StoreItem, user:User) -> int:
         pass

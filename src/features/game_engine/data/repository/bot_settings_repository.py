@@ -10,6 +10,11 @@ class IBotSettingsRepository(ABC):
     async def get_settings(chat_id:int, chat_full_name:str) -> BotSettings:
         """Получить глобальные настройки для чата по его названию и идентификатору"""
         pass
+
+    @abstractmethod
+    async def get_all() -> BotSettings:
+        """Получить глобальные настройки всех чатов"""
+        pass
     
     @abstractmethod
     async def update_settings_by_chat_id(self, chat_id:int, args:Dict[str, Any] = {}) -> bool:

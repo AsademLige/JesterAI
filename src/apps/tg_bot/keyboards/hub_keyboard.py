@@ -8,11 +8,14 @@ prefs = Prefs()
 def get_hub_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-    builder.add(InlineKeyboardButton(text="⚔️ Охота", 
-                             callback_data="hub_hunt"))
+    builder.add(InlineKeyboardButton(text="🎰 Gamba House", 
+                                             callback_data="gamba_house"))
     
     builder.add(InlineKeyboardButton(text="🛒 Торгомат DICKSI", 
                                      callback_data="hub_store"))
+
+    builder.add(InlineKeyboardButton(text="⚔️ Охота", 
+                                 callback_data="hub_hunt"))
     
     builder.add(InlineKeyboardButton(text="🎣 Рыбалка", 
                                      callback_data="hub_fishing"))
