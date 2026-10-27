@@ -6,7 +6,6 @@ from sqlalchemy import and_, desc, func
 from core.consts.config import Prefs
 from typing import Optional
 import logging
-import json
 import time
 
 
@@ -66,7 +65,6 @@ class GinoBattleRepository:
             return None
 
     async def update_log(self, battle_id: int, log: list) -> bool:
-        """Дописать лог, не трогая статус."""
         try:
             battle = await BattleORM.get(battle_id)
             if not battle:

@@ -4,3 +4,6 @@
 [submodule "src/core/services/mini_app_fighting"]
 	path = src/core/services/mini_app_fighting
 	url = https://AsademLige@github.com/AsademLige/telegram-apps-fighting.git
+[submodule "src/core/services/mini_app_fishing"]
+	path = src/core/services/mini_app_fishing
+	url = https://github.com/AsademLige/telegram-apps-fishing.git

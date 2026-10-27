@@ -6,8 +6,7 @@ class BattleORM(BaseModel):
     __tablename__ = "battles"
     id = sa.Column(sa.Integer, primary_key=True)
     user_id = sa.Column(sa.BigInteger) 
-    started_timestamp = sa.Column(sa.Integer)
-    
+    started_timestamp = sa.Column(sa.Integer)    
 
     status = sa.Column(sa.Text)
     data = sa.Column(sa.JSON, default=dict, server_default="{}") 

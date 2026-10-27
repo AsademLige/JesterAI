@@ -69,10 +69,11 @@ if [ -n "$BATTLE_API_URL" ]; then
     echo "✅ API:"
     echo "   $BATTLE_API_URL"
 
-    mkdir -p src/core/services/mini_app_fighting
-
     echo "BATTLE_API_URL=$BATTLE_API_URL" \
         > src/core/services/mini_app_fighting/.env
+
+    echo "API_URL=$BATTLE_API_URL" \
+        > src/core/services/mini_app_fishing/.env
 else
     echo "❌ API tunnel не найден"
 fi
