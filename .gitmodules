@@ -7,3 +7,6 @@
 [submodule "src/core/services/mini_app_fishing"]
 	path = src/core/services/mini_app_fishing
 	url = https://github.com/AsademLige/telegram-apps-fishing.git
+[submodule "src/core/services/mini_app_gladiators"]
+	path = src/core/services/mini_app_gladiators
+	url = https://github.com/AsademLige/telegram-apps-gladiators.git
