@@ -16,33 +16,27 @@ class LocalUserRepository(IUserRepository):
         self.snapshot_dir.mkdir(parents=True, exist_ok=True)
         self._cache = TTLCache(maxsize=100, ttl=86400)
         self._tg_id_map = TTLCache(maxsize=100, ttl=86400)
-        self._chat_tg_map = TTLCache(maxsize=100, ttl=86400)
 
         self._next_id = self.get_max_id() + 1
 
     def _add_to_cache(self, user: User) -> None:
         self._cache[user.id] = user
         self._tg_id_map[user.tg_id] = user.id
-        self._chat_tg_map[(user.chat_id, user.tg_id)] = user.id
 
     def _get_cache_user(self, tg_id: Optional[int] = None, 
-                           id: Optional[int] = None, 
-                           chat_id: Optional[int] = None) -> Optional[User]:
+                           id: Optional[int] = None) -> Optional[User]:
         if id is not None and id in self._cache:
             return self._cache[id]
 
-        if chat_id is not None and tg_id is not None:
-            cache_key = (chat_id, tg_id)
-            if cache_key in self._chat_tg_map:
-                user_id = self._chat_tg_map[cache_key]
-                if user_id in self._cache:
-                    return self._cache[user_id]
+        if tg_id is not None:
+            user_id = self._tg_id_map.get(tg_id)
+            if user_id is not None and user_id in self._cache:
+                return self._cache[user_id]
         
         return None
     
     def clear_cache(self):
         self._cache.clear()
-        self._chat_tg_map.clear()
         self._tg_id_map.clear()
 
     def save_cache(self):
@@ -90,12 +84,11 @@ class LocalUserRepository(IUserRepository):
             os.fsync(f.fileno())
 
     async def get_user(self, tg_id: Optional[int] = None, 
-                       chat_id: Optional[int] = None,
                        id: Optional[int] = None,
                        last_daily_draw_winner: Optional[bool] = None) -> Optional[User]:
         """Поиск пользователя по переданным фильтрам (логика AND)"""
 
-        cache_user = self._get_cache_user(tg_id, id, chat_id)
+        cache_user = self._get_cache_user(tg_id, id)
         if (cache_user): return cache_user
         
         if id is not None:
@@ -108,8 +101,6 @@ class LocalUserRepository(IUserRepository):
         all_users = self._load_all_users()
         for user in all_users:
             if tg_id is not None and user.tg_id != tg_id:
-                continue
-            if chat_id is not None and user.chat_id != chat_id:
                 continue
             if last_daily_draw_winner is not None and user.last_daily_draw_winner != last_daily_draw_winner:
                 continue
@@ -135,7 +126,7 @@ class LocalUserRepository(IUserRepository):
 
     async def add(self, tg_id: int, tg_name: str, length: int, custom_title: str, chat_id: int) -> Optional[User]:
         """Создание нового тестового пользователя/бота и запись на диск"""
-        existing = await self.get_user(tg_id=tg_id, chat_id=chat_id)
+        existing = await self.get_user(tg_id=tg_id)
         if existing:
             return
 
@@ -198,7 +189,7 @@ class LocalUserRepository(IUserRepository):
     async def get_random_item_by_tag(self, tag:DropTags) -> Optional[BaseItem]:
         pass
     
-    async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:
+    async def get_place_in_top_by_member(self, tg_id:int) -> int:
         """Возвращает порядковый номер в топе по размеру {{pencil}}"""
         return 1
     

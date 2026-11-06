@@ -28,31 +28,31 @@ db = DataBase()
 rt = Router()
 
 ###Команда отображения таблицы лидеров
-@rt.message(StateFilter(None), Command(cn.leaderboard))
-async def leaderboard(message: Message, state: FSMContext):
-    users: List[User] = await user_repo.get_users(message.chat.id)
-    sorted_users: List[User] = sorted(users, 
-                                            key=lambda u: u.length,
-                                            reverse=True)
-    await message.delete()
-    answer = await bot.send_message(users[0].chat_id, dict.leaderboard(sorted_users),
-                        parse_mode=ParseMode.HTML)
-    await Utils.delete_old_message([answer], 15)
+# @rt.message(StateFilter(None), Command(cn.leaderboard))
+# async def leaderboard(message: Message, state: FSMContext):
+#     users: List[User] = await user_repo.get_users(message.chat.id)
+#     sorted_users: List[User] = sorted(users, 
+#                                             key=lambda u: u.length,
+#                                             reverse=True)
+#     await message.delete()
+#     answer = await bot.send_message(users[0].chat_id, dict.leaderboard(sorted_users),
+#                         parse_mode=ParseMode.HTML)
+#     await Utils.delete_old_message([answer], 15)
 
 ###Команда отображения списка выигрышей
-@rt.message(StateFilter(None), Command(cn.winners_log))
-async def winners_log(message: Message, state: FSMContext):
-    logs, total_pages, users = await db.get_winners_logs_page(message.chat.id, 1)
-    chat_id:int = message.chat.id
-    await message.delete()
+# @rt.message(StateFilter(None), Command(cn.winners_log))
+# async def winners_log(message: Message, state: FSMContext):
+#     logs, total_pages, users = await db.get_winners_logs_page(message.chat.id, 1)
+#     chat_id:int = message.chat.id
+#     await message.delete()
 
-    if not logs:
-        await bot.send_message(chat_id, "📭 Записей пока нет")
-        return
+#     if not logs:
+#         await bot.send_message(chat_id, "📭 Записей пока нет")
+#         return
     
-    await bot.send_message(chat_id, dict.winners_logs(logs, users), 
-                         reply_markup=interactive_kb.get_pagination_keyboard(1, total_pages), 
-                         parse_mode=ParseMode.HTML)
+#     await bot.send_message(chat_id, dict.winners_logs(logs, users), 
+#                          reply_markup=interactive_kb.get_pagination_keyboard(1, total_pages), 
+#                          parse_mode=ParseMode.HTML)
     
 # Обработчик нажатий на кнопки пагинации
 @rt.callback_query(lambda c: c.data.startswith('page_'))

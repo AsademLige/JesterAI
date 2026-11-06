@@ -1,8 +1,8 @@
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
-from features.store.data.repository.gino_store_repository import GinoStoreRepository
 from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
+from features.game_engine.data.models.bot_settings_dto import BotSettings
 from features.items.data.models.inventory_item_dto import InventoryItem
 from apps.tg_bot.keyboards.callback_fabrics import InventoryCF
 from features.user.domain.user_manager import UserManager
@@ -29,7 +29,6 @@ bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
 repository:GinoUserRepository = GinoUserRepository()
 settings_repo = GinoBotSettingsRepository()
-store_repo:GinoStoreRepository = GinoStoreRepository()
 user_mr:UserManager = UserManager(repo=repository, settings_repo=settings_repo)
 items_mg:ItemsManager = ItemsManager(repository)
 db = DataBase()
@@ -40,13 +39,21 @@ member_change_reset_time:int = 24
 ###Попробовать изменить текущий member размер 
 @rt.message(StateFilter(None), Command(cn.pencil))
 async def pencil_change(message: Message, state: FSMContext):
-    user: User = await repository.get_user(message.from_user.id, message.chat.id)
-
     await message.delete()
+
+    settings:BotSettings = await settings_repo.get_settings(message.chat.id)
+
+    if (not settings.pencil_enabled):
+        denied_message = await bot.send_message(message.chat.id, dict.access_denied(), parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([denied_message], delay=10)
+        return
+
+    user: User = await repository.get_user(message.from_user.id)
+
     result = await user_mr.pencil_change(user)
     msg = result["error"] if ('error' in result) else result["msg"]
 
-    await bot.send_message(user.chat_id, msg, parse_mode=ParseMode.HTML)
+    await bot.send_message(message.chat.id, msg, parse_mode=ParseMode.HTML)
         
 
 ###Получение информации о пользователе
@@ -54,15 +61,23 @@ async def pencil_change(message: Message, state: FSMContext):
 async def user_information(message: Message, 
                            state: FSMContext, api_to_bot_notifier:ApiToBotNotifier):
     await message.delete()
-    user: User = await repository.get_user(message.from_user.id, message.chat.id)
+
+    settings:BotSettings = await settings_repo.get_settings(message.chat.id)
+    if (not settings.me_enabled):
+        denied_message = await bot.send_message(message.chat.id, dict.access_denied(), parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([denied_message], delay=10)
+        return
+    
+    user: User = await repository.get_user(message.from_user.id)
     await state.update_data(user=user)
 
     timer = await api_to_bot_notifier.get_timer_from_api(user.tg_id)
 
 
-    result = await user_mr.get_menu(user, datetime.fromtimestamp(timer["restore_at"]) if timer["restore_at"] else None)
+    result = await user_mr.get_menu(user, message.chat.id, 
+                                    datetime.fromtimestamp(timer["restore_at"]) if timer["restore_at"] else None)
 
-    answer = await bot.send_message(user.chat_id, result["msg"],
+    answer = await bot.send_message(message.chat.id, result["msg"],
                          reply_markup=interactive_kb.user_information_buttons(user),
                          parse_mode=ParseMode.HTML)
     
@@ -121,7 +136,7 @@ async def on_item_sell(callback: CallbackQuery, callback_data: InventoryCF, stat
     sell_message = None
     if (sell_status):
         await callback.message.delete()
-        sell_message = await bot.send_message(user.chat_id, dict.inventory_sell(sell_price), parse_mode=ParseMode.HTML)
+        sell_message = await bot.send_message(callback.message.chat.id, dict.inventory_sell(sell_price), parse_mode=ParseMode.HTML)
     
 
     await Utils.delete_old_message([callback.message, sell_message],10)
@@ -141,7 +156,7 @@ async def on_item_use_myself(callback: CallbackQuery, callback_data: InventoryCF
     
     if (use_status):
         await callback.message.delete()
-        await bot.send_message(user.chat_id, use_status, parse_mode=ParseMode.HTML)
+        await bot.send_message(callback.message.chat.id, use_status, parse_mode=ParseMode.HTML)
 
     await Utils.delete_old_message([callback.message],5)
 
@@ -155,7 +170,7 @@ async def on_item_target_select(callback: CallbackQuery, callback_data: Inventor
     if (user.tg_id != callback_data.user_id):
         return
     
-    users: List[User] = await repository.get_users(user.chat_id)
+    users: List[User] = await repository.get_users(callback.message.chat.id)
     await callback.message.edit_text(dict.select_target,
                                         reply_markup=interactive_kb.select_target(users, user, quantity=callback_data.quantity),
                                         parse_mode=ParseMode.HTML)
@@ -176,7 +191,7 @@ async def on_item_target_selected(callback: CallbackQuery, callback_data: Invent
 
     if (use_status):
         await callback.message.delete()
-        await bot.send_message(user.chat_id, use_status, parse_mode=ParseMode.HTML)
+        await bot.send_message(callback.message.chat.id, use_status, parse_mode=ParseMode.HTML)
 
     await Utils.delete_old_message([callback.message],5)
 

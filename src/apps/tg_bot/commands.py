@@ -1,5 +1,5 @@
-from core.consts.dictionary import Dictionary
 from aiogram.types import BotCommand, BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
+from core.consts.dictionary import Dictionary
 from core.consts.config import Prefs
 from aiogram import Bot
 
@@ -60,8 +60,6 @@ class Commands():
             BotCommand(command=Commands.pencil, description=dict.pencil),
             BotCommand(command=Commands.gamba_house, description=dict.gamba_house),
             BotCommand(command=Commands.hub, description=dict.hub),
-            BotCommand(command=Commands.leaderboard, description=dict.leaderboard_description),
-            BotCommand(command=Commands.winners_log, description=dict.winners_log_description),
             BotCommand(command=Commands.sticker_pack, description=dict.sticker_pack),
             BotCommand(command=Commands.help, description=dict.help),
         ], scope=BotCommandScopeAllGroupChats())

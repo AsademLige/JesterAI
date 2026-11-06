@@ -23,14 +23,13 @@ class RegistrationMiddleware(BaseMiddleware):
         if isinstance(event, Message) or isinstance(event, CallbackQuery):
             if (event.chat.type == "private" and isinstance(event, Message) and not "start" in event.text):
                 return event.answer(Dictionary.private_messages_restriction)
-            register_status:int = await self.user_mr.is_registered(event.from_user.id, event.chat.id)
+            register_status:int = await self.user_mr.is_registered(event.from_user.id)
 
             if (register_status == 1):
                 return await handler(event, data)
-            elif (register_status == 0):
+            else:
                 await event.answer(await self.register_user(event.from_user, event.chat), 
                                    parse_mode=ParseMode.HTML)
-            else: event.answer("Пользователь уже зарегистрирован в другом чате", parse_mode=ParseMode.HTML)
         else:
             return await handler(event, data)
         

@@ -25,7 +25,6 @@ class GinoUserRepository(IUserRepository):
     prefs = Prefs()
     _cache:TTLCache
     _tg_id_map:TTLCache
-    _chat_tg_map:TTLCache
     
     logger:AppHerald = AppHerald()
 
@@ -34,7 +33,6 @@ class GinoUserRepository(IUserRepository):
             cls._instance = super().__new__(cls)
             cls._instance._cache = TTLCache(maxsize=100, ttl=86400)
             cls._instance._tg_id_map = TTLCache(maxsize=100, ttl=86400)
-            cls._instance._chat_tg_map = TTLCache(maxsize=100, ttl=86400)
         return cls._instance
 
     def __init__(self):
@@ -45,50 +43,36 @@ class GinoUserRepository(IUserRepository):
         """метод заполнения кэш-карт User"""
         self._cache[user.id] = user
         self._tg_id_map[user.tg_id] = user.id
-        self._chat_tg_map[(user.chat_id, user.tg_id)] = user.id
 
-        self.logger.send_log("user_repo", logging.INFO, f"cache update id_{user.id}:tg_id_{user.tg_id}:chat_id_{user.chat_id}")
+        self.logger.send_log("user_repo", logging.INFO, f"cache update id_{user.id}:tg_id_{user.tg_id}")
 
     def _get_cache_user(self, tg_id: Optional[int] = None, 
-                       id: Optional[int] = None, 
-                       chat_id: Optional[int] = None) -> Optional[User]:
-        if id in self._cache:
+                       id: Optional[int] = None) -> Optional[User]:
+        if id is not None and id in self._cache:
             return self._cache[id]
-            
-        cache_key = (chat_id, tg_id)
-        if cache_key in self._chat_tg_map:
-            user_id = self._chat_tg_map[cache_key]
-            if user_id in self._cache:
+
+        if tg_id is not None:
+            user_id = self._tg_id_map.get(tg_id)
+            if user_id is not None and user_id in self._cache:
                 return self._cache[user_id]
             
         return None
     
     def clear_cache(self):
         self._cache.clear()
-        self._chat_tg_map.clear()
         self._tg_id_map.clear()
 
     def clear_user_cache(self, user:User):
         self._cache.pop(user.id, None)
         self._tg_id_map.pop(user.tg_id, None)
-        self._chat_tg_map.pop((user.chat_id, user.tg_id), None)
 
     async def get_user(self, tg_id: Optional[int] = None, 
-                       chat_id: Optional[int] = None,
                        id: Optional[int] = None,
                        last_daily_draw_winner: Optional[bool] = None) -> Optional[User]:
         
         if (not tg_id and not id): return None
         
-        cache_user = None
-
-        if id is not None:
-            cache_user = self._get_cache_user(id=id)
-        elif tg_id is not None:
-            cached_user_id = self._tg_id_map.get(tg_id)
-            if cached_user_id is not None:
-                cache_user = self._cache.get(cached_user_id)
-
+        cache_user = self._get_cache_user(tg_id=tg_id, id=id)
         if cache_user:
             return cache_user
 
@@ -103,9 +87,6 @@ class GinoUserRepository(IUserRepository):
 
             if id is not None:
                 query = query.where(UserORM.id == id)
-
-            if chat_id is not None:
-                query = query.where(UserORM.chat_id == chat_id)
 
             if last_daily_draw_winner is not None:
                 query = query.where(UserORM.last_daily_draw_winner == last_daily_draw_winner)            
@@ -169,13 +150,7 @@ class GinoUserRepository(IUserRepository):
                 user_id = row[0]
                 tg_id = row[1]
 
-                cache_user = None
-                if user_id is not None:
-                    cache_user = self._get_cache_user(id=user_id)
-                elif tg_id is not None:
-                    cached_user_id = self._tg_id_map.get(tg_id)
-                    if cached_user_id is not None:
-                        cache_user = self._cache.get(cached_user_id)
+                cache_user = self._get_cache_user(tg_id=tg_id, id=user_id)
                 
                 if cache_user:
                     result.append(cache_user)
@@ -269,7 +244,7 @@ class GinoUserRepository(IUserRepository):
                 if hasattr(user, key):
                     setattr(user, key, value)
                     
-                if key in ("chat_id", "tg_id"):
+                if key == "tg_id":
                     index_needs_update = True
 
 
@@ -476,13 +451,12 @@ class GinoUserRepository(IUserRepository):
             print(f"get item by tag error: {error}")
             return None
         
-    async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:
+    async def get_place_in_top_by_member(self, tg_id:int) -> int:
         subquery = (
             select([
                 UserORM.tg_id,
                 func.row_number().over(order_by=UserORM.length.desc()).label("rank")
             ])
-            .where(UserORM.chat_id == chat_id)
             .alias("top_list")
         )
         

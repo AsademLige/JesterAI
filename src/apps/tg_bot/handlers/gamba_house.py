@@ -1,7 +1,9 @@
+from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, GambaChoiceCF, TrashLotoCF
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from features.gamba_house.domain.trash_loto_manager import TrashLotoManager
 from apps.tg_bot.keyboards.gamba_house_keyboard import GambaHouseKeyboard
+from features.game_engine.data.models.bot_settings_dto import BotSettings
 from apps.tg_bot.providers.random_provider import TelegramRandomProvider
 from features.gamba_house.domain.dice_manager import DiceGameManager
 from domain.controllers.rights_controller import RightsController
@@ -32,6 +34,7 @@ combat_kb = BattleKeyboard()
 db = DataBase()
 rt = Router()
 rp = TelegramRandomProvider(bot)
+settings_repo = GinoBotSettingsRepository()
 user_repo:GinoUserRepository = GinoUserRepository()
 
 dice_manager = DiceGameManager(db, dict)
@@ -40,6 +43,14 @@ trash_loto_manager = TrashLotoManager(db, dict)
 ###Открываем меню гамбы
 @rt.message(StateFilter(None), Command(cn.gamba_house))
 async def gamba_house(message: Message, state: FSMContext):
+    await message.delete()
+    
+    settings:BotSettings = await settings_repo.get_settings(message.chat.id)
+    if (not settings.gamba_house_enabled):
+        denied_message = await bot.send_message(message.chat.id, dict.access_denied(), parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([denied_message], delay=10)
+        return
+    
     await process_gamba_house(message.from_user.id, message, state)
 
 async def process_gamba_house(user_tg_id: int, message: Message, state: FSMContext):
@@ -47,7 +58,6 @@ async def process_gamba_house(user_tg_id: int, message: Message, state: FSMConte
         
     await state.update_data(user=user)
     answer:Message
-    await message.delete()
 
     total:int = 0
 

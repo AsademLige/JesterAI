@@ -63,6 +63,8 @@ class Dictionary():
     ###Общее
     ###------------------------------------------------------------
 
+    __access_denied:List[str] = ["🚧 Отказано 🚧", "⛔️ Запрещено ⛔️", "❗️ Нет ❗️", "‼️ Нельзя ‼️"]
+
     error:str = "Что-то мне сегодня плохо, приходи попозже..."
 
     exit:str = "❌ Выход"
@@ -486,6 +488,9 @@ class Dictionary():
         except Exception as error:
             print(f"load assets error: {error}")
             return False
+
+    def access_denied(self) -> str:
+        return f'<blockquote>{random.choice(self.__access_denied)}</blockquote><i>Раздел временно недоступен...</i>'
         
     def gamba_house_description(self, total_gamba_house_win, user:User) -> str:
         return tp.text_replacement(self.__gamba_house_description, {

@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 class IUserRepository(ABC):
     @abstractmethod
     async def get_user(self, tg_id: Optional[int] = None, 
-                       chat_id: Optional[int] = None,
                        id: Optional[int] = None,
                        last_daily_draw_winner: Optional[bool] = None) -> Optional[User]:
         """Формирование DTO модели пользователя на основе основных данных и данных статистики"""
@@ -31,7 +30,7 @@ class IUserRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_place_in_top_by_member(self, tg_id:int, chat_id:int) -> int:
+    async def get_place_in_top_by_member(self, tg_id:int) -> int:
         """Возвращает порядковый номер в топе по размеру {{pencil}}"""
         pass
 

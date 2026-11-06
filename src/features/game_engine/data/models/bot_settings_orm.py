@@ -10,3 +10,8 @@ class BotSettingsORM(BaseModel):
     max_users_energy = sa.Column(sa.Integer)
     alias = sa.Column(sa.Text)
     events_enabled = sa.Column(sa.Boolean)
+
+    me_enabled = sa.Column(sa.Boolean)
+    hub_enabled = sa.Column(sa.Boolean)
+    pencil_enabled = sa.Column(sa.Boolean)
+    gamba_house_enabled = sa.Column(sa.Boolean)

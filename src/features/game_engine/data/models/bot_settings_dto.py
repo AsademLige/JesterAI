@@ -14,3 +14,8 @@ class BotSettings(BaseModel):
     energy_restore_time:int = 600
     events_enabled:bool = True
     alias: str
+
+    me_enabled:bool = True
+    hub_enabled:bool = True
+    pencil_enabled:bool = True
+    gamba_house_enabled:bool = True

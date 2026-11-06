@@ -25,7 +25,7 @@ class UserManager:
         length_change:int = random.choice([-4, -3, -2, - 1, 1, 2, 3, 4, 5, 6])
         length_from_behind:int = 0
 
-        if (await self.repo.get_place_in_top_by_member(user.tg_id, user.chat_id) > 3):
+        if (await self.repo.get_place_in_top_by_member(user.tg_id) > 3):
             length_from_behind = random.choice([0, 1])
 
         ###Нужно будет заменить args
@@ -35,9 +35,9 @@ class UserManager:
         else:
             return {"error": "что-то пошло не по плану..."}
         
-    async def get_menu(self, user:User, energy_restore_time:Optional[datetime] = None):
-        place_in_top:int = await self.repo.get_place_in_top_by_member(user.tg_id, user.chat_id)
-        settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
+    async def get_menu(self, user:User, chat_id:int, energy_restore_time:Optional[datetime] = None):
+        place_in_top:int = await self.repo.get_place_in_top_by_member(user.tg_id)
+        settings:BotSettings = await self.settings_repo.get_settings(chat_id)
         
         delta:timedelta = Utils.get_time_delta(user.last_length_check)
         if math.floor(delta.total_seconds() / 3600) < 0:
@@ -69,9 +69,9 @@ class UserManager:
     async def is_admin(self, tg_id:int) -> bool:
         return await self.repo.is_admin(tg_id)
     
-    async def is_registered(self, tg_id:int, chat_id: int) -> int:
+    async def is_registered(self, tg_id:int) -> int:
         user:Optional[User] = await self.repo.get_user(tg_id)
-        return -1 if (user is None) else 1 if (user) else 0
+        return -1 if (user is None) else 1
     
     @staticmethod
     def check_pencil_ready(last_length_check:datetime) -> bool:

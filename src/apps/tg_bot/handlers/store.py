@@ -31,7 +31,7 @@ async def store(callback_query: CallbackQuery, state: FSMContext):
     message = callback_query.message 
 
     store_mr = StoreManager(dict, user_repo, store_repo)
-    user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
+    user: User = await user_repo.get_user(callback_query.from_user.id)
     result = await store_mr.openStore(user)
 
     await state.update_data(store_mr=store_mr)
@@ -121,8 +121,7 @@ async def exit_store(callback: CallbackQuery, callback_data: StoreCF, state: FSM
     store_mr: StoreManager = state_data["store_mr"]
 
     try:
-        user:Optional[User] = await user_repo.get_user(store_mr.customer.tg_id, 
-                                            callback.message.chat.id)
+        user:Optional[User] = await user_repo.get_user(store_mr.customer.tg_id)
         answer:Message = None
 
         await callback.message.delete()

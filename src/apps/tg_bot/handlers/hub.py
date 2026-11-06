@@ -1,5 +1,7 @@
+from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.hub_keyboard import get_hub_keyboard, fishing_button
+from features.game_engine.data.models.bot_settings_dto import BotSettings
 from apps.tg_bot.handlers.gamba_house import process_gamba_house
 from aiogram.types import CallbackQuery, Message, FSInputFile
 from features.user.data.dtos.user_dto import User
@@ -17,11 +19,19 @@ rt = Router()
 dict = Dictionary()
 prefs = Prefs()
 bot = Bot(token=prefs.bot_token)
+settings_repo = GinoBotSettingsRepository()
 user_repo:GinoUserRepository = GinoUserRepository()
 
 @rt.message(StateFilter(None), Command("hub"))
 async def show_hub(message: Message, state: SSLContext):
     await message.delete()
+    
+    settings:BotSettings = await settings_repo.get_settings(message.chat.id)
+    if (not settings.hub_enabled):
+        denied_message = await bot.send_message(message.chat.id, dict.access_denied(), parse_mode=ParseMode.HTML)
+        await Utils.delete_old_message([denied_message], delay=10)
+        return
+    
     photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"hub.webp"))
 
     message = await bot.send_photo(message.chat.id, photo, caption="<blockquote>🌳 На перепутье я стою, болт задумчиво чешу...</blockquote>",  
@@ -40,7 +50,7 @@ async def gamba_house_callback(callback: CallbackQuery, state: SSLContext):
 async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
     message = callback_query.message
         
-    user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
+    user: User = await user_repo.get_user(callback_query.from_user.id)
 
     await message.delete()
     if (user.energy > 0):

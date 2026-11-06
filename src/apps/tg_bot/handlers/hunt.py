@@ -40,7 +40,7 @@ def get_redis_client() -> Redis:
 @rt.callback_query(StateFilter(None), F.data == "hub_hunt")
 async def hunt_init(callback_query: CallbackQuery):
     message = callback_query.message
-    user: User = await user_repo.get_user(callback_query.from_user.id, message.chat.id)
+    user: User = await user_repo.get_user(callback_query.from_user.id)
 
     if user.energy <= 0:
         answer = await bot.send_message(
