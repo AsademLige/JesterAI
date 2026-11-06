@@ -1,3 +1,4 @@
+from features.user.data.repository.gino_user_repository import GinoUserRepository
 from domain.controllers.rights_controller import RightsController
 from core.data.models.custom_sticker_model import CustomSticker
 from core.utils.media import get_media_by_custom_sticker
@@ -16,9 +17,11 @@ from aiogram import Router, F
 from aiogram import Bot
 
 
+
 prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
+user_repo = GinoUserRepository()
 db = DataBase()
 rt = Router()
 
@@ -51,7 +54,7 @@ async def get_media_by_sticker(message: Message):
     
     if (custom_sticker is None): return None
     
-    user = await db.get_user_by_chat_id(message.from_user.id, message.chat.id)
+    user = await user_repo.get_user(message.from_user.id)
     
     try:
         await message.delete()
