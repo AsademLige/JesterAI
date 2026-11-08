@@ -6,7 +6,7 @@ from features.items.items_manager import ItemsManager
 from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
-from core.consts.dictionary import Dictionary
+from core.consts.dictionary import Dictionary, INVENTORY_ROW_SIZE, inventory_page_bounds
 from core.consts.config import Prefs
 from typing import List
 
@@ -31,23 +31,48 @@ class InteractiveKeyboard():
         builder.adjust(2) 
         return builder.as_markup()
     
-    def inventory_items(self, user:User) -> InlineKeyboardMarkup:
+    def inventory_items(self, user:User, page:int = 1) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
-        for i, item in enumerate(user.inventory):
-            if (item.quantity > 0):
-                weight = (item.meta or {}).get("weight_kg") if item.meta else None
-                weight_str = f" {float(weight):.1f}кг" if weight else ""
-                builder.button(text=f"{i+1} {item.utf8_icon}{weight_str}",
-                    callback_data=InventoryCF(action="inventory_choice", 
-                                                item_id=item.id,
-                                                instance_id=item.instance_id,
-                                                user_id=user.tg_id))
-            
+        entries = [(i, item) for i, item in enumerate(user.inventory) if item.quantity > 0]
+        pages = inventory_page_bounds(len(entries))
+        total_pages = len(pages)
+        page = max(1, min(page, total_pages))
+        start, count = pages[page - 1]
+        page_entries = entries[start:start + count]
+
+        for i, item in page_entries:
+            weight = (item.meta or {}).get("weight_kg") if item.meta else None
+            weight_str = f" {float(weight):.1f}кг" if weight else ""
+            builder.button(text=f"{i+1} {item.utf8_icon}{weight_str}",
+                callback_data=InventoryCF(action="inventory_choice", 
+                                            item_id=item.id,
+                                            instance_id=item.instance_id,
+                                            user_id=user.tg_id))
+
+        if total_pages > 1:
+            builder.button(text="◀️",
+                callback_data=InventoryCF(action="inventory",
+                                          page=max(1, page - 1),
+                                          user_id=user.tg_id))
+            builder.button(text=f"{page}/{total_pages}",
+                callback_data=InventoryCF(action="", user_id=user.tg_id))
+            builder.button(text="▶️",
+                callback_data=InventoryCF(action="inventory",
+                                          page=min(total_pages, page + 1),
+                                          user_id=user.tg_id))
+
         builder.button(text=dict.exit,
             callback_data=InventoryCF(action="me_close",
                                       user_id=user.tg_id))
         
-        builder.adjust(2)
+        sizes = [INVENTORY_ROW_SIZE] * (len(page_entries) // INVENTORY_ROW_SIZE)
+        leftover = len(page_entries) % INVENTORY_ROW_SIZE
+        if leftover:
+            sizes.append(leftover)
+        if total_pages > 1:
+            sizes.append(INVENTORY_ROW_SIZE)
+        sizes.append(1)
+        builder.adjust(*sizes)
         return builder.as_markup()
     
     def item_keyboard(self, user:User, item:InventoryItem, quantity:int) -> InlineKeyboardMarkup:

@@ -13,6 +13,23 @@ from core.data.data_base import DataBase
 from core.utils.utils import Utils
 import random
 
+INVENTORY_PAGE_SIZE = 9
+INVENTORY_ROW_SIZE = 3
+
+def inventory_page_bounds(total:int) -> List[Tuple[int, int]]:
+    """Разбивка инвентаря на страницы: полные ряды по INVENTORY_ROW_SIZE,
+    остаток, не заполняющий ряд, переносится на следующую страницу."""
+    pages:List[Tuple[int, int]] = []
+    start = 0
+    while start < total:
+        count = min(INVENTORY_PAGE_SIZE, total - start)
+        count -= count % INVENTORY_ROW_SIZE
+        if count == 0:
+            count = total - start
+        pages.append((start, count))
+        start += count
+    return pages or [(0, 0)]
+
 class Dictionary():
     _instance = None
     db = DataBase()
@@ -744,21 +761,29 @@ class Dictionary():
 
         return stats_str
     
-    def user_inventory(self, user:User) -> str:
+    def user_inventory(self, user:User, page:int = 1) -> str:
         return tp.text_replacement(self.__inventory_info, {
-            "items" : self.__generate_inventory_items_list(user.inventory) if user.inventory else "<b>В рюкзаке пусто!</b>",
+            "items" : self.__generate_inventory_items_list(user.inventory, page) if user.inventory else "<b>В рюкзаке пусто!</b>",
             "user_link": self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(), 
         }, recursive_parse_args = True)
     
-    def __generate_inventory_items_list(self, items:List[InventoryItem]) -> str:
+    def __generate_inventory_items_list(self, items:List[InventoryItem], page:int = 1) -> str:
+        pages = inventory_page_bounds(len(items))
+        total_pages = len(pages)
+        page = max(1, min(page, total_pages))
+        start, count = pages[page - 1]
+
         items_str:str = ""
-        index:int = 1
-        for item in items:
+        index:int = start + 1
+        for item in items[start:start + count]:
             weight = (item.meta or {}).get("weight_kg") if item.meta else None
             weight_str = f" · {float(weight):.2f} кг" if weight else ""
             items_str += f"<b>({index})</b> {item.utf8_icon} {hcode(item.title)}{weight_str}<b> ({item.quantity}шт.)</b>\n"
             index+=1
+
+        if total_pages > 1:
+            items_str += f"\n<b>Страница {page}/{total_pages}</b>\n"
 
         return items_str
     

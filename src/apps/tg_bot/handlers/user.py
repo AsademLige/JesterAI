@@ -93,8 +93,8 @@ async def on_inventory_open(callback: CallbackQuery, callback_data: InventoryCF,
     if (user.tg_id != callback_data.user_id):
         return
 
-    await callback.message.edit_text(dict.user_inventory(user),
-                                        reply_markup=interactive_kb.inventory_items(user),
+    await callback.message.edit_text(dict.user_inventory(user, callback_data.page),
+                                        reply_markup=interactive_kb.inventory_items(user, callback_data.page),
                                          parse_mode=ParseMode.HTML)
     
 ###Выбор предмета в инвентаре
@@ -211,8 +211,8 @@ async def on_target_select_cancel(callback: CallbackQuery, callback_data: Invent
         return
     
     user: User = state_data["user"]
-    await callback.message.edit_text(dict.user_inventory(user),
-                                        reply_markup=interactive_kb.inventory_items(user),
+    await callback.message.edit_text(dict.user_inventory(user, callback_data.page),
+                                        reply_markup=interactive_kb.inventory_items(user, callback_data.page),
                                         parse_mode=ParseMode.HTML)
     
 ###Закрытие /me
