@@ -63,7 +63,7 @@ async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
         return
     
     link_message = await bot.send_message(callback_query.message.chat.id,
-            f"🎣 <a href='https://t.me/KristAIBot/fishing?startapp={message.chat.id}'>Расчехляй свое удилище!</a>",
+            f"🎣 <a href='https://t.me/ChamomileJesterBot/fishing?startapp={message.chat.id}'>Расчехляй свое удилище!</a>",
             link_preview_options=LinkPreviewOptions(
                 is_disabled=False,
                 prefer_large_media=True,

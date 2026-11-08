@@ -61,7 +61,7 @@ async def hunt_init(callback_query: CallbackQuery):
         pass
 
     link_message = await bot.send_message(callback_query.message.chat.id,
-            f"🏹 <a href='https://t.me/KristAIBot/hunt?startapp={message.chat.id}'>В воздухе витает чей-то запах...</a>",
+            f"🏹 <a href='https://t.me/ChamomileJesterBot/hunting?startapp={message.chat.id}'>В воздухе витает чей-то запах...</a>",
             link_preview_options=LinkPreviewOptions(
                 is_disabled=False,
                 prefer_large_media=True,
