@@ -72,6 +72,20 @@ class BattleManager():
         )
     
     @classmethod
+    async def fishing(cls, hunter:User, monsters_repo:IMonstersRepository, monster_count:int = 1, boss:bool = False):
+        lst:List[Union[Monster, User]] = [hunter]
+        lst.extend(await monsters_repo.get_random_monsters_by_tag(monster_count, tag="boss" if boss else "mob"))
+        
+        cls.logger.send_log("battle", logging.INFO, 
+                                    f"\n\nBattle: {hunter.tg_name} vs {lst[1].name} --------------------------------------------------")
+
+        members:List[BattleUnit] = [await BattleUnit.create_fish_entity(entity) for entity in lst]
+        return cls(
+            members = members,
+            mode = BattleMode.HUNT
+        )
+    
+    @classmethod
     async def gladiators(cls, monsters_repo:IMonstersRepository, monster_count:int = 2):
         monsters:List[Monster] = await monsters_repo.get_random_monsters_by_tag(monster_count)
         members:List[BattleUnit] = [await BattleUnit.create(entity) for entity in monsters]

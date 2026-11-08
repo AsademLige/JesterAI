@@ -34,6 +34,7 @@ class InventoryCF(CallbackData, prefix="fab_inventory"):
     action: str
     quantity:int = 1
     item_id: Optional[int] = None
+    instance_id: Optional[int] = None
     user_id: Optional[int] = None
 
 class BattleCF(CallbackData, prefix="fab_battle"):

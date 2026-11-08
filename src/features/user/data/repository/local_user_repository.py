@@ -197,7 +197,12 @@ class LocalUserRepository(IUserRepository):
         """Перемещение предмета в инвентарь пользователя/бота"""
         pass
 
-    async def user_sell_item_transaction(self, user: User, item_id: int, refund_price: int, quantity: int = 1) -> bool:
+    async def add_item_instance(self, user: User, item: BaseItem, meta: Optional[dict] = None) -> Optional[int]:
+        """Добавление уникального экземпляра предмета (quantity=1) с метаданными"""
+        pass
+
+    async def user_sell_item_transaction(self, user: User, item_id: int, refund_price: int, quantity: int = 1,
+                                         instance_id: Optional[int] = None) -> bool:
         """Продажа предмета пользователем"""
         pass
     

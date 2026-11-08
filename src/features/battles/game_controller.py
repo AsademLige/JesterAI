@@ -56,6 +56,15 @@ class GameController:
             self.started_battles[hunter.tg_id].prepare_battle(),
             self.started_battles[hunter.tg_id],
         )
+    
+    async def prepare_fishing(self, hunter: User) -> Tuple[str, BattleManager]:
+        get_boss: bool = False
+
+        self.started_battles[hunter.tg_id] = await BattleManager.fishing(
+            hunter, self.monster_repo, boss=get_boss
+        )
+        
+        return (self.started_battles[hunter.tg_id].prepare_battle(), self.started_battles[hunter.tg_id])
 
     async def prepare_gladiators(self, started_by: User):
         self.started_battles[started_by.tg_id] = await BattleManager.gladiators(

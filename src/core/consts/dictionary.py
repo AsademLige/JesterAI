@@ -755,15 +755,21 @@ class Dictionary():
         items_str:str = ""
         index:int = 1
         for item in items:
-            items_str += f"<b>({index})</b> {item.utf8_icon} {hcode(item.title)}<b> ({item.quantity}шт.)</b>\n"
+            weight = (item.meta or {}).get("weight_kg") if item.meta else None
+            weight_str = f" · {float(weight):.2f} кг" if weight else ""
+            items_str += f"<b>({index})</b> {item.utf8_icon} {hcode(item.title)}{weight_str}<b> ({item.quantity}шт.)</b>\n"
             index+=1
 
         return items_str
     
     def inventory_item_info(self, item:InventoryItem) -> str:
+        description = item.description
+        weight = (item.meta or {}).get("weight_kg") if item.meta else None
+        if weight:
+            description = f"{description}\n⚖️ Вес: {float(weight):.2f} кг"
         return tp.text_replacement(self.__inventory_item_info, {
             "title": item.title,
-            "description": item.description,
+            "description": description,
             **self.random_member(),
         }, recursive_parse_args = True)
     

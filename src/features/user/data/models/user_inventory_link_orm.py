@@ -8,3 +8,4 @@ class UserInventoryLinkORM(BaseModel):
     user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'))
     product_id = sa.Column(sa.Integer, sa.ForeignKey('store_goods.id'))
     quantity = sa.Column(sa.Integer)
+    meta = sa.Column(sa.JSON)

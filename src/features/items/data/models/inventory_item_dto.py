@@ -1,11 +1,14 @@
 from features.user.data.models.user_inventory_link_orm import UserInventoryLinkORM
 from features.items.data.models.base_item_dto import BaseItem
 from features.items.data.models.item_orm import ItemORM
+from typing import Any, Optional
 
 
 class InventoryItem(BaseItem):
     user_id: int
     quantity: int = 0
+    instance_id: Optional[int] = None
+    meta: Optional[dict[str, Any]] = None
 
     @classmethod
     def from_orm(cls, user_id: int, item: ItemORM, link: UserInventoryLinkORM) -> "InventoryItem":
@@ -18,5 +21,7 @@ class InventoryItem(BaseItem):
             action=item.action,
             utf8_icon=item.utf8_icon,
             user_id=user_id,
-            quantity=link.quantity if link else 0
+            quantity=link.quantity if link else 0,
+            instance_id=link.id if (link and link.meta) else None,
+            meta=link.meta if link else None
         )

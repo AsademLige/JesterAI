@@ -186,6 +186,12 @@ class BattleUnit():
         drop:Optional[Tuple[List[BaseItem], int]] = await LootManager.generate_drop(entity)\
                                                     if (type(entity) is Monster) else None
         return cls(entity, drop, mode)
+    
+    @classmethod
+    async def create_fish_entity(cls, entity:Union[Monster, User], mode:BattleMode = BattleMode.DUEL):
+        drop:Optional[Tuple[List[BaseItem], int]] = await LootManager.generate_fish()\
+                                                    if (type(entity) is Monster) else None
+        return cls(entity, drop, mode)
 
     def attacked(self, opponent:BattleUnit) -> Optional[AttackResult]:
         hits:List[Hit] = opponent.get_hits()

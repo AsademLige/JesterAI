@@ -28,11 +28,15 @@ def get_hub_keyboard() -> InlineKeyboardMarkup:
 
 def fishing_button(params: str = "") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    
+
+    url = "https://t.me/KristAIBot/fishing"
+    if params:
+        url += f"?startapp={params}"
+
     builder.row(
         InlineKeyboardButton(
             text="Рыбачить",
-            url="https://t.me/KristAIBot/fishing"
+            url=url
         )
     )
 
@@ -40,11 +44,15 @@ def fishing_button(params: str = "") -> InlineKeyboardMarkup:
 
 def hunt_button(params: str = "") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    
+
+    url = "https://t.me/KristAIBot/hunt"
+    if params:
+        url += f"?startapp={params}"
+
     builder.row(
         InlineKeyboardButton(
             text="На охоту",
-            url="https://t.me/KristAIBot/hunt"
+            url=url
         )
     )
 

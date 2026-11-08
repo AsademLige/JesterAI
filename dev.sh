@@ -31,7 +31,7 @@ compose down > /dev/null 2>&1
 compose up -d --build --remove-orphans
 
 echo
-echo "⏳ Ожидание Cloudflare Tunnel..."
+echo "⏳ Ожидание Tunnel..."
 
 BATTLE_API_URL=""
 FRONTEND_URL=""
@@ -39,19 +39,15 @@ FRONTEND_URL=""
 for i in {1..60}; do
 
     if [ -z "$BATTLE_API_URL" ]; then
-        BATTLE_API_URL=$(
-            compose logs --no-color cloudflared-api 2>&1 |
-            grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' |
-            head -n 1
-        )
+        if [ -f "api_url.txt" ]; then
+            BATTLE_API_URL=$(cat api_url.txt | head -n 1)
+        fi
     fi
 
     if [ -z "$FRONTEND_URL" ]; then
-        FRONTEND_URL=$(
-            compose logs --no-color cloudflared-frontend 2>&1 |
-            grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' |
-            head -n 1
-        )
+        if [ -f "frontend_url.txt" ]; then
+            FRONTEND_URL=$(cat frontend_url.txt | head -n 1)
+        fi
     fi
 
     if [ -n "$BATTLE_API_URL" ] && [ -n "$FRONTEND_URL" ]; then

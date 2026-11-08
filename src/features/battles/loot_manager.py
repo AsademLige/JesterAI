@@ -15,6 +15,7 @@ class DropTags(Enum):
     epic = "epic"
     thief = "thief"
     none = "none"
+    fish = "fish"
 
 class LootManager():
     
@@ -54,6 +55,17 @@ class LootManager():
             money_drop = random.randint(15, 30)
 
         return (drop_items, money_drop)
+    
+    @staticmethod
+    async def generate_fish() -> Tuple[List[BaseItem], int]:
+        logger:AppHerald = AppHerald()
+
+        from features.user.data.repository.gino_user_repository import GinoUserRepository
+        item:Optional[BaseItem] = await GinoUserRepository().get_random_item_by_tag(DropTags.fish)
+        logger.send_log("battle", logging.INFO, 
+                        f"drop: {DropTags.fish}: {item.title}")
+
+        return ([item], 0)
 
 
         

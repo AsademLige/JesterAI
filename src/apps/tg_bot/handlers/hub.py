@@ -3,7 +3,7 @@ from features.user.data.repository.gino_user_repository import GinoUserRepositor
 from apps.tg_bot.keyboards.hub_keyboard import get_hub_keyboard, fishing_button
 from features.game_engine.data.models.bot_settings_dto import BotSettings
 from apps.tg_bot.handlers.gamba_house import process_gamba_house
-from aiogram.types import CallbackQuery, Message, FSInputFile
+from aiogram.types import CallbackQuery, LinkPreviewOptions, Message, FSInputFile
 from features.user.data.dtos.user_dto import User
 from aiogram.filters import Command, StateFilter
 from core.consts.dictionary import Dictionary
@@ -56,15 +56,21 @@ async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
     if (user.energy > 0):
         await user_repo.update(user, energy=user.energy - 1)
     else:
-        answer = await bot.send_message(user.chat_id, 
+        answer = await bot.send_message(callback_query.message.chat.id, 
                                         dict.energy_drain(user), 
                                 parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([answer], 10)
         return
+    
+    link_message = await bot.send_message(callback_query.message.chat.id, 
+            f"🎣 <a href='https://t.me/KristAIBot/fishing'>Расчехляй свое удилище!</a>",
+            link_preview_options=LinkPreviewOptions(
+                is_disabled=False,
+                prefer_large_media=True,
+            ),
+            parse_mode=ParseMode.HTML)
 
-    link_message = await bot.send_message(callback_query.message.chat.id, f"🎣 <a href='tg://user?id={user.tg_id}'> Вперед, на рыбалку!</a>", 
-                                            reply_markup=fishing_button(""),
-                                            parse_mode=ParseMode.HTML)
+    await Utils.delete_old_message([link_message], 10)
 
 ###Выход
 @rt.callback_query(StateFilter(None), F.data == "exit")

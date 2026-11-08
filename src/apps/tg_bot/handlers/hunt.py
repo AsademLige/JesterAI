@@ -44,7 +44,7 @@ async def hunt_init(callback_query: CallbackQuery):
 
     if user.energy <= 0:
         answer = await bot.send_message(
-            user.chat_id, 
+            message.chat.id, 
             dictionary.energy_drain(user), 
             parse_mode=ParseMode.HTML
         )
@@ -53,7 +53,8 @@ async def hunt_init(callback_query: CallbackQuery):
 
     await get_redis_client().publish("api_commands", json.dumps({
         "action": "create_battle_request",
-        "user_tg_id": user.tg_id
+        "user_tg_id": user.tg_id,
+        "chat_id": message.chat.id
     }, ensure_ascii=False))
 
     try:
@@ -67,7 +68,7 @@ async def hunt_init(callback_query: CallbackQuery):
         callback_query.message.chat.id,
         photo,
         caption="<blockquote>🏹 В воздухе витает чей-то запах...</blockquote>", 
-        reply_markup=hunt_button(),
+        reply_markup=hunt_button(str(message.chat.id)),
         parse_mode=ParseMode.HTML
     )
     

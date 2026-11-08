@@ -110,7 +110,11 @@ async def on_inventory_item_select(callback: CallbackQuery, callback_data: Inven
 
         await callback.answer()
         
-        item:InventoryItem = next((p for p in user.inventory if p.id == callback_data.item_id), None)
+        if callback_data.instance_id is not None:
+            item:InventoryItem = next((p for p in user.inventory if p.instance_id == callback_data.instance_id), None)
+        else:
+            item:InventoryItem = next((p for p in user.inventory
+                                       if p.id == callback_data.item_id and p.instance_id is None), None)
     
         await state.update_data(item=item)
         await callback.message.edit_text(dict.inventory_item_info(item),
@@ -131,7 +135,8 @@ async def on_item_sell(callback: CallbackQuery, callback_data: InventoryCF, stat
 
     item:InventoryItem = state_data["item"]
     sell_price = callback_data.quantity * (item.price // 2)
-    sell_status:bool = await repository.user_sell_item_transaction(user, item.id, sell_price, callback_data.quantity)
+    sell_status:bool = await repository.user_sell_item_transaction(user, item.id, sell_price, callback_data.quantity,
+                                                                   instance_id=item.instance_id)
 
     sell_message = None
     if (sell_status):

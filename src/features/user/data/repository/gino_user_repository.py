@@ -306,35 +306,91 @@ class GinoUserRepository(IUserRepository):
             self.logger.send_log("user_repo", logging.ERROR, f"item transaction error: {error}")
             return False
 
-    async def user_sell_item_transaction(self, user: User, item_id: int, refund_price: int, quantity: int = 1) -> bool:
+    async def add_item_instance(self, user: User, item: BaseItem, meta: Optional[dict] = None) -> Optional[int]:
+        try:
+            link = UserInventoryLinkORM(
+                user_id=user.id,
+                product_id=item.id,
+                quantity=1,
+                meta=meta
+            )
+            await link.create()
+
+            user.inventory.append(InventoryItem(
+                id=item.id,
+                user_id=user.id,
+                quantity=1,
+                instance_id=link.id,
+                meta=meta,
+                price=item.price,
+                title=item.title,
+                tag=item.tag,
+                description=item.description,
+                action=item.action,
+                utf8_icon=item.utf8_icon
+            ))
+
+            return link.id
+        except Exception as error:
+            self.logger.send_log("user_repo", logging.ERROR, f"add item instance error: {error}")
+            return None
+
+    async def user_sell_item_transaction(self, user: User, item_id: int, refund_price: int, quantity: int = 1,
+                                         instance_id: Optional[int] = None) -> bool:
         if quantity <= 0:
             return False
 
         try:
-            existed_item: UserInventoryLinkORM = await UserInventoryLinkORM.\
-                query.where(and_(UserInventoryLinkORM.product_id == item_id,
-                                 UserInventoryLinkORM.user_id == user.id)).gino.first()
-            
-            if not existed_item or existed_item.quantity < quantity:
-                return False
+            if instance_id is not None:
+                existed_item: UserInventoryLinkORM = await UserInventoryLinkORM.\
+                    query.where(and_(UserInventoryLinkORM.id == instance_id,
+                                     UserInventoryLinkORM.user_id == user.id)).gino.first()
 
-            new_quantity = existed_item.quantity - quantity
+                if not existed_item or existed_item.quantity < quantity:
+                    return False
 
-            if new_quantity > 0:
-                await UserInventoryLinkORM.update.where(
-                    and_(UserInventoryLinkORM.product_id == item_id, UserInventoryLinkORM.user_id == user.id)
-                ).values(quantity=new_quantity).gino.status()
-            else:
-                await UserInventoryLinkORM.delete.where(
-                    and_(UserInventoryLinkORM.product_id == item_id, UserInventoryLinkORM.user_id == user.id)
-                ).gino.status()
+                new_quantity = existed_item.quantity - quantity
 
-            inventory_item = next((i for i in user.inventory if i.id == item_id), None)
-            if inventory_item:
                 if new_quantity > 0:
-                    inventory_item.quantity = new_quantity
+                    await UserInventoryLinkORM.update.where(
+                        UserInventoryLinkORM.id == instance_id
+                    ).values(quantity=new_quantity).gino.status()
                 else:
-                    user.inventory.remove(inventory_item)
+                    await UserInventoryLinkORM.delete.where(
+                        UserInventoryLinkORM.id == instance_id
+                    ).gino.status()
+
+                inventory_item = next((i for i in user.inventory if i.instance_id == instance_id), None)
+                if inventory_item:
+                    if new_quantity > 0:
+                        inventory_item.quantity = new_quantity
+                    else:
+                        user.inventory.remove(inventory_item)
+            else:
+                existed_item: UserInventoryLinkORM = await UserInventoryLinkORM.\
+                    query.where(and_(UserInventoryLinkORM.product_id == item_id,
+                                     UserInventoryLinkORM.user_id == user.id)).gino.first()
+
+                if not existed_item or existed_item.quantity < quantity:
+                    return False
+
+                new_quantity = existed_item.quantity - quantity
+
+                if new_quantity > 0:
+                    await UserInventoryLinkORM.update.where(
+                        and_(UserInventoryLinkORM.product_id == item_id, UserInventoryLinkORM.user_id == user.id)
+                    ).values(quantity=new_quantity).gino.status()
+                else:
+                    await UserInventoryLinkORM.delete.where(
+                        and_(UserInventoryLinkORM.product_id == item_id, UserInventoryLinkORM.user_id == user.id)
+                    ).gino.status()
+
+                inventory_item = next((i for i in user.inventory if i.id == item_id), None)
+                if inventory_item:
+                    if new_quantity > 0:
+                        inventory_item.quantity = new_quantity
+                    else:
+                        user.inventory.remove(inventory_item)
 
             total_refund = refund_price
             user.money += total_refund

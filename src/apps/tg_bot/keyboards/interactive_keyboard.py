@@ -35,9 +35,12 @@ class InteractiveKeyboard():
         builder = InlineKeyboardBuilder()
         for i, item in enumerate(user.inventory):
             if (item.quantity > 0):
-                builder.button(text=f"{i+1} {item.utf8_icon}",
+                weight = (item.meta or {}).get("weight_kg") if item.meta else None
+                weight_str = f" {float(weight):.1f}кг" if weight else ""
+                builder.button(text=f"{i+1} {item.utf8_icon}{weight_str}",
                     callback_data=InventoryCF(action="inventory_choice", 
                                                 item_id=item.id,
+                                                instance_id=item.instance_id,
                                                 user_id=user.tg_id))
             
         builder.button(text=dict.exit,
@@ -57,6 +60,7 @@ class InteractiveKeyboard():
                     callback_data=InventoryCF(action="inventory_choice",
                                             quantity=minus,
                                             item_id=item.id,
+                                            instance_id=item.instance_id,
                                             user_id=user.tg_id))
 
         builder.button(text=f"{quantity}",
@@ -66,6 +70,7 @@ class InteractiveKeyboard():
                             callback_data=InventoryCF(action="inventory_choice",
                                                     quantity=plus,
                                                     item_id=item.id,
+                                                    instance_id=item.instance_id,
                                                     user_id=user.tg_id))
 
         if (item.usable):

@@ -46,6 +46,7 @@
         "notifivcate",
         "onupdate",
         "outerjoin",
+        "pinggy",
         "Prefs",
         "psycopg",
         "pydantic",

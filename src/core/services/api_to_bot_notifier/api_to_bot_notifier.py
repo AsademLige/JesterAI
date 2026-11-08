@@ -149,16 +149,17 @@ class ApiToBotNotifier:
         """Просто отправляет готовое сообщение, сформированное в API"""
         text = log_data.get("text", "Бой завершен!")
         self.user_repo.clear_user_cache(user)
-        await self._send_message(user, text, delete_after=30)
+        await self._send_message(user, text, delete_after=30, chat_id=log_data.get("chat_id"))
 
     async def _handle_notification(self, user: User, log_data: dict):
         if (log_data.get("text")):
             await self._send_message(user, log_data["text"], delete_after=log_data["delete_delay"], private = True)
 
-    async def _send_message(self, user: User, text: str, delete_after: Optional[int] = None, private:bool = False):
+    async def _send_message(self, user: User, text: str, delete_after: Optional[int] = None, private: bool = False, chat_id: Optional[int] = None):
         try:
+            target = user.tg_id if (private or not chat_id) else chat_id
             message = await self.bot.send_message(
-                user.chat_id if (not private) else user.tg_id,
+                target,
                 text,
                 parse_mode=ParseMode.HTML
             )

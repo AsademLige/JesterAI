@@ -62,8 +62,11 @@ class GameEngine:
         return self._next_energy_restore[user.tg_id] if user.tg_id in self._next_energy_restore else None
 
     async def create_energy_restore_timer(self, user:User):
-        if user.tg_id in self._next_energy_restore: return
+        if user.tg_id in self._next_energy_restore : return
 
         settings:BotSettings = await self.settings_repo.get_settings(user.chat_id)
+
+        if (user.energy >= settings.max_users_energy): return
+
         self._next_energy_restore[user.tg_id] = datetime.now() + timedelta(seconds=settings.energy_restore_time)
         self.logger.debug(f"create_energy_restore_timer: {user.tg_id}:{user.tg_name} {user.energy}")
