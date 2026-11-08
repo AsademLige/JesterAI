@@ -6,7 +6,7 @@ from features.game_engine.data.models.bot_settings_dto import BotSettings
 from features.items.data.models.inventory_item_dto import InventoryItem
 from apps.tg_bot.keyboards.callback_fabrics import InventoryCF
 from features.user.domain.user_manager import UserManager
-from features.items.items_manager import ItemsManager
+from features.items.items_manager import ItemsManager, get_item_sell_price
 from features.user.data.dtos.user_dto import User
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
@@ -134,7 +134,7 @@ async def on_item_sell(callback: CallbackQuery, callback_data: InventoryCF, stat
         return
 
     item:InventoryItem = state_data["item"]
-    sell_price = callback_data.quantity * (item.price // 2)
+    sell_price = get_item_sell_price(item, callback_data.quantity)
     sell_status:bool = await repository.user_sell_item_transaction(user, item.id, sell_price, callback_data.quantity,
                                                                    instance_id=item.instance_id)
 

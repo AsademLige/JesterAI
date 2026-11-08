@@ -2,7 +2,7 @@ from features.user.data.repository.gino_user_repository import GinoUserRepositor
 from apps.tg_bot.keyboards.callback_fabrics import DiceGameCF, InventoryCF
 from features.items.data.models.inventory_item_dto import InventoryItem
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from features.items.items_manager import ItemsManager
+from features.items.items_manager import ItemsManager, get_item_sell_price
 from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
@@ -110,7 +110,7 @@ class InteractiveKeyboard():
                                     quantity=quantity,
                                     user_id=user.tg_id))
 
-        builder.button(text=f"{dict.sell_item} (+{quantity * (item.price // 2)}💰)",
+        builder.button(text=f"{dict.sell_item} (+{get_item_sell_price(item, quantity)}💰)",
         callback_data=InventoryCF(action="sell_item",
                                 quantity=quantity,
                                 user_id=user.tg_id))

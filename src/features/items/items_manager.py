@@ -14,6 +14,16 @@ import random
 import json
 
 
+def get_item_sell_price(item: InventoryItem, quantity: int = 1) -> int:
+    """Цена продажи: половина стоимости предмета.
+    Для экземпляров с весом (рыба) применяется множитель по весу: 0.5 + вес/4 (2 кг = базовая цена)."""
+    base = item.price // 2
+    weight = (item.meta or {}).get("weight_kg") if item.meta else None
+    if weight:
+        base = int(base * (0.5 + float(weight) / 4))
+    return base * quantity
+
+
 class ItemActions(Enum):
     pencil_timer_decresc = "pencil_timer_decresc"
     dice_timer_decresc = "dice_timer_decresc"

@@ -62,8 +62,8 @@ async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
         await Utils.delete_old_message([answer], 10)
         return
     
-    link_message = await bot.send_message(callback_query.message.chat.id, 
-            f"🎣 <a href='https://t.me/KristAIBot/fishing'>Расчехляй свое удилище!</a>",
+    link_message = await bot.send_message(callback_query.message.chat.id,
+            f"🎣 <a href='https://t.me/KristAIBot/fishing?startapp={message.chat.id}'>Расчехляй свое удилище!</a>",
             link_preview_options=LinkPreviewOptions(
                 is_disabled=False,
                 prefer_large_media=True,

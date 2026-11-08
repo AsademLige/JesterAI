@@ -1,13 +1,12 @@
 from features.battles.data.repository.gino_battle_repository import GinoBattleRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
+from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
 from apps.tg_bot.keyboards.hub_keyboard import hunt_button
 from features.items.items_manager import ItemsManager
-from aiogram.types import CallbackQuery, FSInputFile
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 from aiogram.filters import StateFilter
-from core.consts.consts import Consts
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
 from core.utils.utils import Utils
@@ -16,7 +15,6 @@ from aiogram import Router, F
 from typing import Optional
 from aiogram import Bot
 import json
-import os
 
 prefs = Prefs()
 dictionary = Dictionary()
@@ -62,16 +60,14 @@ async def hunt_init(callback_query: CallbackQuery):
     except:
         pass
 
-    photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"hunt.webp"))
+    link_message = await bot.send_message(callback_query.message.chat.id,
+            f"🏹 <a href='https://t.me/KristAIBot/hunt?startapp={message.chat.id}'>В воздухе витает чей-то запах...</a>",
+            link_preview_options=LinkPreviewOptions(
+                is_disabled=False,
+                prefer_large_media=True,
+            ),
+            parse_mode=ParseMode.HTML)
 
-    link_message = await bot.send_photo(
-        callback_query.message.chat.id,
-        photo,
-        caption="<blockquote>🏹 В воздухе витает чей-то запах...</blockquote>", 
-        reply_markup=hunt_button(str(message.chat.id)),
-        parse_mode=ParseMode.HTML
-    )
-    
     await Utils.delete_old_message([link_message], 20)
 
 ###---------------------
