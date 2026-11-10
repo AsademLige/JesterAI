@@ -208,6 +208,24 @@ class GinoUserRepository(IUserRepository):
                                 custom_title = custom_title, 
                                 chat_id = chat_id)
             await user.create()
+
+            stats = UserStatsORM(
+                user_id=user.id,
+                trash_loto_money_wins=0,
+                trash_loto_length_wins=0,
+                trash_loto_jackpots=0,
+                trash_loto_spins=0,
+                dice_minor_wins=0,
+                dice_major_wins=0,
+                dice_games=0,
+                gladiators_bet=0,
+                gladiators_bet_win=0,
+                good_hunting_count=0,
+                duels_win_count=0,
+                duels_count=0,
+            )
+            await stats.create()
+
             return True
         except Exception as error: 
             self.logger.send_log("user_repo", logging.ERROR, f"user create error: {error}")

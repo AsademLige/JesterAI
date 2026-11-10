@@ -17,15 +17,12 @@ INVENTORY_PAGE_SIZE = 9
 INVENTORY_ROW_SIZE = 3
 
 def inventory_page_bounds(total:int) -> List[Tuple[int, int]]:
-    """Разбивка инвентаря на страницы: полные ряды по INVENTORY_ROW_SIZE,
-    остаток, не заполняющий ряд, переносится на следующую страницу."""
+    """Разбивка инвентаря на страницы по INVENTORY_PAGE_SIZE записей;
+    последняя страница может содержать неполный ряд."""
     pages:List[Tuple[int, int]] = []
     start = 0
     while start < total:
         count = min(INVENTORY_PAGE_SIZE, total - start)
-        count -= count % INVENTORY_ROW_SIZE
-        if count == 0:
-            count = total - start
         pages.append((start, count))
         start += count
     return pages or [(0, 0)]
