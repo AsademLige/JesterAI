@@ -14,14 +14,21 @@ import random
 import json
 
 
-def get_item_sell_price(item: InventoryItem, quantity: int = 1) -> int:
-    """Цена продажи: половина стоимости предмета.
-    Для экземпляров с весом (рыба) применяется множитель по весу: 0.5 + вес/4 (2 кг = базовая цена)."""
+def get_instance_sell_price(item: InventoryItem, weight_kg: Optional[float]) -> int:
+    """Цена продажи одного экземпляра: половина стоимости предмета,
+    для взвешенных (рыба) — множитель по весу 0.5 + вес/4 (2 кг = базовая цена)."""
     base = item.price // 2
-    weight = (item.meta or {}).get("weight_kg") if item.meta else None
-    if weight:
-        base = int(base * (0.5 + float(weight) / 4))
-    return base * quantity
+    if weight_kg:
+        base = int(base * (0.5 + float(weight_kg) / 4))
+    return base
+
+
+def get_item_sell_price(item: InventoryItem, quantity: int = 1) -> int:
+    meta = item.meta or {}
+    if meta.get("instance_ids"):
+        # Группа экземпляров продаётся целиком: сумма цен по весу каждого
+        return sum(get_instance_sell_price(item, weight) for weight in meta.get("weights") or [])
+    return get_instance_sell_price(item, meta.get("weight_kg")) * quantity
 
 
 class ItemActions(Enum):

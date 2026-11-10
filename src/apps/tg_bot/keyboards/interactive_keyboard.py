@@ -6,7 +6,7 @@ from features.items.items_manager import ItemsManager, get_item_sell_price
 from features.user.data.dtos.user_dto import User
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.types import InlineKeyboardButton
-from core.consts.dictionary import Dictionary, INVENTORY_ROW_SIZE, inventory_page_bounds
+from core.consts.dictionary import Dictionary, INVENTORY_ROW_SIZE, inventory_page_bounds, group_inventory_items
 from core.consts.config import Prefs
 from typing import List
 
@@ -33,7 +33,7 @@ class InteractiveKeyboard():
     
     def inventory_items(self, user:User, page:int = 1) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
-        entries = [(i, item) for i, item in enumerate(user.inventory) if item.quantity > 0]
+        entries = list(enumerate(group_inventory_items(user.inventory)))
         pages = inventory_page_bounds(len(entries))
         total_pages = len(pages)
         page = max(1, min(page, total_pages))
@@ -41,9 +41,11 @@ class InteractiveKeyboard():
         page_entries = entries[start:start + count]
 
         for i, item in page_entries:
-            weight = (item.meta or {}).get("weight_kg") if item.meta else None
+            meta = item.meta or {}
+            weight = meta.get("weight_kg")
             weight_str = f" {float(weight):.1f}кг" if weight else ""
-            builder.button(text=f"{i+1} {item.utf8_icon}{weight_str}",
+            count_str = f"×{item.quantity}" if meta.get("instance_ids") and item.quantity > 1 else ""
+            builder.button(text=f"{i+1} {item.utf8_icon}{weight_str}{count_str}",
                 callback_data=InventoryCF(action="inventory_choice", 
                                             item_id=item.id,
                                             instance_id=item.instance_id,
@@ -78,25 +80,30 @@ class InteractiveKeyboard():
     def item_keyboard(self, user:User, item:InventoryItem, quantity:int) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
 
-        minus:int = quantity - 1 if (quantity - 1 >= 1) else quantity
-        plus:int = quantity + 1 if (quantity + 1 <= item.quantity) else quantity
+        grouped = bool((item.meta or {}).get("instance_ids"))
+        if grouped:
+            quantity = item.quantity
+        else:
+            minus:int = quantity - 1 if (quantity - 1 >= 1) else quantity
+            plus:int = quantity + 1 if (quantity + 1 <= item.quantity) else quantity
 
-        builder.button(text="➖ меньше",
-                    callback_data=InventoryCF(action="inventory_choice",
-                                            quantity=minus,
-                                            item_id=item.id,
-                                            instance_id=item.instance_id,
-                                            user_id=user.tg_id))
+            builder.button(text="➖ меньше",
+                        callback_data=InventoryCF(action="inventory_choice",
+                                                quantity=minus,
+                                                item_id=item.id,
+                                                instance_id=item.instance_id,
+                                                user_id=user.tg_id))
 
         builder.button(text=f"{quantity}",
                             callback_data=InventoryCF(action = "", user_id=user.tg_id))
 
-        builder.button(text="➕ больше",
-                            callback_data=InventoryCF(action="inventory_choice",
-                                                    quantity=plus,
-                                                    item_id=item.id,
-                                                    instance_id=item.instance_id,
-                                                    user_id=user.tg_id))
+        if not grouped:
+            builder.button(text="➕ больше",
+                                callback_data=InventoryCF(action="inventory_choice",
+                                                        quantity=plus,
+                                                        item_id=item.id,
+                                                        instance_id=item.instance_id,
+                                                        user_id=user.tg_id))
 
         if (item.usable):
             builder.button(text=dict.use_myself,

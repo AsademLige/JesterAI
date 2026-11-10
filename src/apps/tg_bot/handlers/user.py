@@ -6,12 +6,12 @@ from features.game_engine.data.models.bot_settings_dto import BotSettings
 from features.items.data.models.inventory_item_dto import InventoryItem
 from apps.tg_bot.keyboards.callback_fabrics import InventoryCF
 from features.user.domain.user_manager import UserManager
-from features.items.items_manager import ItemsManager, get_item_sell_price
+from features.items.items_manager import ItemsManager, get_item_sell_price, get_instance_sell_price
 from features.user.data.dtos.user_dto import User
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from apps.tg_bot.commands import Commands as cn
-from core.consts.dictionary import Dictionary
+from core.consts.dictionary import Dictionary, group_inventory_items
 from aiogram.fsm.context import FSMContext
 from core.data.data_base import DataBase
 from core.consts.config import Prefs
@@ -110,10 +110,11 @@ async def on_inventory_item_select(callback: CallbackQuery, callback_data: Inven
 
         await callback.answer()
         
+        entries = group_inventory_items(user.inventory)
         if callback_data.instance_id is not None:
-            item:InventoryItem = next((p for p in user.inventory if p.instance_id == callback_data.instance_id), None)
+            item:InventoryItem = next((p for p in entries if p.instance_id == callback_data.instance_id), None)
         else:
-            item:InventoryItem = next((p for p in user.inventory
+            item:InventoryItem = next((p for p in entries
                                        if p.id == callback_data.item_id and p.instance_id is None), None)
     
         await state.update_data(item=item)
@@ -134,9 +135,21 @@ async def on_item_sell(callback: CallbackQuery, callback_data: InventoryCF, stat
         return
 
     item:InventoryItem = state_data["item"]
-    sell_price = get_item_sell_price(item, callback_data.quantity)
-    sell_status:bool = await repository.user_sell_item_transaction(user, item.id, sell_price, callback_data.quantity,
-                                                                   instance_id=item.instance_id)
+    meta = item.meta or {}
+    instance_ids = meta.get("instance_ids")
+
+    if instance_ids:
+        # Группа экземпляров (рыба): продаём каждый отдельно, цену считаем по его весу
+        sell_price = 0
+        sell_status = False
+        for instance_id, weight in zip(instance_ids, meta.get("weights") or []):
+            price = get_instance_sell_price(item, weight)
+            if await repository.user_sell_item_transaction(user, item.id, price, 1, instance_id=instance_id):
+                sell_price += price
+                sell_status = True
+    else:
+        sell_price = get_item_sell_price(item, callback_data.quantity)
+        sell_status = await repository.user_sell_item_transaction(user, item.id, sell_price, callback_data.quantity)
 
     sell_message = None
     if (sell_status):

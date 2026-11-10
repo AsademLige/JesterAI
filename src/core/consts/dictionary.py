@@ -30,6 +30,43 @@ def inventory_page_bounds(total:int) -> List[Tuple[int, int]]:
         start += count
     return pages or [(0, 0)]
 
+def group_inventory_items(items:List[InventoryItem]) -> List[InventoryItem]:
+    """Экземпляры одного предмета (рыба) сливаются в одну запись: количество и вес суммируются.
+    instance_id группы — id первого экземпляра, все id лежат в meta['instance_ids']."""
+    grouped:List[InventoryItem] = []
+    positions:Dict[int, int] = {}
+
+    for item in items:
+        if item.quantity <= 0:
+            continue
+
+        if item.instance_id is None:
+            grouped.append(item)
+            continue
+
+        weight = float((item.meta or {}).get("weight_kg") or 0)
+        position = positions.get(item.id)
+
+        if position is None:
+            merged = item.model_copy(deep=True)
+            merged.meta = {
+                **(item.meta or {}),
+                "weight_kg": round(weight, 2),
+                "weights": [weight],
+                "instance_ids": [item.instance_id],
+            }
+            positions[item.id] = len(grouped)
+            grouped.append(merged)
+        else:
+            merged = grouped[position]
+            meta = merged.meta
+            merged.quantity += item.quantity
+            meta["weight_kg"] = round(float(meta["weight_kg"]) + weight, 2)
+            meta["weights"].append(weight)
+            meta["instance_ids"].append(item.instance_id)
+
+    return grouped
+
 class Dictionary():
     _instance = None
     db = DataBase()
@@ -763,7 +800,7 @@ class Dictionary():
     
     def user_inventory(self, user:User, page:int = 1) -> str:
         return tp.text_replacement(self.__inventory_info, {
-            "items" : self.__generate_inventory_items_list(user.inventory, page) if user.inventory else "<b>В рюкзаке пусто!</b>",
+            "items" : self.__generate_inventory_items_list(group_inventory_items(user.inventory), page) if user.inventory else "<b>В рюкзаке пусто!</b>",
             "user_link": self.get_user_link(user.tg_name, user.tg_id),
             **self.random_member(), 
         }, recursive_parse_args = True)
@@ -789,9 +826,13 @@ class Dictionary():
     
     def inventory_item_info(self, item:InventoryItem) -> str:
         description = item.description
-        weight = (item.meta or {}).get("weight_kg") if item.meta else None
+        meta = item.meta or {}
+        weight = meta.get("weight_kg")
         if weight:
-            description = f"{description}\n⚖️ Вес: {float(weight):.2f} кг"
+            if meta.get("instance_ids") and item.quantity > 1:
+                description = f"{description}\n⚖️ Общий вес: {float(weight):.2f} кг ({item.quantity} шт.)"
+            else:
+                description = f"{description}\n⚖️ Вес: {float(weight):.2f} кг"
         return tp.text_replacement(self.__inventory_item_info, {
             "title": item.title,
             "description": description,

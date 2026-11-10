@@ -79,7 +79,7 @@ class GinoUserRepository(IUserRepository):
         try:
             query = (
                 select([UserORM, UserStatsORM])
-                .select_from(UserORM.join(UserStatsORM))
+                .select_from(UserORM.outerjoin(UserStatsORM))
             )
 
             if tg_id is not None:
@@ -96,26 +96,27 @@ class GinoUserRepository(IUserRepository):
                 return None
 
             db_user: UserORM
-            db_stats: UserStatsORM
+            db_stats: Optional[UserStatsORM]
             (db_user, db_stats) = row
 
             user_dto = User.model_validate(db_user)
 
-            user_dto.trash_loto_money_wins = db_stats.trash_loto_money_wins
-            user_dto.trash_loto_length_wins = db_stats.trash_loto_length_wins
-            user_dto.trash_loto_jackpots = db_stats.trash_loto_jackpots
-            user_dto.trash_loto_spins = db_stats.trash_loto_spins
+            if db_stats:
+                user_dto.trash_loto_money_wins = db_stats.trash_loto_money_wins
+                user_dto.trash_loto_length_wins = db_stats.trash_loto_length_wins
+                user_dto.trash_loto_jackpots = db_stats.trash_loto_jackpots
+                user_dto.trash_loto_spins = db_stats.trash_loto_spins
 
-            user_dto.dice_games = db_stats.dice_games
-            user_dto.dice_minor_wins = db_stats.dice_minor_wins
-            user_dto.dice_major_wins = db_stats.dice_major_wins
+                user_dto.dice_games = db_stats.dice_games
+                user_dto.dice_minor_wins = db_stats.dice_minor_wins
+                user_dto.dice_major_wins = db_stats.dice_major_wins
 
-            user_dto.gladiators_bet = db_stats.gladiators_bet
-            user_dto.gladiators_bet_win = db_stats.gladiators_bet_win
+                user_dto.gladiators_bet = db_stats.gladiators_bet
+                user_dto.gladiators_bet_win = db_stats.gladiators_bet_win
 
-            user_dto.duels_count = db_stats.duels_count
-            user_dto.duels_win_count = db_stats.duels_win_count
-            user_dto.good_hunting_count = db_stats.good_hunting_count
+                user_dto.duels_count = db_stats.duels_count
+                user_dto.duels_win_count = db_stats.duels_win_count
+                user_dto.good_hunting_count = db_stats.good_hunting_count
 
             await self.load_user_inventory(user_dto)
 
