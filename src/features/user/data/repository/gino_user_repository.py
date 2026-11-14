@@ -117,6 +117,8 @@ class GinoUserRepository(IUserRepository):
                 user_dto.duels_count = db_stats.duels_count
                 user_dto.duels_win_count = db_stats.duels_win_count
                 user_dto.good_hunting_count = db_stats.good_hunting_count
+                user_dto.fish_caught_count = db_stats.fish_caught_count
+                user_dto.fish_caught_weight = db_stats.fish_caught_weight
 
             await self.load_user_inventory(user_dto)
 
@@ -221,6 +223,8 @@ class GinoUserRepository(IUserRepository):
                 gladiators_bet=0,
                 gladiators_bet_win=0,
                 good_hunting_count=0,
+                fish_caught_count=0,
+                fish_caught_weight=0,
                 duels_win_count=0,
                 duels_count=0,
             )

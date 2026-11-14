@@ -1,16 +1,10 @@
 from core.data.models.str_assets_negative_length_change_model import StrAssetsNegativeLengthChange
 from core.data.models.str_assets_positive_length_change_model import StrAssetsPositiveLengthChange
 from core.data.models.custom_sticker_model import CustomSticker
-from features.user.data.models.user_model_orm import UserORM
 from core.data.models.sticker_set_model import StickerSet
-from core.data.models.winners_log_model import WinnersLog
-from core.services.data_base.db_model import db
 from core.consts.config import Prefs
-from datetime import  datetime
-from sqlalchemy import select
 from typing import Optional
 from typing import List
-from math import ceil
 
 prefs = Prefs()
 
@@ -87,50 +81,6 @@ class DataBase():
     async def delete_sticker_set_by_name(self, short_name:str):
         return await StickerSet.delete.\
             where(StickerSet.short_name == short_name).gino.status()
-
-    ###-----------------------------------------
-    ### Методы работы с статистикой выигрышей 
-    ###-----------------------------------------
-
-    async def get_winners_logs_page(self, chat_id:int, page: int = 1):
-        """Получить одну страницу логов"""
-        items_per_page:int = 10
-        offset = (page - 1) * items_per_page
-
-        subquery = select([UserORM.id]).where(UserORM.chat_id == chat_id).alias()
-        logs:List[WinnersLog] = await WinnersLog.query.where(WinnersLog.user_id.in_(subquery)).order_by(WinnersLog.win_date.desc())\
-            .offset(offset).limit(items_per_page).gino.all()
-
-        total_logs:int = await select([db.func.count(WinnersLog.id)]).where(
-            WinnersLog.user_id.in_(subquery)
-        ).gino.scalar()
-        
-        logs_page_users_id:List[int] = []
-        
-        for log in logs:
-            if (not log.user_id in logs_page_users_id):
-                logs_page_users_id.append(log.user_id)
-        
-        total_pages = ceil(total_logs / items_per_page)
-
-        users: List[UserORM] = await UserORM.query.where(UserORM.id.in_(logs_page_users_id)).gino.all()
-        
-        return logs, total_pages, users
-    
-    async def add_win_log(self, user_id:int, event_type:int = 0, money:int = 0, length:int = 0):
-        try:
-            log = WinnersLog(
-                user_id = user_id,
-                event_type = event_type,
-                money = money,
-                length = length,
-                win_date = datetime.now()
-            )
-            await log.create()
-            return True
-        except Exception as error: 
-            print(f"log create error: {error}")
-            return False
 
     ###-----------------------------------------
     ### Методы загрузки наборов данных 

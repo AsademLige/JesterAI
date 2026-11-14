@@ -11,6 +11,11 @@ class JobsCF(CallbackData, prefix="fab_jobs"):
     action: str
     job_id: Optional[str] = None
 
+class AdminSettingsCF(CallbackData, prefix="fab_admin_settings"):
+    action: str
+    chat_id: Optional[int] = None
+    field: Optional[str] = None
+
 class DiceGameCF(CallbackData, prefix="fab_dice_game"):
     action: str
     user_id: Optional[int] = None

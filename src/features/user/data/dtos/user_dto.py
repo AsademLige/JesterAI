@@ -41,6 +41,8 @@ class User(BaseModel):
     duels_count: int = 0
     duels_win_count: int = 0
     good_hunting_count: int = 0
+    fish_caught_count: int = 0
+    fish_caught_weight: float = 0
     
     inventory: List[InventoryItem] = Field(default_factory=list)
 

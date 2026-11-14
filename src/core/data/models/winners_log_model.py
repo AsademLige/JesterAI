@@ -17,5 +17,6 @@ class WinnersLog(BaseModel):
 
     money = sa.Column(sa.Integer)
     length = sa.Column(sa.Integer)
+    bet = sa.Column(sa.Integer, default=0, server_default="0")
     win_date = sa.Column(sa.Date)
     

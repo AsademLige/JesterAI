@@ -1,9 +1,9 @@
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
-from apps.tg_bot.keyboards.hub_keyboard import get_hub_keyboard, fishing_button
+from aiogram.types import CallbackQuery, LinkPreviewOptions, Message, FSInputFile
 from features.game_engine.data.models.bot_settings_dto import BotSettings
 from apps.tg_bot.handlers.gamba_house import process_gamba_house
-from aiogram.types import CallbackQuery, LinkPreviewOptions, Message, FSInputFile
+from apps.tg_bot.keyboards.hub_keyboard import get_hub_keyboard
 from features.user.data.dtos.user_dto import User
 from aiogram.filters import Command, StateFilter
 from core.consts.dictionary import Dictionary
@@ -47,23 +47,12 @@ async def gamba_house_callback(callback: CallbackQuery, state: SSLContext):
 
 ###Отправиться на Рыбалку
 @rt.callback_query(StateFilter(None), F.data == "hub_fishing")
-async def fishing_init(callback_query: CallbackQuery, state: SSLContext):
+async def fishing_init(callback_query: CallbackQuery, state: SSLContext, bot_name:str):
     message = callback_query.message
-        
-    user: User = await user_repo.get_user(callback_query.from_user.id)
-
     await message.delete()
-    if (user.energy > 0):
-        await user_repo.update(user, energy=user.energy - 1)
-    else:
-        answer = await bot.send_message(callback_query.message.chat.id, 
-                                        dict.energy_drain(user), 
-                                parse_mode=ParseMode.HTML)
-        await Utils.delete_old_message([answer], 10)
-        return
-    
+
     link_message = await bot.send_message(callback_query.message.chat.id,
-            f"🎣 <a href='https://t.me/ChamomileJesterBot/fishing?startapp={message.chat.id}'>Расчехляй свое удилище!</a>",
+            f"🎣 <a href='https://t.me/{bot_name}/fishing?startapp={message.chat.id}'>Расчехляй свое удилище!</a>",
             link_preview_options=LinkPreviewOptions(
                 is_disabled=False,
                 prefer_large_media=True,

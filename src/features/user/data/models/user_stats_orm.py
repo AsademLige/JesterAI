@@ -19,6 +19,8 @@ class UserStatsORM(BaseModel):
     gladiators_bet_win = sa.Column(sa.Integer)
 
     good_hunting_count = sa.Column(sa.Integer)
+    fish_caught_count = sa.Column(sa.Integer)
+    fish_caught_weight = sa.Column(sa.Float)
     duels_win_count = sa.Column(sa.Integer)
     duels_count = sa.Column(sa.Integer)
 

@@ -2,12 +2,19 @@ from features.game_engine.data.repository.bot_settings_repository import IBotSet
 from features.store.data.repository.store_repository import IStoreRepository
 from features.user.data.repository.user_repository import IUserRepository
 from features.game_engine.data.models.bot_settings_dto import BotSettings
+from features.battles.data.repository.gino_battle_repository import GinoBattleRepository
+from features.gamba_house.data.repository.gino_winners_log_repository import GinoWinnersLogRepository
+from features.newspaper.data.repository.gino_newspaper_repository import GinoNewspaperRepository
 from features.items.data.models.store_item_dto import StoreItem
+from core.services.newspaper.humor_provider import HumorProvider
 from features.user.data.dtos.user_dto import User
+from core.consts.dictionary import Dictionary
 from core.utils.app_herald import AppHerald
 from typing import Dict, List, Optional
+from datetime import datetime, timedelta
 import logging
 import random
+import time
 
 class TestJobTracker:
     def __init__(self):
@@ -28,6 +35,7 @@ class GlobalJobs():
         self.user_repo = user_repo
         self.store_repo = store_repo
         self.settings_repo = settings_repo
+        self.dict = Dictionary()
 
     async def weekly_top(self, notifier_func):
         """
@@ -61,6 +69,55 @@ class GlobalJobs():
                 await notifier_func(chat_id, "weekly_winners", {"sorted_users": sorted_users, "rewards": rewards})
             except Exception as e:
                 self.logger.send_log("apscheduler", logging.WARNING, f"weekly_top - {e}")
+
+    async def weekly_newspaper(self, notifier_func):
+        """
+        Еженедельный выпуск газеты «Чумные вести».
+        Победители выбираются среди всех игроков (без привязки к чату),
+        готовый выпуск сохраняется в БД и рассылается в чаты с events_enabled.
+        """
+        winners_log_repo = GinoWinnersLogRepository()
+        newspaper_repo = GinoNewspaperRepository()
+        battle_repo = GinoBattleRepository()
+        humor = HumorProvider()
+
+        try:
+            cutoff_ts = int(time.time()) - 7 * 24 * 3600
+            since_date = datetime.now() - timedelta(days=7)
+
+            # Самая тяжёлая выловленная рыба за неделю (глобально)
+            fish = await battle_repo.get_heaviest_fish_week(cutoff_ts)
+            fish_winner: Optional[User] = None
+            fish_name: Optional[str] = None
+            fish_weight: Optional[float] = None
+            if fish:
+                fish_winner = await self.user_repo.get_user(tg_id=fish["tg_id"])
+                fish_name = fish.get("fish_name")
+                fish_weight = fish.get("weight_kg")
+
+            # Игрок, потративший больше всего монет в гамба-хаусе (глобально)
+            spender: Optional[User] = None
+            spent: int = 0
+            spender_row = await winners_log_repo.get_top_spender(since_date)
+            if spender_row:
+                spender_id, spent = spender_row
+                spender = await self.user_repo.get_user(id=spender_id)
+
+            humor_blocks = await humor.get_blocks(2)
+
+            number = await newspaper_repo.get_next_issue_number()
+            date_str = datetime.now().strftime("%d.%m.%Y")
+            text = self.dict.newspaper(number, date_str, fish_winner, fish_name,
+                                       fish_weight, spender, spent, humor_blocks)
+
+            await newspaper_repo.create_issue(number, text)
+
+            chat_settings: List[BotSettings] = await self.settings_repo.get_all()
+            for settings in chat_settings:
+                if (not settings.events_enabled): continue
+                await notifier_func(settings.chat_id, "newspaper", {"text": text})
+        except Exception as e:
+            self.logger.send_log("apscheduler", logging.WARNING, f"weekly_newspaper - {e}")
 
     async def day_salary(self, notifier_func):
         """

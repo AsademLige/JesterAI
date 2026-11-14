@@ -4,9 +4,9 @@ from features.user.data.dtos.user_dto import User
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from apps.tg_bot.commands import Commands as cn
+from features.gamba_house.data.repository.gino_winners_log_repository import GinoWinnersLogRepository
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
-from core.data.data_base import DataBase
 from typing import Dict, List, Tuple
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
@@ -24,7 +24,7 @@ bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
 marked_users:Dict[int, Tuple[datetime, datetime]] = {}
 user_repo:GinoUserRepository = GinoUserRepository()
-db = DataBase()
+winners_log_repo:GinoWinnersLogRepository = GinoWinnersLogRepository()
 rt = Router()
 
 ###Команда отображения таблицы лидеров
@@ -59,7 +59,7 @@ rt = Router()
 async def process_pagination(callback: CallbackQuery):
     page = int(callback.data.split('_')[1])
 
-    logs, total_pages, users = await db.get_winners_logs_page(callback.message.chat.id, page)
+    logs, total_pages, users = await winners_log_repo.get_winners_logs_page(callback.message.chat.id, page)
 
     await callback.message.edit_text(dict.winners_logs(logs, users), 
                          reply_markup=interactive_kb.get_pagination_keyboard(page, total_pages), 

@@ -1,17 +1,17 @@
+from features.gamba_house.data.repository.gino_winners_log_repository import GinoWinnersLogRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from core.providers.random_provider import IRandomProvider
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
-from core.data.data_base import DataBase
 import random
 
 
 
 class TrashLotoManager:
     user_repo:GinoUserRepository = GinoUserRepository()
+    winners_log_repo:GinoWinnersLogRepository = GinoWinnersLogRepository()
     
-    def __init__(self, db:DataBase, dictionary:Dictionary):
-        self.db = db
+    def __init__(self, dictionary:Dictionary):
         self.dict = dictionary
 
     async def play(self, user:User, bet:int, provider: IRandomProvider) -> dict:
@@ -37,7 +37,7 @@ class TrashLotoManager:
         if is_jackpot:
             award =  random.randrange(4*bet, 6*bet)
             slot_result_msg = self.dict.trash_loto_jackpot_money_award(user.tg_name, user.tg_id, award)
-            await self.db.add_win_log(user.id, event_type=0, money=award)
+            await self.winners_log_repo.add_win_log(user.id, event_type=0, money=award, bet=bet)
         #тройная комбинаций
         elif is_major_win:
             multiplier:int = bet // 5 + 1
@@ -45,18 +45,18 @@ class TrashLotoManager:
             if (action[0] == 1):
                 length = random.randrange(1 * multiplier, 2 * multiplier)
                 slot_result_msg = self.dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length)
-                await self.db.add_win_log(user.id, event_type=2, length=length)
+                await self.winners_log_repo.add_win_log(user.id, event_type=2, length=length, bet=bet)
             else:
                 award =  random.randrange(2 * bet, 3 * bet)
                 slot_result_msg = self.dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award)
-                await self.db.add_win_log(user.id, event_type=2, money=award)
+                await self.winners_log_repo.add_win_log(user.id, event_type=2, money=award, bet=bet)
 
         # Проверка на одинаковые крайние
         elif is_consolation:
             multiplier:int = bet // 5 + 1
             award = random.randrange(1*multiplier, 5*multiplier)
             slot_result_msg = self.dict.trash_loto_consolation_money_award(user.tg_name, user.tg_id, award)
-            await self.db.add_win_log(user.id, event_type=3, money=award)
+            await self.winners_log_repo.add_win_log(user.id, event_type=3, money=award, bet=bet)
 
         # Проверка на любые две одинаковые подряд
         elif is_minor_win:
@@ -65,13 +65,15 @@ class TrashLotoManager:
             if (action[0] == 1):
                 length = 1 * multiplier
                 slot_result_msg = self.dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length)
-                await self.db.add_win_log(user.id, event_type=1, length=length)
+                await self.winners_log_repo.add_win_log(user.id, event_type=1, length=length, bet=bet)
             else:
                 award =  random.randrange(bet + 1, bet * 2)
                 slot_result_msg = self.dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award)
-                await self.db.add_win_log(user.id, event_type=1, money=award)
+                await self.winners_log_repo.add_win_log(user.id, event_type=1, money=award, bet=bet)
         else:
             slot_result_msg = self.dict.trash_loto_lose(user.tg_name, user.tg_id)
+            # Проигрыш тоже пишем в лог — только ставку, без выигрыша (event_type=6)
+            await self.winners_log_repo.add_win_log(user.id, event_type=6, bet=bet)
         
         await self.user_repo.update(user,
                                 length=user.length + length,

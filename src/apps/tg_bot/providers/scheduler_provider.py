@@ -1,3 +1,8 @@
+import os
+
+from aiogram.types import FSInputFile
+
+from core.consts.consts import Consts
 from core.consts.dictionary import Dictionary
 from core.utils.app_herald import AppHerald
 from aiogram.enums import ParseMode
@@ -36,6 +41,10 @@ class SchedulerTelegramProvider:
             elif event_type == "warehouse_update":
                 text = self.dict.warehouse_update(data["discounts"], data["out_of_stock"])
                 await self.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+
+            elif event_type == "newspaper":
+                photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"newspaper.webp"))
+                await self.bot.send_photo(chat_id, photo=photo, caption=data["text"], parse_mode=ParseMode.HTML)
 
         except Exception as e:
             self.logger.send_log("telegram_scheduler", logging.ERROR, f"Failed to send {event_type}: {e}")

@@ -12,9 +12,20 @@ from features.user.data.dtos.user_dto import User
 from core.data.data_base import DataBase
 from core.utils.utils import Utils
 import random
+import html
+import re
 
 INVENTORY_PAGE_SIZE = 9
 INVENTORY_ROW_SIZE = 3
+
+# Лимит подписи к фото в Telegram (газета уходит как caption к картинке)
+TELEGRAM_CAPTION_LIMIT = 1024
+
+
+def visible_text_length(markup: str) -> int:
+    """Длина текста после парсинга HTML-разметки — именно так Telegram считает лимит
+    (теги и entity не учитываются, учитывается только видимый текст)."""
+    return len(html.unescape(re.sub(r"<[^>]+>", "", markup)))
 
 def inventory_page_bounds(total:int) -> List[Tuple[int, int]]:
     """Разбивка инвентаря на страницы по INVENTORY_PAGE_SIZE записей;
@@ -488,6 +499,38 @@ class Dictionary():
     __winners_log:str = "<blockquote>🗓 Таблица данных о выигрышах пользователей</blockquote>\n{{logs}}"
 
     ###------------------------------------------------------------
+    ###Еженедельная газета «Чумные вести»
+    ###------------------------------------------------------------
+
+    __newspaper_header:List[str] = [
+        "<blockquote>📰 Чумные вести №{{number}} — выпуск от {{date}}</blockquote>",
+        "<blockquote>🗞 Чумные вести №{{number}}\nСвежий выпуск от {{date}}! Читайте, завидуйте, ловите.</blockquote>",
+        "<blockquote>📰 Чумные вести №{{number}} · {{date}}\nВсё самое важное за неделю — в одном листке.</blockquote>",
+    ]
+
+    __newspaper_fish:List[str] = [
+        "🎣 <b>Рыбак недели</b>\n{{user_link}} вытащил <code>{{fish_name}}</code> на <b>{{weight}} кг</b>! Говорят, леска до сих пор дымится, а рыба просила пощады жестами.",
+        "🐟 <b>Чудовище глубин повержено</b>\n{{user_link}} добыл <code>{{fish_name}}</code> весом <b>{{weight}} кг</b>. Спиннингисты уже слагают легенды об этой битве.",
+        "🏆 <b>Золотой крючок</b> уходит {{user_link}} — <code>{{fish_name}}</code> на <b>{{weight}} кг</b>. Все остальные на этой неделе просто мочили леску.",
+        "⚓ <b>{{weight}} кг</b> живого серебра!\n{{user_link}} поймал <code>{{fish_name}}</code> и обеспечил весь чат разговорами на неделю вперёд.",
+    ]
+
+    __newspaper_no_fish:List[str] = [
+        "🎣 <b>Рыбак недели</b>\nНа этой неделе рыба ушла в отпуск — ни одного хвоста на всю округу. Удочки сохнут, рыбаки грустят.",
+        "🐟 <b>Тишь да глад</b>\nНи одной поимки за неделю. Водоём хранит молчание, а рыба — девственность рекордов.",
+    ]
+
+    __newspaper_spender:List[str] = [
+        "💸 <b>Спонсор недели</b>\n{{user_link}} спустил <b>{{spent}}</b> монет в гамба-хаусе. Казино благодарит за щедрость и передаёт привет вашему кошельку.",
+        "🎰 <b>Главный транжира</b>\n{{user_link}} вложил <b>{{spent}}</b> монет в слот-машину. Отдача? Не, не слышали.",
+        "💰 <b>Щедрость без границ</b>\n{{user_link}} оставил в гамба-хаусе <b>{{spent}}</b> монет. Автоматы аплодируют стоя.",
+    ]
+
+    __newspaper_no_spender:List[str] = [
+        "💸 <b>Спонсор недели</b>\nНа этой неделе в гамба-хаусе царила подозрительная экономия — никто не сделал ни ставки. Казино скучает.",
+    ]
+
+    ###------------------------------------------------------------
     ###интерактивные действия изменения размера
     ###------------------------------------------------------------
     
@@ -791,7 +834,8 @@ class Dictionary():
         stats_str += f"🍀 Выигрыш в треш-лото: <b>{self.money_wrapper(user.trash_loto_money_wins)} \ {self.length_wrapper(user.trash_loto_length_wins)}</b>\n"
         stats_str += f"🎲 Статистика игры в кости: <b>{user.dice_games} \ 🎯{user.dice_minor_wins + user.dice_major_wins}</b>\n"
         stats_str += f"🏟 Всадил/выиграл на арене: <b>{user.gladiators_bet} \ {user.gladiators_bet_win}</b>\n"
-        stats_str += f"🏹 Уничтожил чудовищ: <b>{user.good_hunting_count}</b>"
+        stats_str += f"🏹 Уничтожил чудовищ: <b>{user.good_hunting_count}</b>\n"
+        stats_str += f"🎣 Поймал рыбы: <b>{user.fish_caught_count}</b><code>({round(user.fish_caught_weight, 2)}kg.)</code>\n"
 
         return stats_str
     
@@ -859,6 +903,51 @@ class Dictionary():
             "winners" : self.__generate_leaderboard(users, rewards),
             **self.random_member(),
         })
+
+    def newspaper(self, number:int, date_str:str,
+                  fish_winner:Optional[User] = None, fish_name:Optional[str] = None,
+                  fish_weight:Optional[float] = None,
+                  spender:Optional[User] = None, spent:int = 0,
+                  humor_blocks:Optional[List[dict]] = None) -> str:
+        """Собирает полный текст выпуска еженедельной газеты «Чумные вести»."""
+        parts:List[str] = []
+
+        parts.append(tp.text_replacement(
+            self.__newspaper_header[random.randint(0, len(self.__newspaper_header) - 1)], {
+                "number": number,
+                "date": date_str,
+            }))
+
+        if fish_winner is not None:
+            parts.append(tp.text_replacement(
+                self.__newspaper_fish[random.randint(0, len(self.__newspaper_fish) - 1)], {
+                    "user_link": self.get_user_link(fish_winner.tg_name, fish_winner.tg_id),
+                    "fish_name": fish_name or "Рыба",
+                    "weight": f"{float(fish_weight or 0):.2f}",
+                }))
+        else:
+            parts.append(self.__newspaper_no_fish[random.randint(0, len(self.__newspaper_no_fish) - 1)])
+
+        if spender is not None and spent > 0:
+            parts.append(tp.text_replacement(
+                self.__newspaper_spender[random.randint(0, len(self.__newspaper_spender) - 1)], {
+                    "user_link": self.get_user_link(spender.tg_name, spender.tg_id),
+                    "spent": self.money_wrapper(spent, False),
+                }))
+        else:
+            parts.append(self.__newspaper_no_spender[random.randint(0, len(self.__newspaper_no_spender) - 1)])
+
+        humor_parts:List[str] = [
+            f"<blockquote>{block.get('title', '')}</blockquote>\n{block.get('text', '')}"
+            for block in (humor_blocks or [])
+        ]
+
+        full = "\n\n".join(parts + humor_parts)
+        if visible_text_length(full) <= TELEGRAM_CAPTION_LIMIT:
+            return full
+
+        # Не влезаем в лимит подписи — оставляем только первый юмор-блок (анекдот обязателен)
+        return "\n\n".join(parts + humor_parts[:1])
     
     def __generate_leaderboard(self, users:List[User], rewards:List[int] = []) -> str:
         winners:str = ""

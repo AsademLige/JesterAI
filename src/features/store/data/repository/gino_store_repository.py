@@ -29,6 +29,10 @@ class GinoStoreRepository(IStoreRepository):
             cls._instance._cache = TTLCache(maxsize=1000, ttl=3600)
         return cls._instance
     
+    def clear_cache(self) -> None:
+        self._cache.clear()
+        self.logger.send_log("store_repo", logging.INFO, "store cache cleared")
+    
     async def get_store_items_with_quantity(self, user:User) -> Optional[List[StoreItem]]:
         try:
             id_query = select([ItemORM.id]).select_from(ItemORM.join(WarehouseItemORM))

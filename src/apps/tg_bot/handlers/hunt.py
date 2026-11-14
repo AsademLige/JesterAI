@@ -2,7 +2,6 @@ from features.battles.data.repository.gino_battle_repository import GinoBattleRe
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions
 from apps.tg_bot.keyboards.battle_keyboard import BattleKeyboard
-from apps.tg_bot.keyboards.hub_keyboard import hunt_button
 from features.items.items_manager import ItemsManager
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
@@ -36,7 +35,7 @@ def get_redis_client() -> Redis:
     return _redis_client
 
 @rt.callback_query(StateFilter(None), F.data == "hub_hunt")
-async def hunt_init(callback_query: CallbackQuery):
+async def hunt_init(callback_query: CallbackQuery, bot_name:str):
     message = callback_query.message
     user: User = await user_repo.get_user(callback_query.from_user.id)
 
@@ -61,7 +60,7 @@ async def hunt_init(callback_query: CallbackQuery):
         pass
 
     link_message = await bot.send_message(callback_query.message.chat.id,
-            f"🏹 <a href='https://t.me/ChamomileJesterBot/hunting?startapp={message.chat.id}'>В воздухе витает чей-то запах...</a>",
+            f"🏹 <a href='https://t.me/{bot_name}/hunting?startapp={message.chat.id}'>В воздухе витает чей-то запах...</a>",
             link_preview_options=LinkPreviewOptions(
                 is_disabled=False,
                 prefer_large_media=True,

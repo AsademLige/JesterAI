@@ -53,6 +53,9 @@ class Commands():
     ###Агрегатор активностей
     hub = "hub"
 
+    ###Панель управления ботом (только суперпользователь)
+    admin = "admin"
+
     @staticmethod
     async def setup_bot_commands():
         await bot.set_my_commands([

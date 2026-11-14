@@ -108,3 +108,41 @@ class GinoBattleRepository:
                 "battle_repo", logging.ERROR, f"update_battle error: {error}"
             )
             return False
+
+    async def get_heaviest_fish_week(self, since_timestamp: int) -> Optional[dict]:
+        """Самая тяжёлая выловленная рыба с момента since_timestamp (unix time) среди всех игроков.
+        Возвращает {'tg_id', 'fish_name', 'weight_kg'} или None, если никто ничего не поймал."""
+        try:
+            rows = await BattleORM.query.where(
+                and_(
+                    BattleORM.status == "end",
+                    BattleORM.started_timestamp >= since_timestamp,
+                )
+            ).gino.all()
+
+            best: Optional[dict] = None
+            for battle in rows:
+                data = battle.data if isinstance(battle.data, dict) else {}
+                if data.get("game_mode") != "fishing":
+                    continue
+
+                validation = battle.validation if isinstance(battle.validation, dict) else {}
+                if validation.get("result") != "caught":
+                    continue
+
+                weight = data.get("fish_weight_kg")
+                if not weight:
+                    continue
+
+                weight = float(weight)
+                if best is None or weight > best["weight_kg"]:
+                    best = {
+                        "tg_id": battle.user_id,
+                        "fish_name": data.get("fish_name", "Рыба"),
+                        "weight_kg": weight,
+                    }
+
+            return best
+        except Exception as error:
+            self.logger.send_log("battle_repo", logging.ERROR, f"get_heaviest_fish_week error: {error}")
+            return None

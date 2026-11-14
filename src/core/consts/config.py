@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     pg_user: SecretStr
     port: SecretStr
     ip: SecretStr
+    # URL источника случайного анекдота для газеты (HTML-страница).
+    # Если пусто — используются только локальные списки.
+    anecdote_api_url: str = Field(default="https://baneks.ru/random")
 
 class Prefs():
     _instance = None
@@ -59,6 +62,10 @@ class Prefs():
     @property 
     def super_users(self) -> List:
         return self.__config.super_users.get_secret_value().split()
+
+    @property 
+    def anecdote_api_url(self) -> str:
+        return self.__config.anecdote_api_url
 
     @property 
     def debug(self) -> bool:

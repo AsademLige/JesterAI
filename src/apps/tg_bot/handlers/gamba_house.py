@@ -14,7 +14,6 @@ from aiogram.filters import Command, StateFilter
 from apps.tg_bot.commands import Commands as cn
 from core.consts.dictionary import Dictionary
 from aiogram.fsm.context import FSMContext
-from core.data.data_base import DataBase
 from core.consts.consts import Consts
 from core.consts.config import Prefs
 from aiogram.enums import ParseMode
@@ -31,14 +30,13 @@ dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 gamba_house_kb = GambaHouseKeyboard()
 combat_kb = BattleKeyboard()
-db = DataBase()
 rt = Router()
 rp = TelegramRandomProvider(bot)
 settings_repo = GinoBotSettingsRepository()
 user_repo:GinoUserRepository = GinoUserRepository()
 
-dice_manager = DiceGameManager(db, dict)
-trash_loto_manager = TrashLotoManager(db, dict)
+dice_manager = DiceGameManager(dict)
+trash_loto_manager = TrashLotoManager(dict)
 
 ###Открываем меню гамбы
 @rt.message(StateFilter(None), Command(cn.gamba_house))

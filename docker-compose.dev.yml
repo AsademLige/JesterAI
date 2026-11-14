@@ -10,25 +10,25 @@ services:
     volumes:
       - ./media:/usr/local/jester/JesterAI/media
 
-  # frontend_fighting:
-  #   image: python:3.11-alpine
-  #   working_dir: /app
-  #   volumes:
-  #     - ./src/core/services/mini_app_fighting:/app
-  #   ports:
-  #     - "5173:5173"
-  #   command: python3 -m http.server 5173
-  #   restart: unless-stopped
-
-  frontend_fishing:
+  frontend_fighting:
     image: python:3.11-alpine
     working_dir: /app
     volumes:
-      - ./src/core/services/mini_app_fishing:/app
+      - ./src/core/services/mini_app_fighting:/app
     ports:
       - "5173:5173"
     command: python3 -m http.server 5173
     restart: unless-stopped
+
+  # frontend_fishing:
+  #   image: python:3.11-alpine
+  #   working_dir: /app
+  #   volumes:
+  #     - ./src/core/services/mini_app_fishing:/app
+  #   ports:
+  #     - "5173:5173"
+  #   command: python3 -m http.server 5173
+  #   restart: unless-stopped
 
   # frontend_gladiators:
   #   image: python:3.11-alpine
@@ -66,9 +66,9 @@ services:
     volumes:
       - .:/app
     command: >
-      sh -c "apk add --no-cache openssh-client grep &&  ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:frontend_fishing:5173 free.pinggy.io 2>&1 |  tee /dev/stderr |  grep --line-buffered -Eo 'https://[a-zA-Z0-9.-]+\.free\.pinggy\.net' > /app/frontend_url.txt"
+      sh -c "apk add --no-cache openssh-client grep &&  ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:frontend_fighting:5173 free.pinggy.io 2>&1 |  tee /dev/stderr |  grep --line-buffered -Eo 'https://[a-zA-Z0-9.-]+\.free\.pinggy\.net' > /app/frontend_url.txt"
     depends_on:
-      - frontend_fishing
+      - frontend_fighting
       - api
       # cloudflared-frontend-gladiators:
       #   image: cloudflare/cloudflared:latest

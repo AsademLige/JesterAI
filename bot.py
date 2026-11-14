@@ -15,6 +15,7 @@ import apps.tg_bot.handlers.gamba_house as gamba_house
 import apps.tg_bot.handlers.send_media as send_media
 from core.consts.dictionary import Dictionary
 import apps.tg_bot.handlers.captcha as captcha
+import apps.tg_bot.handlers.admin_settings as admin_settings
 import apps.tg_bot.handlers.system as system
 import apps.tg_bot.handlers.store as store
 import apps.tg_bot.handlers.start as start
@@ -51,6 +52,7 @@ async def main():
                       interactive.rt,
                       gamba_house.rt,
                       captcha.rt,
+                      admin_settings.rt,
                       system.rt,
                       store.rt,
                       hunt.rt,
@@ -71,7 +73,10 @@ async def main():
                              store_repo=store_repository,
                              settings_repo=settings_repository)
     await Commands.setup_bot_commands()
+    bot_info = await bot.get_me()
+    dp['bot_name'] = bot_info.username
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

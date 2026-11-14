@@ -98,6 +98,9 @@ class Scheduler():
     async def run_warehouse_update(self):
         await self.game_core.warehouse_update(self.notifier)
 
+    async def run_weekly_newspaper(self):
+        await self.game_core.weekly_newspaper(self.notifier)
+
     async def init(self, scheduler: BaseScheduler):
         if Scheduler._lock is None:
             Scheduler._lock = asyncio.Lock()
@@ -115,6 +118,10 @@ class Scheduler():
         scheduler.add_job(self.run_warehouse_update, 'cron', id='warehouse_update', 
                                replace_existing=True, misfire_grace_time=15,
                                hour=9, minute=00)
+
+        scheduler.add_job(self.run_weekly_newspaper, 'cron', id='weekly_newspaper', 
+                               replace_existing=True, misfire_grace_time=15,
+                               day_of_week='sun', hour=19, minute=00)
         
         # self.scheduler.add_job(
         #     BotSchedulerJobs.event_trigger, 

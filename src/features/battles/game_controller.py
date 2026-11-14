@@ -12,6 +12,7 @@ from aiogram.types import Message
 from cachetools import TTLCache
 from aiogram import Bot
 import asyncio
+import random
 
 CACHE_TTL = 600
 CACHE_MAXSIZE = 100
@@ -47,7 +48,7 @@ class GameController:
             )
 
     async def prepare_hunt(self, hunter: User) -> Tuple[str, BattleManager]:
-        get_boss: bool = False
+        get_boss: bool = random.random() < 0.1
 
         self.started_battles[hunter.tg_id] = await BattleManager.hunt(
             hunter, self.monster_repo, boss=get_boss

@@ -1,8 +1,8 @@
+from features.gamba_house.data.repository.gino_winners_log_repository import GinoWinnersLogRepository
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from src.core.providers.random_provider import IRandomProvider
 from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
-from core.data.data_base import DataBase
 from datetime import datetime, timedelta
 from core.utils.utils import Utils
 from typing import Optional
@@ -10,9 +10,9 @@ import math
 
 class DiceGameManager:
     user_repo:GinoUserRepository = GinoUserRepository()
+    winners_log_repo:GinoWinnersLogRepository = GinoWinnersLogRepository()
 
-    def __init__(self, db:DataBase, dictionary:Dictionary):
-        self.db = db
+    def __init__(self, dictionary:Dictionary):
         self.dict = dictionary
 
     async def check_cool_down(self, user:User) -> Optional[timedelta]:
@@ -37,7 +37,7 @@ class DiceGameManager:
                                         dice_minor_wins=user.dice_minor_wins + (1 if is_minor_win else 0),
                                         dice_major_wins=user.dice_major_wins + (1 if is_major_win else 0))
             
-            await self.db.add_win_log(user.id, event_type=4 if is_minor_win else 5, money=award)
+            await self.winners_log_repo.add_win_log(user.id, event_type=4 if is_minor_win else 5, money=award)
         else:
             await self.user_repo.update(user, dice_games=user.dice_games + 1,
                                         last_dice_play=datetime.now())

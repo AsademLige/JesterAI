@@ -29,6 +29,10 @@ class GinoBotSettingsRepository(IBotSettingsRepository):
             return self._cache[chat_id]
         return None
 
+    def clear_cache(self) -> None:
+        self._cache.clear()
+        self.logger.send_log("settings_repo", logging.INFO, "settings cache cleared")
+
     async def get_all(self) -> List[BotSettings]:
         try:
             query = select([BotSettingsORM.chat_id]).select_from(BotSettingsORM)
