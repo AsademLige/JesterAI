@@ -2,6 +2,7 @@ import os
 
 from aiogram.types import FSInputFile
 
+from apps.tg_bot.keyboards.newspaper_keyboard import NewspaperKeyboard
 from core.consts.consts import Consts
 from core.consts.dictionary import Dictionary
 from core.utils.app_herald import AppHerald
@@ -15,6 +16,7 @@ class SchedulerTelegramProvider:
         self.bot = bot
         self.dict = Dictionary()
         self.logger = AppHerald()
+        self.newspaper_kb = NewspaperKeyboard()
 
     async def handle_event(self, chat_id: int, event_type: str, data: dict):
         """
@@ -44,7 +46,10 @@ class SchedulerTelegramProvider:
 
             elif event_type == "newspaper":
                 photo = FSInputFile(os.path.join(Consts.IMAGES_DIR, f"newspaper.webp"))
-                await self.bot.send_photo(chat_id, photo=photo, caption=data["text"], parse_mode=ParseMode.HTML)
+                number = int(data.get("number", 1))
+                markup = self.newspaper_kb.issue_navigation(number, has_prev=number > 1, has_next=False)
+                await self.bot.send_photo(chat_id, photo=photo, caption=data["text"],
+                                          reply_markup=markup, parse_mode=ParseMode.HTML)
 
         except Exception as e:
             self.logger.send_log("telegram_scheduler", logging.ERROR, f"Failed to send {event_type}: {e}")

@@ -260,13 +260,17 @@ class Dictionary():
     
     __trash_loto_minor_length_award: str = "🍆 {{user_link}} выиграл мазь для увеличения {{pencil_gen}} на целых {{length}}!"
 
+    __trash_loto_minor_energy_award: str = "⚡️ {{user_link}} выиграл энергетик объемом {{energy}}!"
+
     __trash_loto_minor_money_award: str = "☘️ Сегодня твой день, {{user_link}}! Выигрыш составил: {{money}}"
 
+    __trash_loto_major_energy_award: str = "<blockquote>⚡️ ВОТ ЭТО УДАЧА!</blockquote> {{user_link}}, бочку энергетика за счет заведения {{energy}}!"
+    
     __trash_loto_major_length_award: str = "<blockquote>🍆 ВОТ ЭТО УДАЧА!</blockquote> {{user_link}}, весь персонал казино тянул за твой {{pencil_accu}}, и вытянул на целых {{length}}!"
 
     __trash_loto_major_money_award: str = "<blockquote>🍀 ВОТ ЭТО УДАЧА!</blockquote> {{user_link}}, на твоей совести наша бабка-бухгалтер! Выигрыш составил: {{money}}"
 
-    __trash_loto_jackpot_money_award: str = "<blockquote>💎 ДЖЕКПОТ!!! 💎</blockquote>\n Однорукий бандит сегодня ты, {{user_link}}! Казино ОГРАБЛЕНО! Выигрыш составил: {{money}}"
+    __trash_loto_jackpot_money_award: str = "<blockquote>💎 ДЖЕКПОТ!!! 💎</blockquote>\n Однорукий бандит сегодня ты, {{user_link}}! Казино ОГРАБЛЕНО! Выигрыш составил: {{money}}, а еще {{length}}, и в довесок {{energy}}!"
 
     __trash_loto_lose:List[str] = [
         "🎰 Жена плачет, дочь рыдает, {{user_link}} снова доливает! Минус бабки...",
@@ -509,10 +513,10 @@ class Dictionary():
     ]
 
     __newspaper_fish:List[str] = [
-        "🎣 <b>Рыбак недели</b>\n{{user_link}} вытащил <code>{{fish_name}}</code> на <b>{{weight}} кг</b>! Говорят, леска до сих пор дымится, а рыба просила пощады жестами.",
-        "🐟 <b>Чудовище глубин повержено</b>\n{{user_link}} добыл <code>{{fish_name}}</code> весом <b>{{weight}} кг</b>. Спиннингисты уже слагают легенды об этой битве.",
-        "🏆 <b>Золотой крючок</b> уходит {{user_link}} — <code>{{fish_name}}</code> на <b>{{weight}} кг</b>. Все остальные на этой неделе просто мочили леску.",
-        "⚓ <b>{{weight}} кг</b> живого серебра!\n{{user_link}} поймал <code>{{fish_name}}</code> и обеспечил весь чат разговорами на неделю вперёд.",
+        "🎣 <b>Рыбак недели</b>\n{{user_link}} вытащил <code>{{fish_name}}</code> на <b>{{weight}} кг</b> и забирает {{reward}}! А весь чат за неделю наловил <b>{{total_weight}} кг</b> — леска до сих пор дымится.",
+        "🐟 <b>Чудовище глубин повержено</b>\n{{user_link}} добыл <code>{{fish_name}}</code> весом <b>{{weight}} кг</b>. Награда — {{reward}}. Суммарный улов недели: <b>{{total_weight}} кг</b>.",
+        "🏆 <b>Золотой крючок</b> уходит {{user_link}} — <code>{{fish_name}}</code> на <b>{{weight}} кг</b> и {{reward}} в карман. Общий улов чата за неделю — <b>{{total_weight}} кг</b>.",
+        "⚓ <b>{{weight}} кг</b> живого серебра!\n{{user_link}} поймал <code>{{fish_name}}</code>, и редакция высылает приз: {{reward}}. Все рыбаки вместе вытащили <b>{{total_weight}} кг</b> за неделю.",
     ]
 
     __newspaper_no_fish:List[str] = [
@@ -521,13 +525,25 @@ class Dictionary():
     ]
 
     __newspaper_spender:List[str] = [
-        "💸 <b>Спонсор недели</b>\n{{user_link}} спустил <b>{{spent}}</b> монет в гамба-хаусе. Казино благодарит за щедрость и передаёт привет вашему кошельку.",
-        "🎰 <b>Главный транжира</b>\n{{user_link}} вложил <b>{{spent}}</b> монет в слот-машину. Отдача? Не, не слышали.",
-        "💰 <b>Щедрость без границ</b>\n{{user_link}} оставил в гамба-хаусе <b>{{spent}}</b> монет. Автоматы аплодируют стоя.",
+        "💸 <b>Спонсор недели</b>\n{{user_link}} спустил {{spent}} в гамба-хаусе. Все игроки вместе оставили там {{total_spent}}. Казино благодарит за щедрость.",
+        "🎰 <b>Главный транжира</b>\n{{user_link}} вложил {{spent}} в слот-машину. Общий навар казино за неделю — {{total_spent}}. Отдача? Не, не слышали.",
+        "💰 <b>Щедрость без границ</b>\n{{user_link}} оставил в гамба-хаусе {{spent}}. А все игроки суммарно спустили {{total_spent}}. Автоматы аплодируют стоя.",
     ]
 
     __newspaper_no_spender:List[str] = [
         "💸 <b>Спонсор недели</b>\nНа этой неделе в гамба-хаусе царила подозрительная экономия — никто не сделал ни ставки. Казино скучает.",
+    ]
+
+    __newspaper_monsters:List[str] = [
+        "👹 <b>Жалоба из союза нечисти</b>\nВ редакцию поступила жалоба: <code>{{monster_name}}</code> пишет — «За неделю вы истребили <b>{{kills}}</b> моих сородичей! Требую компенсации и отпуск». Больше всех отличился {{user_link}} — ему выписана премия {{reward}}!",
+        "🧟 <b>Стон из подземелья</b>\n<code>{{monster_name}}</code> слёзно жалуется: «<b>{{kills}}</b> убитых за неделю — это уже не охота, а геноцид!». Ударнику {{user_link}}, премия {{reward}}!",
+        "📜 <b>Петиция нечисти</b>\nСоюз монстров в лице <code>{{monster_name}}</code> сообщает: «Мы потеряли <b>{{kills}}</b> бойцов за неделю и настаиваем на перемирии». Почётный истребитель — {{user_link}}, премия {{reward}}!",
+        "⚔️ <b>Хроника охоты</b>\nЗа неделю полегло <b>{{kills}}</b> монстров, и <code>{{monster_name}}</code> уже готов мстить. Лучший охотник — {{user_link}}, ему выписана премия {{reward}}!",
+    ]
+
+    __newspaper_no_monsters:List[str] = [
+        "👹 <b>Союз нечисти ликует</b>\nЗа неделю не пострадал ни один монстр. <code>{{monster_name}}</code> шлёт охотникам благодарности и просит не расслабляться — вы явно спали.",
+        "🕊 <b>Перемирие в подземелье</b>\nНи одного убитого монстра за неделю. <code>{{monster_name}}</code> устраивает праздник и напоминает: охотники, вы где?",
     ]
 
     ###------------------------------------------------------------
@@ -765,6 +781,12 @@ class Dictionary():
             **self.random_member(),
         })
     
+    def trash_loto_minor_energy_award(self, full_name:str, tg_id:int, energy:int) -> str:
+        return tp.text_replacement(self.__trash_loto_minor_energy_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "energy" : hcode(f"⚡️{energy}"),
+        })
+    
     def trash_loto_consolation_money_award(self, full_name:str, tg_id:int, money:int) -> str:
         return tp.text_replacement(self.__trash_loto_consolation_money_award, {
             "user_link" : self.get_user_link(full_name, tg_id),
@@ -784,16 +806,24 @@ class Dictionary():
             **self.random_member(),
         })
     
+    def trash_loto_major_energy_award(self, full_name:str, tg_id:int, energy:int) -> str:
+        return tp.text_replacement(self.__trash_loto_major_energy_award, {
+            "user_link" : self.get_user_link(full_name, tg_id),
+            "energy" : hcode(f"⚡️{energy}"), 
+        })
+    
     def trash_loto_major_money_award(self, full_name:str, tg_id:int, money:int) -> str:
         return tp.text_replacement(self.__trash_loto_major_money_award, {
             "user_link" : self.get_user_link(full_name, tg_id),
             "money" : self.money_wrapper(money, False), 
         })
     
-    def trash_loto_jackpot_money_award(self, full_name:str, tg_id:int, money:int) -> str:
+    def trash_loto_jackpot_money_award(self, full_name:str, tg_id:int, money:int, length:int, energy:int) -> str:
         return tp.text_replacement(self.__trash_loto_jackpot_money_award, {
             "user_link" : self.get_user_link(full_name, tg_id),
-            "money" : self.money_wrapper(money, False), 
+            "money" : self.money_wrapper(money, False),
+            "length": self.length_wrapper(length, False),
+            "energy" : hcode(f"⚡️{energy}") 
         })
     
     
@@ -906,8 +936,11 @@ class Dictionary():
 
     def newspaper(self, number:int, date_str:str,
                   fish_winner:Optional[User] = None, fish_name:Optional[str] = None,
-                  fish_weight:Optional[float] = None,
-                  spender:Optional[User] = None, spent:int = 0,
+                  fish_weight:Optional[float] = None, total_fish_weight:float = 0.0,
+                  fish_reward:int = 0,
+                  monster_killer:Optional[User] = None, total_monster_kills:int = 0,
+                  monster_name:Optional[str] = None, monster_reward:int = 0,
+                  spender:Optional[User] = None, spent:int = 0, total_spent:int = 0,
                   humor_blocks:Optional[List[dict]] = None) -> str:
         """Собирает полный текст выпуска еженедельной газеты «Чумные вести»."""
         parts:List[str] = []
@@ -924,15 +957,32 @@ class Dictionary():
                     "user_link": self.get_user_link(fish_winner.tg_name, fish_winner.tg_id),
                     "fish_name": fish_name or "Рыба",
                     "weight": f"{float(fish_weight or 0):.2f}",
+                    "total_weight": f"{float(total_fish_weight or 0):.2f}",
+                    "reward": self.money_wrapper(fish_reward, False),
                 }))
         else:
             parts.append(self.__newspaper_no_fish[random.randint(0, len(self.__newspaper_no_fish) - 1)])
+
+        if monster_killer is not None and total_monster_kills > 0:
+            parts.append(tp.text_replacement(
+                self.__newspaper_monsters[random.randint(0, len(self.__newspaper_monsters) - 1)], {
+                    "monster_name": monster_name or "Монстр",
+                    "kills": total_monster_kills,
+                    "user_link": self.get_user_link(monster_killer.tg_name, monster_killer.tg_id),
+                    "reward": self.money_wrapper(monster_reward, False),
+                }))
+        else:
+            parts.append(tp.text_replacement(
+                self.__newspaper_no_monsters[random.randint(0, len(self.__newspaper_no_monsters) - 1)], {
+                    "monster_name": monster_name or "Монстр",
+                }))
 
         if spender is not None and spent > 0:
             parts.append(tp.text_replacement(
                 self.__newspaper_spender[random.randint(0, len(self.__newspaper_spender) - 1)], {
                     "user_link": self.get_user_link(spender.tg_name, spender.tg_id),
                     "spent": self.money_wrapper(spent, False),
+                    "total_spent": self.money_wrapper(total_spent, False),
                 }))
         else:
             parts.append(self.__newspaper_no_spender[random.randint(0, len(self.__newspaper_no_spender) - 1)])

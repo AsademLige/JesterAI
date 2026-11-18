@@ -21,3 +21,8 @@ class IWinnersLogRepository(ABC):
     async def get_top_spender(self, since: datetime) -> Optional[Tuple[int, int]]:
         """(users.id, сумма ставок) игрока, потратившего больше всех в гамба-хаусе с момента since."""
         pass
+
+    @abstractmethod
+    async def get_total_spent(self, since: datetime) -> int:
+        """Суммарные ставки всех игроков гамба-хауса с момента since."""
+        pass

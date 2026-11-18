@@ -72,10 +72,10 @@ async def user_information(message: Message,
     await state.update_data(user=user)
 
     timer = await api_to_bot_notifier.get_timer_from_api(user.tg_id)
-
+    restore_at = timer.get("restore_at") if timer else None
 
     result = await user_mr.get_menu(user, message.chat.id, 
-                                    datetime.fromtimestamp(timer["restore_at"]) if timer["restore_at"] else None)
+                                    datetime.fromtimestamp(restore_at) if restore_at else None)
 
     answer = await bot.send_message(message.chat.id, result["msg"],
                          reply_markup=interactive_kb.user_information_buttons(user),

@@ -109,9 +109,10 @@ class GinoBattleRepository:
             )
             return False
 
-    async def get_heaviest_fish_week(self, since_timestamp: int) -> Optional[dict]:
-        """Самая тяжёлая выловленная рыба с момента since_timestamp (unix time) среди всех игроков.
-        Возвращает {'tg_id', 'fish_name', 'weight_kg'} или None, если никто ничего не поймал."""
+    async def get_week_fishing_stats(self, since_timestamp: int) -> dict:
+        """Статистика рыбалки с момента since_timestamp (unix time) среди всех игроков.
+        Возвращает {'best': {'tg_id', 'fish_name', 'weight_kg'} | None, 'total_weight': float},
+        где best — самая тяжёлая пойманная рыба, total_weight — суммарный вес всего улова."""
         try:
             rows = await BattleORM.query.where(
                 and_(
@@ -121,6 +122,7 @@ class GinoBattleRepository:
             ).gino.all()
 
             best: Optional[dict] = None
+            total_weight: float = 0.0
             for battle in rows:
                 data = battle.data if isinstance(battle.data, dict) else {}
                 if data.get("game_mode") != "fishing":
@@ -135,6 +137,7 @@ class GinoBattleRepository:
                     continue
 
                 weight = float(weight)
+                total_weight += weight
                 if best is None or weight > best["weight_kg"]:
                     best = {
                         "tg_id": battle.user_id,
@@ -142,7 +145,47 @@ class GinoBattleRepository:
                         "weight_kg": weight,
                     }
 
-            return best
+            return {"best": best, "total_weight": total_weight}
         except Exception as error:
-            self.logger.send_log("battle_repo", logging.ERROR, f"get_heaviest_fish_week error: {error}")
-            return None
+            self.logger.send_log("battle_repo", logging.ERROR, f"get_week_fishing_stats error: {error}")
+            return {"best": None, "total_weight": 0.0}
+
+    async def get_week_monster_kills(self, since_timestamp: int) -> dict:
+        """Статистика охоты с момента since_timestamp (unix time) среди всех игроков.
+        Учитываются только победные бои с монстрами (режимы fishing/gladiators исключаются).
+        Возвращает {'total_kills': int, 'top': {'tg_id', 'kills'} | None, 'monster_names': [str]}."""
+        try:
+            rows = await BattleORM.query.where(
+                and_(
+                    BattleORM.status == "end",
+                    BattleORM.started_timestamp >= since_timestamp,
+                )
+            ).gino.all()
+
+            kills_by_user: dict = {}
+            monster_names: list = []
+            total_kills: int = 0
+            for battle in rows:
+                data = battle.data if isinstance(battle.data, dict) else {}
+                if data.get("game_mode") in ("fishing", "gladiators"):
+                    continue
+
+                validation = battle.validation if isinstance(battle.validation, dict) else {}
+                if not validation.get("valid") or validation.get("status") != "victory":
+                    continue
+
+                total_kills += 1
+                kills_by_user[battle.user_id] = kills_by_user.get(battle.user_id, 0) + 1
+                name = data.get("monster_name")
+                if name:
+                    monster_names.append(name)
+
+            top: Optional[dict] = None
+            if kills_by_user:
+                top_id, top_kills = max(kills_by_user.items(), key=lambda kv: kv[1])
+                top = {"tg_id": top_id, "kills": top_kills}
+
+            return {"total_kills": total_kills, "top": top, "monster_names": monster_names}
+        except Exception as error:
+            self.logger.send_log("battle_repo", logging.ERROR, f"get_week_monster_kills error: {error}")
+            return {"total_kills": 0, "top": None, "monster_names": []}

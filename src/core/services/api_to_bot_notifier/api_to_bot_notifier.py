@@ -35,22 +35,28 @@ class ApiToBotNotifier:
             self.pending_messages = {}
             self._initialized = True
 
-    async def get_timer_from_api(self, tg_id: int):
+    async def get_timer_from_api(self, tg_id: int, timeout: float = 3.0) -> Optional[dict]:
         redis_client = Redis(host='redis-broker', port=6379, decode_responses=True)
         request_id = uuid4().hex 
     
         future = asyncio.get_running_loop().create_future()
         self._pending_requests[request_id] = future 
         
-        # Отправляем вопрос в API
-        await redis_client.publish("api_commands", json.dumps({
-            "action": "get_energy_timer",
-            "tg_id": tg_id,
-            "request_id": request_id
-        }))
-        
-        result = await future 
-        return result
+        try:
+            # Отправляем вопрос в API
+            await redis_client.publish("api_commands", json.dumps({
+                "action": "get_energy_timer",
+                "tg_id": tg_id,
+                "request_id": request_id
+            }))
+            
+            return await asyncio.wait_for(future, timeout)
+        except asyncio.TimeoutError:
+            logger.warning(f"get_timer_from_api timeout: tg_id={tg_id}")
+            return None
+        finally:
+            self._pending_requests.pop(request_id, None)
+            await redis_client.close()
 
     async def redis_listener(self):
         redis_client = Redis(host='redis-broker', port=6379, decode_responses=True)

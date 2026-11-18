@@ -20,13 +20,14 @@ class GinoWinnersLogRepository(IWinnersLogRepository):
         return cls._instance
 
     async def add_win_log(self, user_id: int, event_type: int = 0, money: int = 0,
-                          length: int = 0, bet: int = 0) -> bool:
+                          length: int = 0, bet: int = 0, energy: int = 0) -> bool:
         try:
             log = WinnersLog(
                 user_id=user_id,
                 event_type=event_type,
                 money=money,
                 length=length,
+                energy= energy,
                 bet=bet,
                 win_date=datetime.now(),
             )
@@ -77,3 +78,13 @@ class GinoWinnersLogRepository(IWinnersLogRepository):
         except Exception as error:
             self.logger.send_log("winners_log_repo", logging.ERROR, f"top spender error: {error}")
             return None
+
+    async def get_total_spent(self, since: datetime) -> int:
+        """Суммарные ставки всех игроков гамба-хауса с момента since."""
+        try:
+            total = await select([db.func.sum(WinnersLog.bet)])\
+                .where(WinnersLog.win_date >= since).gino.scalar()
+            return int(total or 0)
+        except Exception as error:
+            self.logger.send_log("winners_log_repo", logging.ERROR, f"total spent error: {error}")
+            return 0

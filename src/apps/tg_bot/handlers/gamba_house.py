@@ -99,7 +99,7 @@ async def dice_game(callback: CallbackQuery, callback_data: DiceGameCF, state: F
     
     delta = await dice_manager.check_cool_down(user)
     if delta:
-        answer = await bot.send_message(user.chat_id, dict.timer_message(user, Utils.timedelta_to_hhmm(delta)),
+        answer = await bot.send_message(callback.message.chat.id, dict.timer_message(user, Utils.timedelta_to_hhmm(delta)),
                                         parse_mode=ParseMode.HTML)
         return await Utils.delete_old_message([answer], 10)
 
@@ -119,9 +119,9 @@ async def dice_game_start(callback: CallbackQuery, callback_data: DiceGameCF, st
 
     await callback.message.delete()
 
-    result = await dice_manager.play(user, callback_data.action, rp)
+    result = await dice_manager.play(user, callback.message.chat.id, callback_data.action, rp)
 
-    msg = await bot.send_message(user.chat_id, result["msg"], parse_mode=ParseMode.HTML)    
+    msg = await bot.send_message(callback.message.chat.id, result["msg"], parse_mode=ParseMode.HTML)    
     messages_to_delete = result["roll_result"] + [msg]
     await Utils.delete_old_message(messages_to_delete, 10)
 
@@ -158,20 +158,20 @@ async def trash_loto(callback: CallbackQuery, callback_data: TrashLotoCF, state:
     loto_cost:int = callback_data.bet
 
     if (user.money < loto_cost):
-        answer = await bot.send_message(user.chat_id, dict.not_enough_money(user),
+        answer = await bot.send_message(callback.message.chat.id, dict.not_enough_money(user),
                             parse_mode=ParseMode.HTML)
         await Utils.delete_old_message([callback.message, answer])
         return
     
-    result = await trash_loto_manager.play(user, loto_cost, rp)
+    result = await trash_loto_manager.play(user, callback.message.chat.id, loto_cost, rp)
     
     await asyncio.sleep(3) 
 
     if (result["error"]):
-        msg = await bot.send_message(user.chat_id, dict.trash_loto_error, 
+        msg = await bot.send_message(callback.message.chat.id, dict.trash_loto_error, 
                                         parse_mode=ParseMode.HTML)
     else:
-        msg = await bot.send_message(user.chat_id, result["slot_result_msg"] + f"\n<code>Кошель: {dict.money_wrapper(user.money, False)}</code>",
+        msg = await bot.send_message(callback.message.chat.id, result["slot_result_msg"] + f"\n<code>Кошель: {dict.money_wrapper(user.money, False)}</code>",
                                         reply_markup=gamba_house_kb.trash_loto_again(user, loto_cost),
                                         parse_mode=ParseMode.HTML)
     

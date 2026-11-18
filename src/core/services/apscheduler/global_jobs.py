@@ -3,6 +3,7 @@ from features.store.data.repository.store_repository import IStoreRepository
 from features.user.data.repository.user_repository import IUserRepository
 from features.game_engine.data.models.bot_settings_dto import BotSettings
 from features.battles.data.repository.gino_battle_repository import GinoBattleRepository
+from features.battles.data.repository.gino_monsters_repository import GinoMonstersRepository
 from features.gamba_house.data.repository.gino_winners_log_repository import GinoWinnersLogRepository
 from features.newspaper.data.repository.gino_newspaper_repository import GinoNewspaperRepository
 from features.items.data.models.store_item_dto import StoreItem
@@ -15,6 +16,9 @@ from datetime import datetime, timedelta
 import logging
 import random
 import time
+
+NEWSPAPER_FISH_REWARD = 50
+NEWSPAPER_MONSTER_REWARD = 50
 
 class TestJobTracker:
     def __init__(self):
@@ -85,8 +89,10 @@ class GlobalJobs():
             cutoff_ts = int(time.time()) - 7 * 24 * 3600
             since_date = datetime.now() - timedelta(days=7)
 
-            # Самая тяжёлая выловленная рыба за неделю (глобально)
-            fish = await battle_repo.get_heaviest_fish_week(cutoff_ts)
+            # Самая тяжёлая выловленная рыба за неделю + суммарный улов (глобально)
+            fish_stats = await battle_repo.get_week_fishing_stats(cutoff_ts)
+            fish = fish_stats["best"]
+            total_fish_weight: float = fish_stats["total_weight"]
             fish_winner: Optional[User] = None
             fish_name: Optional[str] = None
             fish_weight: Optional[float] = None
@@ -94,28 +100,56 @@ class GlobalJobs():
                 fish_winner = await self.user_repo.get_user(tg_id=fish["tg_id"])
                 fish_name = fish.get("fish_name")
                 fish_weight = fish.get("weight_kg")
+                if fish_winner is not None:
+                    await self.user_repo.update(fish_winner, money=fish_winner.money + NEWSPAPER_FISH_REWARD)
 
-            # Игрок, потративший больше всего монет в гамба-хаусе (глобально)
+            # Охота: сколько монстров убито всеми игроками + лучший охотник (глобально)
+            monster_stats = await battle_repo.get_week_monster_kills(cutoff_ts)
+            total_monster_kills: int = monster_stats["total_kills"]
+            monster_killer: Optional[User] = None
+            if monster_stats["top"]:
+                monster_killer = await self.user_repo.get_user(tg_id=monster_stats["top"]["tg_id"])
+                if monster_killer is not None:
+                    await self.user_repo.update(monster_killer, money=monster_killer.money + NEWSPAPER_MONSTER_REWARD)
+
+            monster_name: Optional[str] = None
+            monster_names = monster_stats["monster_names"]
+            if monster_names:
+                monster_name = random.choice(monster_names)
+            else:
+                rnd_monsters = await GinoMonstersRepository().get_random_monsters_by_tag(1, "mob")
+                if rnd_monsters:
+                    monster_name = rnd_monsters[0].name
+
+            # Игрок, потративший больше всего монет в гамба-хаусе + общие траты (глобально)
             spender: Optional[User] = None
             spent: int = 0
             spender_row = await winners_log_repo.get_top_spender(since_date)
             if spender_row:
                 spender_id, spent = spender_row
                 spender = await self.user_repo.get_user(id=spender_id)
+            total_spent: int = await winners_log_repo.get_total_spent(since_date)
 
             humor_blocks = await humor.get_blocks(2)
 
             number = await newspaper_repo.get_next_issue_number()
             date_str = datetime.now().strftime("%d.%m.%Y")
-            text = self.dict.newspaper(number, date_str, fish_winner, fish_name,
-                                       fish_weight, spender, spent, humor_blocks)
+            text = self.dict.newspaper(number, date_str,
+                                       fish_winner=fish_winner, fish_name=fish_name,
+                                       fish_weight=fish_weight, total_fish_weight=total_fish_weight,
+                                       fish_reward=NEWSPAPER_FISH_REWARD if fish_winner else 0,
+                                       monster_killer=monster_killer, total_monster_kills=total_monster_kills,
+                                       monster_name=monster_name,
+                                       monster_reward=NEWSPAPER_MONSTER_REWARD if monster_killer else 0,
+                                       spender=spender, spent=spent, total_spent=total_spent,
+                                       humor_blocks=humor_blocks)
 
             await newspaper_repo.create_issue(number, text)
 
             chat_settings: List[BotSettings] = await self.settings_repo.get_all()
             for settings in chat_settings:
                 if (not settings.events_enabled): continue
-                await notifier_func(settings.chat_id, "newspaper", {"text": text})
+                await notifier_func(settings.chat_id, "newspaper", {"text": text, "number": number})
         except Exception as e:
             self.logger.send_log("apscheduler", logging.WARNING, f"weekly_newspaper - {e}")
 

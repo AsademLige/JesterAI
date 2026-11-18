@@ -57,3 +57,7 @@ class StoreCF(CallbackData, prefix="fab_store"):
     quantity:int = 1
     user_id: Optional[int] = None
     id: Optional[int] = None
+
+class NewspaperCF(CallbackData, prefix="fab_newspaper"):
+    action: str
+    number: int = 1

@@ -4,6 +4,7 @@ from core.services.data_base.db_model import db
 from core.utils.app_herald import AppHerald
 from sqlalchemy import select
 from datetime import datetime
+from typing import Optional
 import logging
 
 
@@ -34,3 +35,12 @@ class GinoNewspaperRepository(INewspaperRepository):
         except Exception as error:
             self.logger.send_log("newspaper_repo", logging.ERROR, f"newspaper issue create error: {error}")
             return False
+
+    async def get_issue(self, number: int) -> Optional[str]:
+        """Текст выпуска газеты по номеру или None, если выпуска нет."""
+        try:
+            issue: Optional[NewspaperIssue] = await NewspaperIssue.get(number)
+            return issue.data if issue else None
+        except Exception as error:
+            self.logger.send_log("newspaper_repo", logging.ERROR, f"newspaper get_issue error: {error}")
+            return None

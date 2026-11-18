@@ -21,8 +21,8 @@ class DiceGameManager:
             return delta
         return None
 
-    async def play(self, user:User, action: str, provider: IRandomProvider) -> dict:
-        dice_values, roll_result = await provider.roll_dice(user.chat_id)
+    async def play(self, user:User, chat_id:int, action: str, provider: IRandomProvider) -> dict:
+        dice_values, roll_result = await provider.roll_dice(chat_id)
         result = sum(dice_values)
         
         is_minor_win = (result > 7 and action == "bigger") or (result < 7 and action == "smaller")
