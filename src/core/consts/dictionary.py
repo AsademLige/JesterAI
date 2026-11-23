@@ -1,4 +1,5 @@
 from features.battles.battle_unit_entity import BattleUnit, BodyParts, AttackResult
+from features.bestiary.data.models.bestiary_dto import BestiaryEntry, BestiaryKind
 from features.items.data.models.inventory_item_dto import InventoryItem
 from features.items.data.models.store_item_dto import StoreItem
 from features.items.data.models.base_item_dto import BaseItem
@@ -17,6 +18,12 @@ import re
 
 INVENTORY_PAGE_SIZE = 9
 INVENTORY_ROW_SIZE = 3
+
+BESTIARY_SECTIONS = (
+    (BestiaryKind.monster, "👹", "Монстры"),
+    (BestiaryKind.fish, "🐟", "Рыба"),
+    (BestiaryKind.item, "🎒", "Предметы"),
+)
 
 # Лимит подписи к фото в Telegram (газета уходит как caption к картинке)
 TELEGRAM_CAPTION_LIMIT = 1024
@@ -184,6 +191,12 @@ class Dictionary():
                                   "💰 Не пользованные, надеюсь? Ладно, держи копейки: {{money}}",
                                   "💰 Вот так бы всегда? Держи копейки: {{money}}"]
 
+    __bestiary_menu:str = "<blockquote>📖 Коллекции {{user_link}}</blockquote>\n{{sections}}"
+
+    __bestiary_section:str = "<blockquote>{{icon}} {{title}} · {{found}} из {{total}}</blockquote>\n{{entries}}"
+
+    __bestiary_empty:str = "<i>Ни одной записи — самое время выбраться на охоту.</i>"
+
     select_target:str = "🎁 Кто получит твой подарок?"
 
     use_myself:str = "📤 На себя"
@@ -290,8 +303,8 @@ class Dictionary():
     dice_game_rules:str = "<b>🎲 Выше или ниже семи</b>\n"\
                           "Игрок перед броском делает «ставку»: будет ли сумма двух кубиков меньше 7, больше 7 или ровно 7\n"\
                           "<b>Выигрыш:</b> \n"\
-                          "🍀 Угадал меньше или больше 7 - <b>5</b>💰\n" \
-                          "💎 Угадал ровно 7 - <b>15</b>💰"
+                          "🍀 Угадал меньше или больше 7 - <b>15</b>💰\n" \
+                          "💎 Угадал ровно 7 - <b>35</b>💰"
     
     __dice_lose:str = "🪗 <b>{{combination}}</b> Мимо! Повезет в следующий раз, {{user_link}}, но я не то чтобы гарантирую..."
     __dice_minor_win:str = "🎯 <b>{{combination}}</b> Угадал! Выигрыш твой, {{user_link}}! Ну чертяка! {{money}}"
@@ -914,6 +927,43 @@ class Dictionary():
         return tp.text_replacement(random.choice(self.__inventory_sell), {
             "money": self.money_wrapper(sell_price),
         })
+    
+    def bestiary_menu(self, user:User, sections:Dict[str, List[BestiaryEntry]]) -> str:
+        lines:str = ""
+        for kind, icon, title in BESTIARY_SECTIONS:
+            entries = sections.get(kind) or []
+            found = sum(1 for entry in entries if entry.discovered)
+            lines += f"{icon} <b>{title}:</b> {found} из {len(entries)}\n"
+
+        return tp.text_replacement(self.__bestiary_menu, {
+            "sections": lines or self.__bestiary_empty,
+            "user_link": self.get_user_link(user.tg_name, user.tg_id),
+            **self.random_member(),
+        }, recursive_parse_args = True)
+
+    def bestiary_section(self, kind:str, entries:List[BestiaryEntry]) -> str:
+        icon, title = next(((section_icon, section_title) for section_kind, section_icon, section_title
+                            in BESTIARY_SECTIONS if section_kind == kind), ("📖", "Коллекции"))
+        found = sum(1 for entry in entries if entry.discovered)
+
+        lines:str = ""
+        for entry in entries:
+            if not entry.discovered:
+                lines += "❓ <code>???</code>\n"
+                continue
+
+            times = f" <b>×{entry.times}</b>" if entry.times > 1 else ""
+            record = f" · рекорд <b>{entry.record_value:.2f} кг</b>" if entry.record_value else ""
+            lines += f"{entry.utf8_icon} <code>{entry.title}</code>{times}{record}\n"
+
+        return tp.text_replacement(self.__bestiary_section, {
+            "icon": icon,
+            "title": title,
+            "found": found,
+            "total": len(entries),
+            "entries": lines or self.__bestiary_empty,
+            **self.random_member(),
+        }, recursive_parse_args = True)
     
     def day_salary(self, money:int) -> str:
         return tp.text_replacement(self.__day_salary, {"money" : self.money_wrapper(money)})

@@ -70,6 +70,9 @@ if [ -n "$BATTLE_API_URL" ]; then
 
     echo "API_URL=$BATTLE_API_URL" \
         > src/core/services/mini_app_fishing/.env
+
+    echo "API_URL=$BATTLE_API_URL" \
+        > src/core/services/mini_app_gladiators/.env
 else
     echo "❌ API tunnel не найден"
 fi

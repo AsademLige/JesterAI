@@ -61,3 +61,8 @@ class StoreCF(CallbackData, prefix="fab_store"):
 class NewspaperCF(CallbackData, prefix="fab_newspaper"):
     action: str
     number: int = 1
+
+class BestiaryCF(CallbackData, prefix="fab_bestiary"):
+    action: str
+    kind: Optional[str] = None
+    user_id: Optional[int] = None

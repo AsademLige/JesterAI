@@ -11,6 +11,7 @@ import apps.tg_bot.handlers.edit_sticker_set as edit_sticker_set
 from core.services.apscheduler.scheduler_main import Scheduler
 from core.services.data_base.db_model import on_startup
 import apps.tg_bot.handlers.interactive as interactive
+import apps.tg_bot.handlers.bestiary as bestiary
 import apps.tg_bot.handlers.newspaper as newspaper
 import apps.tg_bot.handlers.gamba_house as gamba_house
 import apps.tg_bot.handlers.send_media as send_media
@@ -51,6 +52,7 @@ async def main():
                       edit_sticker_set.rt,
                       send_media.rt,
                       interactive.rt,
+                      bestiary.rt,
                       newspaper.rt,
                       gamba_house.rt,
                       captcha.rt,

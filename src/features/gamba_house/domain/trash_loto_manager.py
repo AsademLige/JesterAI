@@ -5,8 +5,6 @@ from features.user.data.dtos.user_dto import User
 from core.consts.dictionary import Dictionary
 import random
 
-
-
 class TrashLotoManager:
     user_repo:GinoUserRepository = GinoUserRepository()
     winners_log_repo:GinoWinnersLogRepository = GinoWinnersLogRepository()
@@ -50,7 +48,7 @@ class TrashLotoManager:
                 length = random.randrange(1 * multiplier, 2 * multiplier)
                 slot_result_msg = self.dict.trash_loto_major_length_award(user.tg_name, user.tg_id, length)
                 await self.winners_log_repo.add_win_log(user.id, event_type=2, length=length, bet=bet, energy=energy)
-            elif (action[0] == 1):
+            elif (action[0] == 2):
                 award = random.randrange(2 * bet, 3 * bet)
                 slot_result_msg = self.dict.trash_loto_major_money_award(user.tg_name, user.tg_id, award)
                 await self.winners_log_repo.add_win_log(user.id, event_type=2, money=award, bet=bet, energy=energy)
@@ -74,18 +72,17 @@ class TrashLotoManager:
                 length = 1 * multiplier
                 slot_result_msg = self.dict.trash_loto_minor_length_award(user.tg_name, user.tg_id, length)
                 await self.winners_log_repo.add_win_log(user.id, event_type=1, length=length, bet=bet, energy=energy)
-            elif (action[0] == 1):
+            elif (action[0] == 2):
                 award =  random.randrange(bet + 1, bet * 2)
                 slot_result_msg = self.dict.trash_loto_minor_money_award(user.tg_name, user.tg_id, award)
                 await self.winners_log_repo.add_win_log(user.id, event_type=1, money=award, bet=bet, energy=energy)
             else:
                 energy = 2
                 slot_result_msg = self.dict.trash_loto_minor_energy_award(user.tg_name, user.tg_id, energy)
-                await self.winners_log_repo.add_win_log(user.id, event_type=2, money=award, bet=bet, energy=energy)
+                await self.winners_log_repo.add_win_log(user.id, event_type=1, money=award, bet=bet, energy=energy)
             
         else:
             slot_result_msg = self.dict.trash_loto_lose(user.tg_name, user.tg_id)
-            # Проигрыш тоже пишем в лог — только ставку, без выигрыша (event_type=6)
             await self.winners_log_repo.add_win_log(user.id, event_type=6, bet=bet, energy=energy)
         
         await self.user_repo.update(user,

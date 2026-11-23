@@ -1,17 +1,17 @@
 from features.game_engine.data.repository.gino_bot_settings_repository import GinoBotSettingsRepository
+from features.items.items_manager import ItemsManager, get_item_sell_price, get_instance_sell_price
 from core.services.api_to_bot_notifier.api_to_bot_notifier import ApiToBotNotifier
 from features.user.data.repository.gino_user_repository import GinoUserRepository
 from apps.tg_bot.keyboards.interactive_keyboard import InteractiveKeyboard
 from features.game_engine.data.models.bot_settings_dto import BotSettings
 from features.items.data.models.inventory_item_dto import InventoryItem
+from core.consts.dictionary import Dictionary, group_inventory_items
 from apps.tg_bot.keyboards.callback_fabrics import InventoryCF
 from features.user.domain.user_manager import UserManager
-from features.items.items_manager import ItemsManager, get_item_sell_price, get_instance_sell_price
 from features.user.data.dtos.user_dto import User
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, StateFilter
 from apps.tg_bot.commands import Commands as cn
-from core.consts.dictionary import Dictionary, group_inventory_items
 from aiogram.fsm.context import FSMContext
 from core.data.data_base import DataBase
 from core.consts.config import Prefs
@@ -27,8 +27,8 @@ prefs = Prefs()
 dict = Dictionary()
 bot = Bot(token=prefs.bot_token)
 interactive_kb = InteractiveKeyboard()
-repository:GinoUserRepository = GinoUserRepository()
 settings_repo = GinoBotSettingsRepository()
+repository:GinoUserRepository = GinoUserRepository()
 user_mr:UserManager = UserManager(repo=repository, settings_repo=settings_repo)
 items_mg:ItemsManager = ItemsManager(repository)
 db = DataBase()
@@ -139,7 +139,6 @@ async def on_item_sell(callback: CallbackQuery, callback_data: InventoryCF, stat
     instance_ids = meta.get("instance_ids")
 
     if instance_ids:
-        # Группа экземпляров (рыба): продаём каждый отдельно, цену считаем по его весу
         sell_price = 0
         sell_status = False
         for instance_id, weight in zip(instance_ids, meta.get("weights") or []):

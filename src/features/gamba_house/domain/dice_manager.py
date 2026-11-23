@@ -47,7 +47,7 @@ class DiceGameManager:
         if is_minor_win:
             msg = self.dict.dice_minor_win(user, dice_values, award)
         elif is_major_win:
-            msg = self.dict.dice_minor_win(user, dice_values, award)
+            msg = self.dict.dice_major_win(user, dice_values, award)
         else:
             msg = self.dict.dice_lose(user, dice_values)
         
